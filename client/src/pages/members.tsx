@@ -23,9 +23,9 @@ export default function MembersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberWithDepartment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedPosition, setSelectedPosition] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [selectedPosition, setSelectedPosition] = useState("all");
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
@@ -38,9 +38,9 @@ export default function MembersPage() {
   const { data: members = [], isLoading: membersLoading } = useQuery<MemberWithDepartment[]>({
     queryKey: ["/api/members", { 
       search: searchQuery,
-      type: selectedType,
-      department: selectedDepartment,
-      position: selectedPosition,
+      type: selectedType === "all" ? "" : selectedType,
+      department: selectedDepartment === "all" ? "" : selectedDepartment,
+      position: selectedPosition === "all" ? "" : selectedPosition,
     }],
   });
 
@@ -67,9 +67,9 @@ export default function MembersPage() {
 
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedType("");
-    setSelectedDepartment("");
-    setSelectedPosition("");
+    setSelectedType("all");
+    setSelectedDepartment("all");
+    setSelectedPosition("all");
   };
 
   return (
@@ -215,7 +215,7 @@ export default function MembersPage() {
                     <SelectValue placeholder="Tất cả trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
                     <SelectItem value="active">Thành viên hiện tại</SelectItem>
                     <SelectItem value="alumni">Cựu thành viên</SelectItem>
                   </SelectContent>
@@ -226,7 +226,7 @@ export default function MembersPage() {
                     <SelectValue placeholder="Tất cả ban" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tất cả ban</SelectItem>
+                    <SelectItem value="all">Tất cả ban</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id.toString()}>
                         {dept.name}
@@ -240,7 +240,7 @@ export default function MembersPage() {
                     <SelectValue placeholder="Tất cả chức vụ" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tất cả chức vụ</SelectItem>
+                    <SelectItem value="all">Tất cả chức vụ</SelectItem>
                     <SelectItem value="president">Chủ nhiệm</SelectItem>
                     <SelectItem value="vice-president">Phó chủ nhiệm</SelectItem>
                     <SelectItem value="secretary">Thư ký</SelectItem>
@@ -251,7 +251,7 @@ export default function MembersPage() {
                 </Select>
               </div>
 
-              {(searchQuery || selectedType || selectedDepartment || selectedPosition) && (
+              {(searchQuery || selectedType !== "all" || selectedDepartment !== "all" || selectedPosition !== "all") && (
                 <Button variant="outline" onClick={clearFilters}>
                   Xóa bộ lọc
                 </Button>
@@ -288,7 +288,7 @@ export default function MembersPage() {
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy thành viên</h3>
               <p className="text-gray-500 mb-4">
-                {searchQuery || selectedType || selectedDepartment || selectedPosition
+                {searchQuery || selectedType !== "all" || selectedDepartment !== "all" || selectedPosition !== "all"
                   ? "Không có thành viên nào phù hợp với tiêu chí tìm kiếm."
                   : "Chưa có thành viên nào trong câu lạc bộ."
                 }
