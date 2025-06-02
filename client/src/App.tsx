@@ -11,6 +11,7 @@ import AdminPage from "@/pages/admin";
 import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
+import ProfilePage from "@/pages/profile";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/members" component={MembersPage} />
           <Route path="/roles" component={AdminPage} />
           <Route path="/settings" component={SettingsPage} />
+          <Route path="/profile" component={ProfilePage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
