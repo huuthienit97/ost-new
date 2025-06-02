@@ -1256,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const achievementsList = await db.select().from(achievements).where(eq(achievements.isActive, true));
+      const achievementsList = await db.select().from(achievementsTable).where(eq(achievements.isActive, true));
       res.json(achievementsList);
     } catch (error) {
       console.error("Error fetching achievements:", error);
@@ -1378,8 +1378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get achievement details for points reward
       const achievement = await db
         .select()
-        .from(achievements)
-        .where(eq(achievements.id, achievementId));
+        .from(achievementsTable)
+        .where(eq(achievementsTable.id, achievementId));
 
       if (achievement.length === 0) {
         return res.status(404).json({ message: "Không tìm thấy thành tích" });
@@ -1431,7 +1431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           achievement: achievements,
         })
         .from(userAchievements)
-        .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+        .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
         .where(eq(userAchievements.userId, userId))
         .orderBy(desc(userAchievements.awardedDate));
 
@@ -1497,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           achievement: achievements,
         })
         .from(userAchievements)
-        .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+        .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
         .where(eq(userAchievements.userId, userId))
         .orderBy(desc(userAchievements.awardedDate));
 
@@ -1585,7 +1585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/public/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
     try {
-      const achievementsList = await db.select().from(achievements).orderBy(achievements.createdAt);
+      const achievementsList = await db.select().from(achievementsTable).orderBy(achievementsTable.createdAt);
       res.json(achievementsList);
     } catch (error) {
       console.error("Error fetching achievements:", error);
