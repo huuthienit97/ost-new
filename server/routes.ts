@@ -7,9 +7,29 @@ import { z } from "zod";
 
 /**
  * @swagger
+ * /api/auth/check-init:
+ *   get:
+ *     tags: [Public]
+ *     summary: Kiểm tra hệ thống có cần khởi tạo không
+ *     description: API công khai để kiểm tra xem hệ thống đã được khởi tạo chưa
+ *     responses:
+ *       200:
+ *         description: Trạng thái khởi tạo hệ thống
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 needsInit:
+ *                   type: boolean
+ *                   description: true nếu hệ thống cần khởi tạo
+ */
+
+/**
+ * @swagger
  * /api/auth/init:
  *   post:
- *     tags: [Authentication]
+ *     tags: [Public]
  *     summary: Khởi tạo tài khoản quản trị viên đầu tiên
  *     description: Tạo tài khoản quản trị viên mặc định nếu chưa có người dùng nào trong hệ thống
  *     responses:
@@ -91,7 +111,7 @@ import { z } from "zod";
  * @swagger
  * /api/roles:
  *   get:
- *     tags: [Roles]
+ *     tags: [Admin Only]
  *     summary: Lấy danh sách vai trò
  *     security:
  *       - bearerAuth: []
@@ -105,7 +125,7 @@ import { z } from "zod";
  *               items:
  *                 $ref: '#/components/schemas/Role'
  *   post:
- *     tags: [Roles]
+ *     tags: [Super Admin]
  *     summary: Tạo vai trò mới
  *     security:
  *       - bearerAuth: []
@@ -128,7 +148,7 @@ import { z } from "zod";
  * @swagger
  * /api/users:
  *   get:
- *     tags: [Users]
+ *     tags: [Admin Only]
  *     summary: Lấy danh sách người dùng
  *     security:
  *       - bearerAuth: []
@@ -142,7 +162,7 @@ import { z } from "zod";
  *               items:
  *                 $ref: '#/components/schemas/User'
  *   post:
- *     tags: [Users]
+ *     tags: [Admin Only]
  *     summary: Tạo người dùng mới
  *     security:
  *       - bearerAuth: []
@@ -165,7 +185,7 @@ import { z } from "zod";
  * @swagger
  * /api/departments:
  *   get:
- *     tags: [Departments]
+ *     tags: [User Access]
  *     summary: Lấy danh sách ban
  *     security:
  *       - bearerAuth: []
@@ -184,7 +204,7 @@ import { z } from "zod";
  * @swagger
  * /api/members:
  *   get:
- *     tags: [Members]
+ *     tags: [User Access]
  *     summary: Lấy danh sách thành viên
  *     security:
  *       - bearerAuth: []
@@ -220,7 +240,7 @@ import { z } from "zod";
  *               items:
  *                 $ref: '#/components/schemas/Member'
  *   post:
- *     tags: [Members]
+ *     tags: [Admin Only]
  *     summary: Tạo thành viên mới
  *     security:
  *       - bearerAuth: []
@@ -243,7 +263,7 @@ import { z } from "zod";
  * @swagger
  * /api/members/{id}:
  *   get:
- *     tags: [Members]
+ *     tags: [User Access]
  *     summary: Lấy thông tin thành viên
  *     security:
  *       - bearerAuth: []
@@ -264,7 +284,7 @@ import { z } from "zod";
  *       404:
  *         description: Không tìm thấy thành viên
  *   put:
- *     tags: [Members]
+ *     tags: [Admin Only]
  *     summary: Cập nhật thông tin thành viên
  *     security:
  *       - bearerAuth: []
