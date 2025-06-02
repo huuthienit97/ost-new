@@ -926,8 +926,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Define leadership keywords to identify leadership positions
       const leadershipKeywords = [
-        'chủ tịch', 'chủ nhiệm', 'president', 
-        'phó chủ tịch', 'phó chủ nhiệm', 'vice-president',
+        'chủ nhiệm', 'president', 
+        'phó chủ nhiệm', 'vice-president',
         'thư ký', 'secretary',
         'trưởng', 'head',
         'phó', 'vice'
@@ -955,8 +955,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sort by position hierarchy based on keywords
           const getPositionPriority = (position: string) => {
             const pos = position.toLowerCase();
-            if (pos.includes('chủ tịch') || pos.includes('president')) return 1;
-            if (pos.includes('phó chủ tịch') || pos.includes('vice-president')) return 2;
+            if (pos.includes('chủ nhiệm') && !pos.includes('phó')) return 1;
+            if (pos.includes('phó chủ nhiệm') || pos.includes('vice-president')) return 2;
             if (pos.includes('thư ký') || pos.includes('secretary')) return 3;
             if (pos.includes('trưởng') && !pos.includes('phó')) return 4;
             if (pos.includes('phó') && pos.includes('trưởng')) return 5;
