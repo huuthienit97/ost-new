@@ -213,14 +213,18 @@ export default function AdminPage() {
     return names[permission] || permission;
   };
 
-  if (!hasPermission(PERMISSIONS.SYSTEM_ADMIN) && !hasPermission(PERMISSIONS.ROLE_VIEW) && !hasPermission(PERMISSIONS.USER_VIEW)) {
+  // Chỉ Super Admin và Admin mới được truy cập trang này
+  if (!hasPermission("system_admin") && !hasPermission("role_view")) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-96">
           <CardContent className="p-8 text-center">
             <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Không có quyền truy cập</h2>
-            <p className="text-gray-600">Bạn không có quyền truy cập vào trang quản trị</p>
+            <p className="text-gray-600">Chỉ có quản trị viên mới được truy cập trang này</p>
+            <div className="mt-4">
+              <a href="/" className="text-blue-600 hover:text-blue-800">← Quay về trang chủ</a>
+            </div>
           </CardContent>
         </Card>
       </div>

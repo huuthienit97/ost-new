@@ -123,12 +123,14 @@ export default function MembersPage() {
               <h2 className="text-2xl font-bold text-gray-900">Quản lý thành viên</h2>
               <p className="text-gray-600 mt-1">Quản lý thông tin và tổ chức thành viên câu lạc bộ</p>
             </div>
-            <div className="mt-4 sm:mt-0">
-              <Button onClick={handleAddMember} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Thêm thành viên
-              </Button>
-            </div>
+            {hasPermission("member_create") && (
+              <div className="mt-4 sm:mt-0">
+                <Button onClick={handleAddMember} className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm thành viên
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -305,10 +307,12 @@ export default function MembersPage() {
                   : "Chưa có thành viên nào trong câu lạc bộ."
                 }
               </p>
-              <Button onClick={handleAddMember}>
-                <Plus className="h-4 w-4 mr-2" />
-                Thêm thành viên đầu tiên
-              </Button>
+              {hasPermission("member_create") && (
+                <Button onClick={handleAddMember}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm thành viên đầu tiên
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
