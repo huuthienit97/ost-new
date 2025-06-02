@@ -7,6 +7,7 @@ import {
   uploads,
   beePoints,
   pointTransactions,
+  apiKeys,
   type Member, 
   type Department, 
   type InsertMember, 
@@ -25,7 +26,9 @@ import {
   type BeePoint,
   type InsertBeePoint,
   type PointTransaction,
-  type InsertPointTransaction
+  type InsertPointTransaction,
+  type ApiKey,
+  type InsertApiKey
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc } from "drizzle-orm";
@@ -87,6 +90,13 @@ export interface IStorage {
   addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
   getUserPointTransactions(userId: number): Promise<PointTransaction[]>;
   getUserWithBeePoints(userId: number): Promise<UserWithBeePoints | undefined>;
+
+  // API Keys methods
+  getApiKeys(): Promise<ApiKey[]>;
+  getApiKey(id: number): Promise<ApiKey | undefined>;
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined>;
+  deleteApiKey(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
