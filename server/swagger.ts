@@ -301,8 +301,8 @@ const options = {
         description: '🍯 Hệ thống điểm thưởng BeePoints',
       },
       {
-        name: 'Public API',
-        description: '🌐 API công khai - Cần API key để truy cập',
+        name: 'External API',
+        description: '🌐 API cho bên ngoài - Cần API key để truy cập',
       },
     ],
   },

@@ -1256,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const achievementsList = await db.select().from(achievementsTable).where(eq(achievements.isActive, true));
+      const achievementsList = await db.select().from(achievementsTable).where(eq(achievementsTable.isActive, true));
       res.json(achievementsList);
     } catch (error) {
       console.error("Error fetching achievements:", error);
@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [newAchievement] = await db
-        .insert(achievements)
+        .insert(achievementsTable)
         .values(validationResult.data)
         .returning();
 
@@ -1428,7 +1428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: userAchievements.id,
           awardedDate: userAchievements.awardedDate,
           notes: userAchievements.notes,
-          achievement: achievements,
+          achievement: achievementsTable,
         })
         .from(userAchievements)
         .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
@@ -1494,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: userAchievements.id,
           awardedDate: userAchievements.awardedDate,
           notes: userAchievements.notes,
-          achievement: achievements,
+          achievement: achievementsTable,
         })
         .from(userAchievements)
         .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
@@ -1509,15 +1509,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===========================================
-  // PUBLIC API ENDPOINTS (Require API Key)
+  // EXTERNAL API ENDPOINTS (Require API Key)
   // ===========================================
 
   /**
    * @swagger
-   * /api/public/departments:
+   * /api/external/departments:
    *   get:
-   *     summary: Get all departments (Public API)
-   *     tags: [Public API]
+   *     summary: Get all departments (External API)
+   *     tags: [External API]
    *     security:
    *       - ApiKeyAuth: []
    *     responses:
@@ -1530,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               items:
    *                 $ref: '#/components/schemas/Department'
    */
-  app.get("/api/public/departments", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/external/departments", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -1542,17 +1542,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /**
    * @swagger
-   * /api/public/stats:
+   * /api/external/stats:
    *   get:
-   *     summary: Get basic statistics (Public API)
-   *     tags: [Public API]
+   *     summary: Get basic statistics (External API)
+   *     tags: [External API]
    *     security:
    *       - ApiKeyAuth: []
    *     responses:
    *       200:
    *         description: Basic statistics
    */
-  app.get("/api/public/stats", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/external/stats", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const totalMembers = await db.select().from(members);
       const activeMembers = totalMembers.filter(m => m.memberType === 'active');
@@ -1573,17 +1573,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /**
    * @swagger
-   * /api/public/achievements:
+   * /api/external/achievements:
    *   get:
-   *     summary: Get all achievements (Public API)
-   *     tags: [Public API]
+   *     summary: Get all achievements (External API)
+   *     tags: [External API]
    *     security:
    *       - ApiKeyAuth: []
    *     responses:
    *       200:
    *         description: List of achievements
    */
-  app.get("/api/public/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/external/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievementsTable).orderBy(achievementsTable.createdAt);
       res.json(achievementsList);
@@ -1595,10 +1595,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /**
    * @swagger
-   * /api/public/members:
+   * /api/external/members:
    *   get:
-   *     summary: Get public member information (Public API)
-   *     tags: [Public API]
+   *     summary: Get public member information (External API)
+   *     tags: [External API]
    *     security:
    *       - ApiKeyAuth: []
    *     parameters:
@@ -1611,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: List of members (public info only)
    */
-  app.get("/api/public/members", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.MEMBERS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/external/members", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.MEMBERS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const { department } = req.query;
       let members = await dbStorage.getMembersWithDepartments();
