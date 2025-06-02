@@ -51,16 +51,26 @@ export default function ApiKeysPage() {
   // Create API key mutation
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: CreateApiKeyData) => {
-      const response = await apiRequest("/api/admin/api-keys", {
+      const response = await fetch("/api/admin/api-keys", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
         body: JSON.stringify({
           ...data,
           expiresAt: data.expiresAt ? new Date(data.expiresAt).toISOString() : null,
         }),
       });
-      return response;
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      return response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] });
       setCreatedApiKey(response.apiKey);
       setIsCreateModalOpen(false);
@@ -82,9 +92,19 @@ export default function ApiKeysPage() {
   // Delete API key mutation
   const deleteApiKeyMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/api-keys/${id}`, {
+      const response = await fetch(`/api/admin/api-keys/${id}`, {
         method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] });

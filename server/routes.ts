@@ -1688,6 +1688,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API Key management endpoints
+  
+  /**
+   * @swagger
+   * /api/admin/api-keys:
+   *   get:
+   *     summary: Lấy danh sách API keys (Admin only)
+   *     tags: [Admin API Keys]
+   *     security:
+   *       - BearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách API keys
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/ApiKey'
+   */
+  app.get("/api/admin/api-keys", authenticate, authorize("system:admin"), async (req, res) => {
+    try {
+      const apiKeys = await dbStorage.getApiKeys();
+      res.json(apiKeys);
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách API keys" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/admin/api-keys:
+   *   post:
+   *     summary: Tạo API key mới (Admin only)
+   *     tags: [Admin API Keys]
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 description: Tên mô tả của API key
+   *               permissions:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Danh sách quyền hạn
+   *               expiresAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Ngày hết hạn (tùy chọn)
+   *     responses:
+   *       201:
+   *         description: API key đã được tạo
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 id:
+   *                   type: number
+   *                 apiKey:
+   *                   type: string
+   *                   description: API key được tạo (chỉ hiển thị 1 lần)
+   */
+  app.post("/api/admin/api-keys", authenticate, authorize("system:admin"), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, permissions, expiresAt } = req.body;
+      
+      if (!name || !permissions || !Array.isArray(permissions)) {
+        return res.status(400).json({ message: "Tên và quyền hạn là bắt buộc" });
+      }
+
+      // Generate random API key
+      const crypto = await import("crypto");
+      const bcrypt = await import("bcrypt");
+      const apiKey = crypto.randomBytes(32).toString("hex");
+      const keyHash = await bcrypt.hash(apiKey, 10);
+
+      const newApiKey = await dbStorage.createApiKey({
+        name,
+        keyHash,
+        permissions,
+        isActive: true,
+        createdBy: req.user!.id,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      });
+
+      res.status(201).json({
+        id: newApiKey.id,
+        apiKey, // Only return this once
+        message: "API key đã được tạo thành công"
+      });
+    } catch (error) {
+      console.error("Error creating API key:", error);
+      res.status(500).json({ message: "Lỗi tạo API key" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/admin/api-keys/{id}:
+   *   delete:
+   *     summary: Xóa API key (Admin only)
+   *     tags: [Admin API Keys]
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: API key đã được xóa
+   */
+  app.delete("/api/admin/api-keys/:id", authenticate, authorize("system:admin"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID không hợp lệ" });
+      }
+
+      const success = await dbStorage.deleteApiKey(id);
+      if (!success) {
+        return res.status(404).json({ message: "API key không tồn tại" });
+      }
+
+      res.json({ message: "API key đã được xóa" });
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+      res.status(500).json({ message: "Lỗi xóa API key" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

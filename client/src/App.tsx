@@ -8,6 +8,7 @@ import LandingPage from "@/pages/landing";
 import HomePage from "@/pages/home";
 import MembersPage from "@/pages/members";
 import AdminPage from "@/pages/admin";
+import ApiKeysPage from "@/pages/api-keys";
 import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/" component={HomePage} />
           <Route path="/members" component={MembersPage} />
           <Route path="/roles" component={AdminPage} />
+          <Route path="/api-keys" component={ApiKeysPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
