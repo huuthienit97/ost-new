@@ -484,6 +484,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Người dùng không tồn tại" });
       }
 
+      // Add no-cache headers to ensure fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json({
         user: {
           id: userWithRole.id,
@@ -492,6 +497,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fullName: userWithRole.fullName,
           role: userWithRole.role,
           mustChangePassword: userWithRole.mustChangePassword,
+          avatarUrl: userWithRole.avatarUrl,
+          bio: userWithRole.bio,
+          facebookUrl: userWithRole.facebookUrl,
+          instagramUrl: userWithRole.instagramUrl,
+          tiktokUrl: userWithRole.tiktokUrl,
         },
       });
     } catch (error) {
