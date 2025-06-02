@@ -27,11 +27,7 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
   const queryClient = useQueryClient();
   const [showCredentials, setShowCredentials] = useState(false);
 
-  // Query to get account info for this member
-  const { data: accountInfo } = useQuery({
-    queryKey: ["/api/members", member.id, "account"],
-    enabled: !!member.id,
-  });
+  // Account info is now included in the member object via user field
 
   // Mutation to reset password
   const resetPasswordMutation = useMutation({

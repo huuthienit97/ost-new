@@ -5,12 +5,13 @@ import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award } from "l
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { BeePoint } from "@shared/schema";
 
 export default function HomePage() {
   const { user, logout, hasPermission } = useAuth();
 
   // Fetch user's BeePoints
-  const { data: beePoints } = useQuery({
+  const { data: beePoints } = useQuery<BeePoint>({
     queryKey: ["/api/bee-points/me"],
     enabled: !!user,
   });
