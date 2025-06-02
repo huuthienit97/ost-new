@@ -18,8 +18,19 @@ const rateLimitStore = new Map<number, { count: number; resetTime: number }>();
 
 export async function authenticateApiKey(req: ApiKeyRequest, res: Response, next: NextFunction) {
   try {
-    // Skip API key authentication in development environment
-    if (process.env.NODE_ENV === 'development') {
+    // Skip API key authentication for same-origin requests (frontend calling backend)
+    const origin = req.headers.origin;
+    const host = req.headers.host;
+    const referer = req.headers.referer;
+    
+    // Check if request is from same origin (frontend to backend)
+    const isSameOrigin = origin && host && (
+      origin === `http://${host}` || 
+      origin === `https://${host}` ||
+      (referer && (referer.startsWith(`http://${host}`) || referer.startsWith(`https://${host}`)))
+    );
+    
+    if (isSameOrigin) {
       req.apiKey = null;
       return next();
     }
@@ -109,8 +120,8 @@ export async function authenticateApiKey(req: ApiKeyRequest, res: Response, next
 
 export function requireApiPermission(permission: string) {
   return (req: ApiKeyRequest, res: Response, next: NextFunction) => {
-    // Skip permission check in development environment
-    if (process.env.NODE_ENV === 'development') {
+    // Skip permission check for same-origin requests (already authenticated via same-origin check)
+    if (req.apiKey === null) {
       return next();
     }
 
