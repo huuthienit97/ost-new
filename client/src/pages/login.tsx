@@ -65,7 +65,13 @@ export default function LoginPage() {
         title: "Đăng nhập thành công",
         description: `Chào mừng ${data.user.fullName}`,
       });
-      window.location.href = "/";
+      
+      // Check if user must change password
+      if (data.user.mustChangePassword) {
+        window.location.href = "/change-password";
+      } else {
+        window.location.href = "/";
+      }
     },
     onError: (error: any) => {
       toast({

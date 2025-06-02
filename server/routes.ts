@@ -469,6 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: user.email,
           fullName: user.fullName,
           role: userWithRole.role,
+          mustChangePassword: user.mustChangePassword,
         },
       });
     } catch (error) {
@@ -490,6 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: userWithRole.email,
           fullName: userWithRole.fullName,
           role: userWithRole.role,
+          mustChangePassword: userWithRole.mustChangePassword,
         },
       });
     } catch (error) {
