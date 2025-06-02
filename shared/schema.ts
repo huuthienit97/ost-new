@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -158,6 +158,53 @@ export const pointTransactionsRelations = relations(pointTransactions, ({ one })
   }),
 }));
 
+// Achievements/Awards table
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'academic', 'creative', 'leadership', 'participation', 'special'
+  level: text("level").notNull(), // 'bronze', 'silver', 'gold', 'special'
+  badgeIcon: text("badge_icon"), // Icon name or emoji
+  badgeColor: text("badge_color").default("#3B82F6"), // Badge color
+  pointsReward: integer("points_reward").default(0), // BeePoints awarded
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// User achievements (many-to-many relationship)
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementId: integer("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
+  awardedDate: timestamp("awarded_date").defaultNow().notNull(),
+  awardedBy: integer("awarded_by").references(() => users.id), // Who granted the achievement
+  notes: text("notes"), // Additional notes about the achievement
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Achievement relations
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+  userAchievements: many(userAchievements),
+}));
+
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(users, {
+    fields: [userAchievements.userId],
+    references: [users.id],
+  }),
+  achievement: one(achievements, {
+    fields: [userAchievements.achievementId],
+    references: [achievements.id],
+  }),
+  awardedByUser: one(users, {
+    fields: [userAchievements.awardedBy],
+    references: [users.id],
+    relationName: "achievementAwardedBy",
+  }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, {
     fields: [users.roleId],
@@ -302,6 +349,13 @@ export const PERMISSIONS = {
   UPLOAD_VIEW: "upload:view",
   UPLOAD_DELETE: "upload:delete",
   
+  // Achievement permissions
+  ACHIEVEMENT_VIEW: "achievement:view",
+  ACHIEVEMENT_CREATE: "achievement:create",
+  ACHIEVEMENT_EDIT: "achievement:edit",
+  ACHIEVEMENT_DELETE: "achievement:delete",
+  ACHIEVEMENT_AWARD: "achievement:award",
+  
   // System permissions
   SYSTEM_ADMIN: "system:admin",
   STATS_VIEW: "stats:view",
@@ -342,4 +396,43 @@ export const createMemberSchema = insertMemberSchema.extend({
   memberType: z.enum(["active", "alumni"]),
   joinDate: z.string().min(1, "Ngày gia nhập là bắt buộc"),
   createUserAccount: z.boolean().optional(),
+});
+
+// Achievement constants
+export const ACHIEVEMENT_CATEGORIES = {
+  academic: "Học tập",
+  creative: "Sáng tạo", 
+  leadership: "Lãnh đạo",
+  participation: "Tham gia",
+  special: "Đặc biệt",
+} as const;
+
+export const ACHIEVEMENT_LEVELS = {
+  bronze: "Đồng",
+  silver: "Bạc", 
+  gold: "Vàng",
+  special: "Đặc biệt",
+} as const;
+
+// Achievement types
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = typeof achievements.$inferInsert;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = typeof userAchievements.$inferInsert;
+
+// Achievement schemas
+export const insertAchievementSchema = createInsertSchema(achievements);
+export const insertUserAchievementSchema = createInsertSchema(userAchievements);
+
+export const createAchievementSchema = insertAchievementSchema.extend({
+  title: z.string().min(1, "Tiêu đề thành tích là bắt buộc"),
+  category: z.enum(["academic", "creative", "leadership", "participation", "special"]),
+  level: z.enum(["bronze", "silver", "gold", "special"]),
+  pointsReward: z.number().min(0, "Điểm thưởng phải là số dương"),
+});
+
+export const awardAchievementSchema = z.object({
+  userId: z.number().min(1, "Người dùng là bắt buộc"),
+  achievementId: z.number().min(1, "Thành tích là bắt buộc"),
+  notes: z.string().optional(),
 });
