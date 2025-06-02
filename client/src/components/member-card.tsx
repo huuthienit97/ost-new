@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Edit, Users, GraduationCap, Calendar, Phone } from "lucide-react";
+import { Eye, Edit, Users, GraduationCap, Calendar, Phone, Trash2 } from "lucide-react";
 import { MemberWithDepartment, POSITIONS, MEMBER_TYPES } from "@shared/schema";
 import { getInitials, getAvatarGradient, getPositionColor, getMemberTypeColor } from "@/lib/utils";
 
@@ -10,9 +10,11 @@ interface MemberCardProps {
   index: number;
   onView: (member: MemberWithDepartment) => void;
   onEdit: (member: MemberWithDepartment) => void;
+  onDelete: (member: MemberWithDepartment) => void;
+  canDelete?: boolean;
 }
 
-export function MemberCard({ member, index, onView, onEdit }: MemberCardProps) {
+export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false }: MemberCardProps) {
   const initials = getInitials(member.fullName);
   const gradientClass = getAvatarGradient(index);
   const positionColor = getPositionColor(member.position);
@@ -109,6 +111,16 @@ export function MemberCard({ member, index, onView, onEdit }: MemberCardProps) {
             <Edit className="h-4 w-4 mr-1" />
             Sửa
           </Button>
+          {canDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDelete(member)}
+              className="px-3"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Users, UserCheck, GraduationCap, Building2, Bell, LogOut } from "lucide-react";
 import { MemberCard } from "@/components/member-card";
 import { AddMemberModal } from "@/components/add-member-modal";
@@ -22,12 +25,14 @@ interface Stats {
 
 export default function MembersPage() {
   const { user, logout, hasPermission } = useAuth();
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberWithDepartment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
+  const [deletingMember, setDeletingMember] = useState<MemberWithDepartment | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
@@ -44,6 +49,30 @@ export default function MembersPage() {
       department: selectedDepartment === "all" ? "" : selectedDepartment,
       position: selectedPosition === "all" ? "" : selectedPosition,
     }],
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      await apiRequest(`/api/members/${memberId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Thành công",
+        description: "Đã xóa thành viên thành công",
+      });
+      setDeletingMember(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa thành viên",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleViewMember = (member: MemberWithDepartment) => {
