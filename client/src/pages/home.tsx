@@ -1,12 +1,19 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HomePage() {
   const { user, logout, hasPermission } = useAuth();
+
+  // Fetch user's BeePoints
+  const { data: beePoints } = useQuery({
+    queryKey: ["/api/bee-points/me"],
+    enabled: !!user,
+  });
 
   if (!user) {
     return (

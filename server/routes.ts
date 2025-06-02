@@ -901,12 +901,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bee-points/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const beePoints = await storage.getUserBeePoints(userId);
+      const beePoints = await dbStorage.getUserBeePoints(userId);
       
       if (!beePoints) {
         // Create BeePoints for user if not exists
-        const newBeePoints = await storage.createUserBeePoints(userId);
-        await storage.addPointTransaction({
+        const newBeePoints = await dbStorage.createUserBeePoints(userId);
+        await dbStorage.addPointTransaction({
           userId,
           amount: 50,
           type: "welcome_bonus",
@@ -925,7 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bee-points/transactions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const transactions = await storage.getUserPointTransactions(userId);
+      const transactions = await dbStorage.getUserPointTransactions(userId);
       res.json(transactions);
     } catch (error) {
       console.error("Error fetching point transactions:", error);
@@ -941,7 +941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
       }
 
-      const transaction = await storage.addPointTransaction({
+      const transaction = await dbStorage.addPointTransaction({
         userId: parseInt(userId),
         amount: parseInt(amount),
         type,

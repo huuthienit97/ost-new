@@ -343,7 +343,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUploadsByUser(userId: number): Promise<Upload[]> {
-    return await db.select().from(uploads).where(eq(uploads.uploadedBy, userId)).orderBy(desc(uploads.uploadedAt));
+    return await db.select().from(uploads).where(eq(uploads.uploadedBy, userId)).orderBy(desc(uploads.createdAt));
   }
 
   // BeePoint methods
