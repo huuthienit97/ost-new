@@ -7,7 +7,6 @@ import {
   uploads,
   beePoints,
   pointTransactions,
-  apiKeys,
   type Member, 
   type Department, 
   type InsertMember, 
@@ -26,9 +25,7 @@ import {
   type BeePoint,
   type InsertBeePoint,
   type PointTransaction,
-  type InsertPointTransaction,
-  type ApiKey,
-  type InsertApiKey
+  type InsertPointTransaction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc } from "drizzle-orm";
@@ -90,13 +87,6 @@ export interface IStorage {
   addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
   getUserPointTransactions(userId: number): Promise<PointTransaction[]>;
   getUserWithBeePoints(userId: number): Promise<UserWithBeePoints | undefined>;
-
-  // API Keys methods
-  getApiKeys(): Promise<ApiKey[]>;
-  getApiKey(id: number): Promise<ApiKey | undefined>;
-  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
-  updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined>;
-  deleteApiKey(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -526,38 +516,6 @@ export class DatabaseStorage implements IStorage {
       ...user,
       beePoints: userBeePoints,
     };
-  }
-
-  // API Keys methods
-  async getApiKeys(): Promise<ApiKey[]> {
-    return await db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
-  }
-
-  async getApiKey(id: number): Promise<ApiKey | undefined> {
-    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
-    return apiKey || undefined;
-  }
-
-  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
-    const [apiKey] = await db
-      .insert(apiKeys)
-      .values(insertApiKey)
-      .returning();
-    return apiKey;
-  }
-
-  async updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined> {
-    const [apiKey] = await db
-      .update(apiKeys)
-      .set(updates)
-      .where(eq(apiKeys.id, id))
-      .returning();
-    return apiKey || undefined;
-  }
-
-  async deleteApiKey(id: number): Promise<boolean> {
-    const result = await db.delete(apiKeys).where(eq(apiKeys.id, id));
-    return (result.rowCount ?? 0) > 0;
   }
 }
 

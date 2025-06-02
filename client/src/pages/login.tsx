@@ -18,7 +18,6 @@ export default function LoginPage() {
   const { data: initStatus } = useQuery<{ needsInit: boolean }>({
     queryKey: ["/api/auth/check-init"],
     retry: false,
-    throwOnError: false,
   });
 
   React.useEffect(() => {

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -189,20 +189,6 @@ export const userAchievements = pgTable("user_achievements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// API Keys table for public API access
-export const apiKeys = pgTable("api_keys", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  keyHash: varchar("key_hash", { length: 255 }).notNull().unique(),
-  permissions: json("permissions").notNull().default('[]'), // Array of permissions
-  isActive: boolean("is_active").default(true).notNull(),
-  rateLimit: integer("rate_limit").default(1000).notNull(), // Requests per hour
-  lastUsed: timestamp("last_used"),
-  createdBy: integer("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at"), // Optional expiration
-});
-
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({
   userAchievements: many(userAchievements),
@@ -224,13 +210,6 @@ export const userAchievementsRelations = relations(userAchievements, ({ one }) =
   }),
 }));
 
-export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
-  createdByUser: one(users, {
-    fields: [apiKeys.createdBy],
-    references: [users.id],
-  }),
-}));
-
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, {
     fields: [users.roleId],
@@ -244,9 +223,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdTransactions: many(pointTransactions, {
     relationName: "transactionCreatedBy",
   }),
-  userAchievements: many(userAchievements),
-  awardedAchievements: many(userAchievements, { relationName: "achievementAwardedBy" }),
-  createdApiKeys: many(apiKeys),
 }));
 
 // Insert schemas
@@ -471,25 +447,3 @@ export const awardAchievementSchema = z.object({
   achievementId: z.number().min(1, "Thành tích là bắt buộc"),
   notes: z.string().optional(),
 });
-
-// API Keys types
-export type ApiKey = typeof apiKeys.$inferSelect;
-export type InsertApiKey = typeof apiKeys.$inferInsert;
-
-// API Keys schemas
-export const insertApiKeySchema = createInsertSchema(apiKeys);
-export const createApiKeySchema = insertApiKeySchema.extend({
-  name: z.string().min(1, "Tên API key là bắt buộc"),
-  permissions: z.array(z.string()).min(1, "Ít nhất một quyền hạn là bắt buộc"),
-  rateLimit: z.number().min(1).max(10000, "Giới hạn rate phải từ 1-10000 requests/hour"),
-  expiresAt: z.date().optional(),
-});
-
-// Public API permissions
-export const PUBLIC_API_PERMISSIONS = {
-  // Read-only permissions for public API
-  DEPARTMENTS_READ: "public:departments:read",
-  STATS_READ: "public:stats:read", 
-  ACHIEVEMENTS_READ: "public:achievements:read",
-  MEMBERS_READ: "public:members:read",
-} as const;

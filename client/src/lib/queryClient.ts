@@ -1,30 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Get API base URL from environment or default to current origin
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  
-  // In development, use localhost:5000
-  if (import.meta.env.DEV) {
-    return 'http://localhost:5000';
-  }
-  
-  // In production, use same origin
-  return window.location.origin;
-};
-
-const API_BASE_URL = getApiBaseUrl();
-
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    try {
-      const text = (await res.text()) || res.statusText;
-      throw new Error(`${res.status}: ${text}`);
-    } catch (error) {
-      throw new Error(`${res.status}: ${res.statusText}`);
-    }
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
   }
 }
 
@@ -34,12 +13,11 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const token = localStorage.getItem("token");
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   
-  const res = await fetch(fullUrl, {
+  const res = await fetch(url, {
     method,
     headers: {
-      "Content-Type": "application/json",
+      ...(data ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: data ? JSON.stringify(data) : undefined,
@@ -56,52 +34,34 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    try {
-      const token = localStorage.getItem("token");
-      const url = queryKey[0] as string;
-      const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-      
-      const res = await fetch(fullUrl, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
+    const token = localStorage.getItem("token");
+    
+    const res = await fetch(queryKey[0] as string, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+    });
 
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
-      }
-
-      await throwIfResNotOk(res);
-      const data = await res.json();
-      return data;
-    } catch (error) {
-      // Silent handling for 401 errors when configured to return null
-      if (unauthorizedBehavior === "returnNull" && error instanceof Error && error.message.includes('401')) {
-        return null;
-      }
-      console.error('Query error:', error);
-      if (unauthorizedBehavior === "returnNull") {
-        return null;
-      }
-      throw error;
+    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      return null;
     }
+
+    await throwIfResNotOk(res);
+    return await res.json();
   };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "returnNull" }),
+      queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: false,
-      throwOnError: false,
-      refetchOnMount: false,
     },
     mutations: {
       retry: false,
-      throwOnError: false,
     },
   },
 });

@@ -77,37 +77,10 @@ const options = {
             memberType: { type: 'string' },
             joinDate: { type: 'string' },
             notes: { type: 'string' },
-            userId: { type: 'integer', nullable: true },
             isActive: { type: 'boolean' },
-            createdBy: { type: 'integer' },
-            updatedBy: { type: 'integer' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
-        },
-        MemberWithDepartment: {
-          allOf: [
-            { $ref: '#/components/schemas/Member' },
-            {
-              type: 'object',
-              properties: {
-                department: {
-                  $ref: '#/components/schemas/Department'
-                },
-                user: {
-                  type: 'object',
-                  nullable: true,
-                  properties: {
-                    id: { type: 'integer' },
-                    username: { type: 'string' },
-                    fullName: { type: 'string' },
-                    email: { type: 'string' }
-                  }
-                }
-              },
-              required: ['department']
-            }
-          ]
         },
         LoginRequest: {
           type: 'object',
@@ -299,10 +272,6 @@ const options = {
       {
         name: 'BeePoints',
         description: '🍯 Hệ thống điểm thưởng BeePoints',
-      },
-      {
-        name: 'External API',
-        description: '🌐 API cho bên ngoài - Cần API key để truy cập',
       },
     ],
   },

@@ -36,14 +36,10 @@ export default function MembersPage() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
-    retry: false,
-    throwOnError: false,
   });
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"],
-    retry: false,
-    throwOnError: false,
   });
 
   const { data: members = [], isLoading: membersLoading } = useQuery<MemberWithDepartment[]>({
@@ -53,8 +49,6 @@ export default function MembersPage() {
       department: selectedDepartment === "all" ? "" : selectedDepartment,
       position: selectedPosition === "all" ? "" : selectedPosition,
     }],
-    retry: false,
-    throwOnError: false,
   });
 
   const deleteMemberMutation = useMutation({

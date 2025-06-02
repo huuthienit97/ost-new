@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -14,8 +14,6 @@ export default function HomePage() {
   const { data: beePoints } = useQuery<BeePoint>({
     queryKey: ["/api/bee-points/me"],
     enabled: !!user,
-    retry: false,
-    throwOnError: false,
   });
 
   if (!user) {
@@ -181,23 +179,6 @@ export default function HomePage() {
               <CardContent>
                 <p className="text-gray-600 text-sm">
                   Xem tài liệu API và thử nghiệm endpoints
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* API Keys Management */}
-          {hasPermission("system_admin") && (
-            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/api-keys"}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Key className="h-5 w-5 text-blue-600" />
-                  <span>Quản lý API Keys</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 text-sm">
-                  Tạo và quản lý API keys cho external applications
                 </p>
               </CardContent>
             </Card>

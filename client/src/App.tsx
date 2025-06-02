@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "@/pages/landing";
 import HomePage from "@/pages/home";
 import MembersPage from "@/pages/members";
@@ -14,7 +13,6 @@ import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 import ProfilePage from "@/pages/profile";
 import AchievementsPage from "@/pages/achievements";
-import ApiKeysPage from "@/pages/api-keys";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -46,7 +44,6 @@ function Router() {
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
-          <Route path="/api-keys" component={ApiKeysPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
@@ -61,21 +58,13 @@ function Router() {
 }
 
 function App() {
-  // Handle unhandled promise rejections in the frontend
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-    event.preventDefault(); // Prevent the default browser behavior
-  });
-
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
