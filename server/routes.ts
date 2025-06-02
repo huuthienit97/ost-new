@@ -691,10 +691,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const memberData = validationResult.data;
       
-      // Check if studentId already exists
-      const existingMembers = await dbStorage.getMembers();
-      if (existingMembers.some(m => m.studentId === memberData.studentId)) {
-        return res.status(400).json({ message: "Mã học sinh đã tồn tại" });
+      // Check if studentId already exists (only if studentId is provided)
+      if (memberData.studentId) {
+        const existingMembers = await dbStorage.getMembers();
+        if (existingMembers.some(m => m.studentId === memberData.studentId)) {
+          return res.status(400).json({ message: "Mã học sinh đã tồn tại" });
+        }
       }
       
       // Validate department exists
@@ -706,7 +708,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newMember = await dbStorage.createMember(memberData);
       const memberWithDepartment = await dbStorage.getMemberWithDepartment(newMember.id);
       
-      res.status(201).json(memberWithDepartment);
+      let userCredentials = null;
+      
+      // Create user account if requested
+      if (memberData.createUserAccount) {
+        try {
+          // Generate username from full name
+          const username = memberData.fullName
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/[^a-z0-9]/g, '')
+            .substring(0, 15);
+          
+          // Generate random password
+          const password = Math.random().toString(36).slice(-8);
+          const hashedPassword = await hashPassword(password);
+          
+          // Get member role (default role for members)
+          const roles = await dbStorage.getRoles();
+          const memberRole = roles.find(r => r.name === 'member');
+          if (!memberRole) {
+            throw new Error("Member role not found");
+          }
+          
+          // Create user account
+          const userData = {
+            username,
+            email: memberData.email || `${username}@example.com`,
+            fullName: memberData.fullName,
+            password: hashedPassword,
+            roleId: memberRole.id,
+            mustChangePassword: true,
+          };
+          
+          const newUser = await dbStorage.createUser(userData);
+          
+          // Create BeePoint record for new user
+          await dbStorage.createBeePoint({
+            userId: newUser.id,
+            currentPoints: 50,
+            totalEarned: 50,
+            totalSpent: 0,
+          });
+          
+          // Create welcome transaction
+          await dbStorage.createPointTransaction({
+            userId: newUser.id,
+            amount: 50,
+            type: 'welcome_bonus',
+            description: 'Điểm chào mừng thành viên mới',
+            createdBy: req.user?.id,
+          });
+          
+          userCredentials = {
+            username,
+            password, // Return plain password for display
+          };
+        } catch (error) {
+          console.error("Error creating user account:", error);
+          // Don't fail member creation if user account creation fails
+        }
+      }
+      
+      const result = {
+        ...memberWithDepartment,
+        userCredentials,
+      };
+      
+      res.status(201).json(result);
     } catch (error) {
       res.status(500).json({ message: "Failed to create member" });
     }

@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -14,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { createMemberSchema, Department, MemberWithDepartment } from "@shared/schema";
 import { z } from "zod";
-import { Copy, Eye, EyeOff } from "lucide-react";
+import { Copy } from "lucide-react";
 
 type CreateMemberData = z.infer<typeof createMemberSchema>;
 
@@ -118,6 +117,7 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       form.reset();
+      setNewUserInfo(null);
     }
     onOpenChange(newOpen);
   };
@@ -125,71 +125,74 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editingMember ? "Chỉnh sửa thành viên" : "Thêm thành viên mới"}
-          </DialogTitle>
-        </DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingMember ? "Chỉnh sửa thành viên" : "Thêm thành viên mới"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Họ và tên *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nhập họ và tên" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Họ và tên *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nhập họ và tên" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mã học sinh *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="VD: 2024001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="studentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mã học sinh</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nhập mã học sinh" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="example@gmail.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Nhập email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Số điện thoại</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0123456789" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Số điện thoại</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="Nhập số điện thoại" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -198,225 +201,230 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                   <FormItem>
                     <FormLabel>Lớp *</FormLabel>
                     <FormControl>
-                      <Input placeholder="VD: 12A1" {...field} />
+                      <Input placeholder="Nhập lớp (ví dụ: 12A1)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="departmentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ban *</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn ban" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id.toString()}>
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chức vụ *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn chức vụ" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="president">Chủ tịch</SelectItem>
+                          <SelectItem value="vice-president">Phó chủ tịch</SelectItem>
+                          <SelectItem value="secretary">Thư ký</SelectItem>
+                          <SelectItem value="head">Trưởng ban</SelectItem>
+                          <SelectItem value="vice-head">Phó trưởng ban</SelectItem>
+                          <SelectItem value="member">Thành viên</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="memberType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Trạng thái *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn trạng thái" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Đang hoạt động</SelectItem>
+                          <SelectItem value="alumni">Cựu thành viên</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="joinDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ngày gia nhập *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="memberType"
+                name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loại thành viên *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại thành viên" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Thành viên hiện tại</SelectItem>
-                        <SelectItem value="alumni">Cựu thành viên</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ban *</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn ban" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id.toString()}>
-                            {dept.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="position"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chức vụ *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn chức vụ" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="president">Chủ nhiệm</SelectItem>
-                        <SelectItem value="vice-president">Phó chủ nhiệm</SelectItem>
-                        <SelectItem value="secretary">Thư ký</SelectItem>
-                        <SelectItem value="head">Trưởng ban</SelectItem>
-                        <SelectItem value="vice-head">Phó ban</SelectItem>
-                        <SelectItem value="member">Thành viên</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="joinDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ngày gia nhập *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ghi chú</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Thông tin bổ sung về thành viên..." 
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {!editingMember && (
-              <FormField
-                control={form.control}
-                name="createUserAccount"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormLabel>Ghi chú</FormLabel>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+                      <Textarea 
+                        placeholder="Thông tin bổ sung về thành viên..." 
+                        rows={3}
+                        {...field} 
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Tạo tài khoản đăng nhập
-                      </FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Tạo tài khoản đăng nhập cho thành viên này để họ có thể truy cập hệ thống
-                      </p>
-                    </div>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => handleOpenChange(false)}
-              >
-                Hủy
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createMemberMutation.isPending || updateMemberMutation.isPending}
-              >
-                {editingMember ? "Cập nhật" : "Thêm thành viên"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              {!editingMember && (
+                <FormField
+                  control={form.control}
+                  name="createUserAccount"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Tạo tài khoản đăng nhập
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Tạo tài khoản đăng nhập cho thành viên này để họ có thể truy cập hệ thống
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
 
-    {/* Dialog hiển thị thông tin đăng nhập */}
-    <Dialog open={!!newUserInfo} onOpenChange={() => {
-      setNewUserInfo(null);
-      onOpenChange(false);
-    }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Tài khoản đã được tạo thành công!</DialogTitle>
-        </DialogHeader>
-        {newUserInfo && (
-          <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-semibold text-green-800 mb-2">Thông tin đăng nhập:</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Tên đăng nhập:</span>
-                  <div className="flex items-center space-x-2">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.username}</code>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigator.clipboard.writeText(newUserInfo.username)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => handleOpenChange(false)}
+                >
+                  Hủy
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createMemberMutation.isPending || updateMemberMutation.isPending}
+                >
+                  {editingMember ? "Cập nhật" : "Thêm thành viên"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog hiển thị thông tin đăng nhập */}
+      <Dialog open={!!newUserInfo} onOpenChange={() => {
+        setNewUserInfo(null);
+        onOpenChange(false);
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tài khoản đã được tạo thành công!</DialogTitle>
+          </DialogHeader>
+          {newUserInfo && (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-800 mb-2">Thông tin đăng nhập:</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Tên đăng nhập:</span>
+                    <div className="flex items-center space-x-2">
+                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.username}</code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigator.clipboard.writeText(newUserInfo.username)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Mật khẩu:</span>
-                  <div className="flex items-center space-x-2">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.password}</code>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigator.clipboard.writeText(newUserInfo.password)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Mật khẩu:</span>
+                    <div className="flex items-center space-x-2">
+                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.password}</code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigator.clipboard.writeText(newUserInfo.password)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Lưu ý:</strong> Hãy lưu lại thông tin này và chuyển cho thành viên. 
+                  Thành viên sẽ được yêu cầu đổi mật khẩu khi đăng nhập lần đầu.
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => {
+                  setNewUserInfo(null);
+                  onOpenChange(false);
+                }}>
+                  Đã hiểu
+                </Button>
+              </div>
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Lưu ý:</strong> Hãy lưu lại thông tin này và chuyển cho thành viên. 
-                Thành viên sẽ được yêu cầu đổi mật khẩu khi đăng nhập lần đầu.
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={() => {
-                setNewUserInfo(null);
-                onOpenChange(false);
-              }}>
-                Đã hiểu
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
