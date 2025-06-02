@@ -646,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchLower = search.toLowerCase();
         members = members.filter(member =>
           member.fullName.toLowerCase().includes(searchLower) ||
-          member.studentId.toLowerCase().includes(searchLower) ||
+          (member.studentId && member.studentId.toLowerCase().includes(searchLower)) ||
           member.class.toLowerCase().includes(searchLower) ||
           member.department.name.toLowerCase().includes(searchLower)
         );

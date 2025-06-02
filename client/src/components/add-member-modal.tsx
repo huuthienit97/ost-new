@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { createMemberSchema, Department, MemberWithDepartment } from "@shared/schema";
 import { z } from "zod";
+import { Copy, Eye, EyeOff } from "lucide-react";
 
 type CreateMemberData = z.infer<typeof createMemberSchema>;
 

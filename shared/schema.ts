@@ -39,7 +39,7 @@ export const departments = pgTable("departments", {
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   fullName: text("full_name").notNull(),
-  studentId: text("student_id").notNull().unique(),
+  studentId: text("student_id"),
   email: text("email"),
   phone: text("phone"),
   class: text("class").notNull(),
@@ -186,6 +186,8 @@ export const insertMemberSchema = createInsertSchema(members).omit({
   isActive: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  studentId: z.string().optional(),
 });
 
 // Types
@@ -307,7 +309,7 @@ export const createUserSchema = insertUserSchema.extend({
 
 export const createMemberSchema = insertMemberSchema.extend({
   fullName: z.string().min(1, "Họ và tên là bắt buộc"),
-  studentId: z.string().min(1, "Mã học sinh là bắt buộc"),
+  studentId: z.string().optional().or(z.literal("")),
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   phone: z.string().optional(),
   class: z.string().min(1, "Lớp là bắt buộc"),
@@ -315,4 +317,5 @@ export const createMemberSchema = insertMemberSchema.extend({
   position: z.enum(["president", "vice-president", "secretary", "head", "vice-head", "member"]),
   memberType: z.enum(["active", "alumni"]),
   joinDate: z.string().min(1, "Ngày gia nhập là bắt buộc"),
+  createUserAccount: z.boolean().optional(),
 });
