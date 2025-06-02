@@ -11,7 +11,7 @@ import { MemberCard } from "@/components/member-card";
 import { AddMemberModal } from "@/components/add-member-modal";
 import { getInitials, getAvatarGradient } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { MemberWithDepartment, Department } from "@shared/schema";
+import { MemberWithDepartment, Department, PERMISSIONS } from "@shared/schema";
 
 interface Stats {
   totalMembers: number;
@@ -21,7 +21,7 @@ interface Stats {
 }
 
 export default function MembersPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberWithDepartment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,6 +102,11 @@ export default function MembersPage() {
                   {user?.fullName ? getInitials(user.fullName) : "A"}
                 </span>
               </div>
+              {user && hasPermission("system_admin") && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="/admin">Quản trị</a>
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={logout} title="Đăng xuất">
                 <LogOut className="h-4 w-4" />
               </Button>

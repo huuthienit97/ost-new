@@ -8,11 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Users, Lock, User } from "lucide-react";
 
-interface LoginPageProps {
-  onLoginSuccess: (token: string, user: any) => void;
-}
-
-export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
+export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
@@ -48,13 +44,12 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      localStorage.setItem("auth_token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      onLoginSuccess(data.token, data.user);
+      localStorage.setItem("token", data.token);
       toast({
         title: "Đăng nhập thành công",
         description: `Chào mừng ${data.user.fullName}`,
       });
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({

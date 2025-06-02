@@ -5,10 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import MembersPage from "@/pages/members";
+import AdminPage from "@/pages/admin";
 import LoginPage from "@/pages/login";
 
 function Router() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -22,13 +23,14 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={login} />;
+    return <LoginPage />;
   }
 
   return (
     <Switch>
       <Route path="/" component={MembersPage} />
       <Route path="/members" component={MembersPage} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={MembersPage} />
     </Switch>
   );
