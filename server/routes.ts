@@ -1001,7 +1001,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await dbStorage.updateUser(userId, {
         passwordHash: newPasswordHash,
         mustChangePassword: false,
-        updatedAt: new Date(),
       });
 
       res.json({ message: "Đổi mật khẩu thành công" });

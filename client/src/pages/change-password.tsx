@@ -10,7 +10,7 @@ import { Eye, EyeOff, Key } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function ChangePasswordPage() {
-  const { user, refresh } = useAuth();
+  const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,14 +21,24 @@ export default function ChangePasswordPage() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      return await apiRequest("/api/auth/change-password", {
+      const response = await fetch("/api/auth/change-password", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
         body: JSON.stringify(data),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      // Refresh user data to update mustChangePassword status
-      refresh();
+      // Redirect to home after successful password change
       window.location.href = "/";
     },
     onError: (error: any) => {

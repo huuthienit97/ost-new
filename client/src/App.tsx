@@ -13,7 +13,7 @@ import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -26,6 +26,11 @@ function Router() {
     );
   }
 
+  // Check if user must change password (first time login)
+  if (isAuthenticated && user?.mustChangePassword) {
+    return <ChangePasswordPage />;
+  }
+
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
@@ -35,6 +40,7 @@ function Router() {
           <Route path="/members" component={MembersPage} />
           <Route path="/roles" component={AdminPage} />
           <Route path="/settings" component={SettingsPage} />
+          <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
       ) : (
