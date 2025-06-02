@@ -165,25 +165,41 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center space-y-4">
+              {/* Debug info */}
+              {user?.avatarUrl && (
+                <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                  Avatar URL: {user.avatarUrl}
+                </div>
+              )}
               <div className="relative">
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
                   {user?.avatarUrl ? (
-                    <img 
-                      src={user.avatarUrl}
-                      alt="Avatar" 
-                      className="w-full h-full object-cover"
-                      key={user.avatarUrl} // Force re-render when avatar changes
-                      onError={(e) => {
-                        console.error('Avatar load error:', user.avatarUrl);
-                        // Hide broken image and show fallback
-                        e.currentTarget.style.display = 'none';
-                      }}
-                      onLoad={() => {
-                        console.log('Avatar loaded successfully:', user.avatarUrl);
-                      }}
-                    />
-                  ) : null}
-                  {!user?.avatarUrl && (
+                    <>
+                      <img 
+                        src={user.avatarUrl}
+                        alt="Avatar" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Avatar load error:', user.avatarUrl);
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Show fallback text
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'block';
+                        }}
+                        onLoad={() => {
+                          console.log('Avatar loaded successfully:', user.avatarUrl);
+                        }}
+                        style={{ display: 'block' }}
+                      />
+                      <span 
+                        className="text-white text-3xl font-bold absolute inset-0 flex items-center justify-center"
+                        style={{ display: 'none' }}
+                      >
+                        {user?.fullName?.charAt(0) || 'U'}
+                      </span>
+                    </>
+                  ) : (
                     <span className="text-white text-3xl font-bold">
                       {user?.fullName?.charAt(0) || 'U'}
                     </span>
