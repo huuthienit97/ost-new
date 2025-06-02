@@ -43,6 +43,7 @@ function Router() {
           <Route path="/roles" component={AdminPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
+          <Route path="/achievements" component={AchievementsPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

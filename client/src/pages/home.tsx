@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins, User } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -124,6 +124,21 @@ export default function HomePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Achievements - Available for all users */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/achievements"}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Award className="h-5 w-5 text-yellow-600" />
+                <span>Thành tích</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Xem thành tích cá nhân và quản lý khen thưởng
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Statistics - Available for all users */}
           <Card className="hover:shadow-md transition-shadow">
