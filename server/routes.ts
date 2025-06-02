@@ -2,8 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements } from "@shared/schema";
-import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements as achievementsTable, userAchievements } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS, PUBLIC_API_PERMISSIONS, createApiKeySchema } from "@shared/schema";
+import { authenticateApiKey, requireApiPermission, type ApiKeyRequest } from "./apiKeyAuth";
+import crypto from "crypto";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 import { eq, and, desc, ilike, or, isNotNull } from "drizzle-orm";
@@ -1503,6 +1505,329 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching my achievements:", error);
       res.status(500).json({ message: "Lỗi lấy thành tích của tôi" });
+    }
+  });
+
+  // ===========================================
+  // PUBLIC API ENDPOINTS (Require API Key)
+  // ===========================================
+
+  /**
+   * @swagger
+   * /api/public/departments:
+   *   get:
+   *     summary: Get all departments (Public API)
+   *     tags: [Public API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *     responses:
+   *       200:
+   *         description: List of departments
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Department'
+   */
+  app.get("/api/public/departments", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: ApiKeyRequest, res) => {
+    try {
+      const departments = await dbStorage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/public/stats:
+   *   get:
+   *     summary: Get basic statistics (Public API)
+   *     tags: [Public API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *     responses:
+   *       200:
+   *         description: Basic statistics
+   */
+  app.get("/api/public/stats", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: ApiKeyRequest, res) => {
+    try {
+      const totalMembers = await db.select().from(members);
+      const activeMembers = totalMembers.filter(m => m.memberType === 'active');
+      const alumniMembers = totalMembers.filter(m => m.memberType === 'alumni');
+      const departments = await dbStorage.getDepartments();
+
+      res.json({
+        totalMembers: totalMembers.length,
+        activeMembers: activeMembers.length,
+        alumniMembers: alumniMembers.length,
+        totalDepartments: departments.length,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/public/achievements:
+   *   get:
+   *     summary: Get all achievements (Public API)
+   *     tags: [Public API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *     responses:
+   *       200:
+   *         description: List of achievements
+   */
+  app.get("/api/public/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
+    try {
+      const achievementsList = await db.select().from(achievements).orderBy(achievements.createdAt);
+      res.json(achievementsList);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/public/members:
+   *   get:
+   *     summary: Get public member information (Public API)
+   *     tags: [Public API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: department
+   *         schema:
+   *           type: string
+   *         description: Filter by department ID
+   *     responses:
+   *       200:
+   *         description: List of members (public info only)
+   */
+  app.get("/api/public/members", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.MEMBERS_READ), async (req: ApiKeyRequest, res) => {
+    try {
+      const { department } = req.query;
+      let members = await dbStorage.getMembersWithDepartments();
+      
+      // Filter by department if specified
+      if (department && typeof department === 'string') {
+        const deptId = parseInt(department);
+        if (!isNaN(deptId)) {
+          members = members.filter(member => member.departmentId === deptId);
+        }
+      }
+
+      // Return only public information
+      const publicMembers = members.map(member => ({
+        id: member.id,
+        fullName: member.fullName,
+        class: member.class,
+        position: member.position,
+        memberType: member.memberType,
+        joinDate: member.joinDate,
+        department: {
+          id: member.department.id,
+          name: member.department.name,
+          icon: member.department.icon,
+          color: member.department.color,
+        }
+      }));
+
+      res.json(publicMembers);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ===========================================
+  // API KEY MANAGEMENT (Admin Only)
+  // ===========================================
+
+  /**
+   * @swagger
+   * /api/admin/api-keys:
+   *   get:
+   *     summary: Get all API keys (Admin only)
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of API keys
+   */
+  app.get("/api/admin/api-keys", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const apiKeys = await dbStorage.getApiKeys();
+      // Don't return the actual key hashes
+      const safeApiKeys = apiKeys.map(key => ({
+        ...key,
+        keyHash: undefined,
+      }));
+      res.json(safeApiKeys);
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách API keys" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/admin/api-keys:
+   *   post:
+   *     summary: Create new API key (Admin only)
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               permissions:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *               rateLimit:
+   *                 type: integer
+   *               expiresAt:
+   *                 type: string
+   *                 format: date-time
+   *     responses:
+   *       201:
+   *         description: API key created successfully
+   */
+  app.post("/api/admin/api-keys", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = createApiKeySchema.parse(req.body);
+      
+      // Generate a new API key
+      const apiKey = crypto.randomBytes(32).toString('hex');
+      const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+      
+      const newApiKey = await dbStorage.createApiKey({
+        name: validatedData.name,
+        keyHash,
+        permissions: validatedData.permissions,
+        rateLimit: validatedData.rateLimit,
+        expiresAt: validatedData.expiresAt,
+        createdBy: req.user!.id,
+      });
+
+      res.status(201).json({
+        message: "API key đã được tạo thành công",
+        apiKey: {
+          ...newApiKey,
+          keyHash: undefined, // Don't return the hash
+          key: apiKey, // Return the actual key (only once!)
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dữ liệu không hợp lệ", errors: error.errors });
+      }
+      console.error("Error creating API key:", error);
+      res.status(500).json({ message: "Lỗi tạo API key" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/admin/api-keys/{id}:
+   *   put:
+   *     summary: Update API key (Admin only)
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: API key updated successfully
+   */
+  app.put("/api/admin/api-keys/:id", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID không hợp lệ" });
+      }
+
+      const { name, permissions, rateLimit, isActive, expiresAt } = req.body;
+      
+      const updatedApiKey = await dbStorage.updateApiKey(id, {
+        name,
+        permissions,
+        rateLimit,
+        isActive,
+        expiresAt,
+      });
+
+      if (!updatedApiKey) {
+        return res.status(404).json({ message: "API key không tồn tại" });
+      }
+
+      res.json({
+        message: "API key đã được cập nhật",
+        apiKey: {
+          ...updatedApiKey,
+          keyHash: undefined,
+        }
+      });
+    } catch (error) {
+      console.error("Error updating API key:", error);
+      res.status(500).json({ message: "Lỗi cập nhật API key" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/admin/api-keys/{id}:
+   *   delete:
+   *     summary: Delete API key (Admin only)
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: API key deleted successfully
+   */
+  app.delete("/api/admin/api-keys/:id", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID không hợp lệ" });
+      }
+
+      const deleted = await dbStorage.deleteApiKey(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "API key không tồn tại" });
+      }
+
+      res.json({ message: "API key đã được xóa" });
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+      res.status(500).json({ message: "Lỗi xóa API key" });
     }
   });
 

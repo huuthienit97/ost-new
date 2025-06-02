@@ -527,6 +527,38 @@ export class DatabaseStorage implements IStorage {
       beePoints: userBeePoints,
     };
   }
+
+  // API Keys methods
+  async getApiKeys(): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKey(id: number): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    return apiKey || undefined;
+  }
+
+  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
+    const [apiKey] = await db
+      .insert(apiKeys)
+      .values(insertApiKey)
+      .returning();
+    return apiKey;
+  }
+
+  async updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined> {
+    const [apiKey] = await db
+      .update(apiKeys)
+      .set(updates)
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return apiKey || undefined;
+  }
+
+  async deleteApiKey(id: number): Promise<boolean> {
+    const result = await db.delete(apiKeys).where(eq(apiKeys.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();
