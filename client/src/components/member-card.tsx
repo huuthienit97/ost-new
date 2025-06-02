@@ -1,9 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Edit, Users, GraduationCap, Calendar, Phone, Trash2 } from "lucide-react";
+import { Eye, Edit, Users, GraduationCap, Calendar, Phone, Trash2, User, Key, RotateCcw } from "lucide-react";
 import { MemberWithDepartment, POSITIONS, MEMBER_TYPES } from "@shared/schema";
 import { getInitials, getAvatarGradient, getPositionColor, getMemberTypeColor } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface MemberCardProps {
   member: MemberWithDepartment;
@@ -12,6 +15,7 @@ interface MemberCardProps {
   onEdit: (member: MemberWithDepartment) => void;
   onDelete: (member: MemberWithDepartment) => void;
   canDelete?: boolean;
+  canResetPassword?: boolean;
 }
 
 export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false }: MemberCardProps) {

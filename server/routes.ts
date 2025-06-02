@@ -1055,6 +1055,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset password endpoint for admin
+  app.post("/api/users/:id/reset-password", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await dbStorage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+      
+      // Generate new temporary password
+      const newPassword = Math.random().toString(36).slice(-8);
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update user password
+      await dbStorage.updateUser(userId, {
+        passwordHash: hashedPassword,
+        mustChangePassword: true
+      });
+      
+      res.json({ 
+        message: "Reset mật khẩu thành công",
+        username: user.username,
+        newPassword
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Lỗi server" });
+    }
+  });
+
+  // Get user account info for member
+  app.get("/api/members/:id/account", authenticate, authorize([PERMISSIONS.MEMBER_VIEW]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const memberId = parseInt(req.params.id);
+      const member = await dbStorage.getMember(memberId);
+      
+      if (!member) {
+        return res.status(404).json({ message: "Không tìm thấy thành viên" });
+      }
+      
+      // Find user by email or name
+      let user = null;
+      if (member.email) {
+        user = await dbStorage.getUserByEmail(member.email);
+      }
+      
+      if (!user) {
+        return res.json({ hasAccount: false });
+      }
+      
+      res.json({
+        hasAccount: true,
+        username: user.username,
+        email: user.email,
+        mustChangePassword: user.mustChangePassword,
+        isActive: user.isActive
+      });
+    } catch (error) {
+      console.error("Error getting member account:", error);
+      res.status(500).json({ message: "Lỗi server" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
