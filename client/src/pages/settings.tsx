@@ -48,7 +48,7 @@ export default function SettingsPage() {
   // Setting mutation
   const settingMutation = useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: string; description?: string }) => {
-      await apiRequest(`/api/settings`, "POST", { key, value, description });
+      await apiRequest("POST", `/api/settings`, { key, value, description });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -106,7 +106,7 @@ export default function SettingsPage() {
   // Delete upload mutation
   const deleteUploadMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/uploads/${id}`, "DELETE");
+      await apiRequest("DELETE", `/api/uploads/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
