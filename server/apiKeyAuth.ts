@@ -20,11 +20,16 @@ export async function apiKeyAuth(req: ApiKeyRequest, res: Response, next: NextFu
       return res.status(401).json({ message: "API key is required" });
     }
 
-    // Find API key in database
-    const [keyRecord] = await db
-      .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.keyHash, await bcrypt.hash(apiKey, 10)));
+    // Find API key in database by comparing hashes
+    const allKeys = await db.select().from(apiKeys);
+    let keyRecord = null;
+    
+    for (const key of allKeys) {
+      if (await bcrypt.compare(apiKey, key.keyHash)) {
+        keyRecord = key;
+        break;
+      }
+    }
 
     if (!keyRecord || !keyRecord.isActive) {
       return res.status(401).json({ message: "Invalid or inactive API key" });
