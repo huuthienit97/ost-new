@@ -90,7 +90,9 @@ export default function ProfilePage() {
       return response.json();
     },
     onSuccess: () => {
+      // Force refetch user data immediately
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Thành công",
         description: "Avatar đã được cập nhật",
@@ -170,19 +172,17 @@ export default function ProfilePage() {
                       src={user.avatarUrl}
                       alt="Avatar" 
                       className="w-full h-full object-cover"
+                      key={user.avatarUrl} // Force re-render when avatar changes
                       onError={(e) => {
                         console.error('Avatar load error:', user.avatarUrl);
+                        // Hide broken image and show fallback
                         e.currentTarget.style.display = 'none';
                       }}
                       onLoad={() => {
                         console.log('Avatar loaded successfully:', user.avatarUrl);
                       }}
                     />
-                  ) : (
-                    <span className="text-white text-3xl font-bold">
-                      {user?.fullName?.charAt(0) || 'U'}
-                    </span>
-                  )}
+                  ) : null}
                   {!user?.avatarUrl && (
                     <span className="text-white text-3xl font-bold">
                       {user?.fullName?.charAt(0) || 'U'}
