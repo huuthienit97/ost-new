@@ -6,16 +6,10 @@ interface UserWithRole extends User {
 }
 
 export function useAuth() {
-  const token = localStorage.getItem("token");
-  
-  const { data: user, isLoading, error } = useQuery<{ user: UserWithRole } | null>({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-    throwOnError: false,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    enabled: !!token, // Only run query if token exists
-  });
+  // Temporarily disable auth query to test if this is causing the issue
+  const user = null;
+  const isLoading = false;
+  const error = null;
 
   const logout = () => {
     localStorage.removeItem("token");
