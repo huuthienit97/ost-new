@@ -7,6 +7,8 @@ import {
   type InsertDepartment, 
   type MemberWithDepartment 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, ilike, or } from "drizzle-orm";
 
 export interface IStorage {
   // Department methods
@@ -28,143 +30,108 @@ export interface IStorage {
   searchMembers(query: string): Promise<Member[]>;
 }
 
-export class MemStorage implements IStorage {
-  private departments: Map<number, Department>;
-  private members: Map<number, Member>;
-  private departmentIdCounter: number;
-  private memberIdCounter: number;
-
-  constructor() {
-    this.departments = new Map();
-    this.members = new Map();
-    this.departmentIdCounter = 1;
-    this.memberIdCounter = 1;
-    
-    // Initialize with default departments
-    this.initializeDefaultData();
-  }
-
-  private initializeDefaultData() {
-    // Create default departments
-    const defaultDepartments = [
-      { name: "Ban Thiết Kế", icon: "palette", color: "purple" },
-      { name: "Ban Truyền Thông", icon: "bullhorn", color: "pink" },
-      { name: "Ban Sự Kiện", icon: "calendar-star", color: "teal" },
-      { name: "Ban Kỹ Thuật", icon: "code", color: "blue" },
-      { name: "Ban Nhân Sự", icon: "users", color: "green" },
-      { name: "Ban Tài Chính", icon: "coins", color: "yellow" },
-    ];
-
-    defaultDepartments.forEach(dept => {
-      const department: Department = {
-        id: this.departmentIdCounter++,
-        ...dept,
-      };
-      this.departments.set(department.id, department);
-    });
-  }
-
-  // Department methods
+export class DatabaseStorage implements IStorage {
   async getDepartments(): Promise<Department[]> {
-    return Array.from(this.departments.values());
+    return await db.select().from(departments);
   }
 
   async getDepartment(id: number): Promise<Department | undefined> {
-    return this.departments.get(id);
+    const [department] = await db.select().from(departments).where(eq(departments.id, id));
+    return department || undefined;
   }
 
   async createDepartment(insertDepartment: InsertDepartment): Promise<Department> {
-    const department: Department = {
-      id: this.departmentIdCounter++,
-      ...insertDepartment,
-    };
-    this.departments.set(department.id, department);
+    const [department] = await db
+      .insert(departments)
+      .values(insertDepartment)
+      .returning();
     return department;
   }
 
-  // Member methods
   async getMembers(): Promise<Member[]> {
-    return Array.from(this.members.values());
+    return await db.select().from(members);
   }
 
   async getMembersWithDepartments(): Promise<MemberWithDepartment[]> {
-    const allMembers = Array.from(this.members.values());
-    return allMembers.map(member => {
-      const department = this.departments.get(member.departmentId);
-      return {
-        ...member,
-        department: department!,
-      };
-    });
+    const result = await db
+      .select()
+      .from(members)
+      .leftJoin(departments, eq(members.departmentId, departments.id));
+    
+    return result.map(row => ({
+      ...row.members,
+      department: row.departments!,
+    }));
   }
 
   async getMember(id: number): Promise<Member | undefined> {
-    return this.members.get(id);
+    const [member] = await db.select().from(members).where(eq(members.id, id));
+    return member || undefined;
   }
 
   async getMemberWithDepartment(id: number): Promise<MemberWithDepartment | undefined> {
-    const member = this.members.get(id);
-    if (!member) return undefined;
+    const result = await db
+      .select()
+      .from(members)
+      .leftJoin(departments, eq(members.departmentId, departments.id))
+      .where(eq(members.id, id));
     
-    const department = this.departments.get(member.departmentId);
-    if (!department) return undefined;
+    if (result.length === 0) return undefined;
     
+    const row = result[0];
     return {
-      ...member,
-      department,
+      ...row.members,
+      department: row.departments!,
     };
   }
 
   async createMember(insertMember: InsertMember): Promise<Member> {
-    const member: Member = {
-      id: this.memberIdCounter++,
-      isActive: true,
-      ...insertMember,
-    };
-    this.members.set(member.id, member);
+    const [member] = await db
+      .insert(members)
+      .values({ ...insertMember, isActive: true })
+      .returning();
     return member;
   }
 
   async updateMember(id: number, updates: Partial<InsertMember>): Promise<Member | undefined> {
-    const member = this.members.get(id);
-    if (!member) return undefined;
-    
-    const updatedMember: Member = { ...member, ...updates };
-    this.members.set(id, updatedMember);
-    return updatedMember;
+    const [member] = await db
+      .update(members)
+      .set(updates)
+      .where(eq(members.id, id))
+      .returning();
+    return member || undefined;
   }
 
   async deleteMember(id: number): Promise<boolean> {
-    return this.members.delete(id);
+    const result = await db.delete(members).where(eq(members.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getMembersByDepartment(departmentId: number): Promise<Member[]> {
-    return Array.from(this.members.values()).filter(
-      member => member.departmentId === departmentId
-    );
+    return await db.select().from(members).where(eq(members.departmentId, departmentId));
   }
 
   async getMembersByType(memberType: string): Promise<Member[]> {
-    return Array.from(this.members.values()).filter(
-      member => member.memberType === memberType
-    );
+    return await db.select().from(members).where(eq(members.memberType, memberType));
   }
 
   async getMembersByPosition(position: string): Promise<Member[]> {
-    return Array.from(this.members.values()).filter(
-      member => member.position === position
-    );
+    return await db.select().from(members).where(eq(members.position, position));
   }
 
   async searchMembers(query: string): Promise<Member[]> {
-    const lowercaseQuery = query.toLowerCase();
-    return Array.from(this.members.values()).filter(member =>
-      member.fullName.toLowerCase().includes(lowercaseQuery) ||
-      member.studentId.toLowerCase().includes(lowercaseQuery) ||
-      member.class.toLowerCase().includes(lowercaseQuery) ||
-      (member.email && member.email.toLowerCase().includes(lowercaseQuery))
-    );
+    return await db
+      .select()
+      .from(members)
+      .where(
+        or(
+          ilike(members.fullName, `%${query}%`),
+          ilike(members.studentId, `%${query}%`),
+          ilike(members.class, `%${query}%`),
+          ilike(members.email, `%${query}%`)
+        )
+      );
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
