@@ -62,20 +62,22 @@ export default function HomePage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Members Management */}
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/members"}>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                <span>Quản lý thành viên</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm">
-                Xem và quản lý danh sách thành viên câu lạc bộ
-              </p>
-            </CardContent>
-          </Card>
+          {/* Members Management - Only for users with member:view permission */}
+          {hasPermission("member:view") && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/members"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <span>Quản lý thành viên</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Xem và quản lý danh sách thành viên câu lạc bộ
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Admin Panel - Only for authorized users */}
           {hasPermission("system_admin") && (
@@ -111,20 +113,48 @@ export default function HomePage() {
             </Card>
           )}
 
-          {/* API Documentation */}
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.open("/api-docs", "_blank")}>
+          {/* Statistics - Available for all users */}
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-green-600" />
-                <span>Tài liệu API</span>
+                <Users className="h-5 w-5 text-green-600" />
+                <span>Thống kê câu lạc bộ</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 text-sm">
-                Xem tài liệu API và thử nghiệm endpoints
-              </p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Tổng thành viên:</span>
+                  <span className="font-medium">0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Thành viên hoạt động:</span>
+                  <span className="font-medium">0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Cựu thành viên:</span>
+                  <span className="font-medium">0</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
+
+          {/* API Documentation */}
+          {hasPermission("system_admin") && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.open("/api-docs", "_blank")}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  <span>Tài liệu API</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Xem tài liệu API và thử nghiệm endpoints
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* User Info */}
