@@ -54,6 +54,25 @@ export const members = pgTable("members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value"),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const uploads = pgTable("uploads", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  mimetype: text("mimetype").notNull(),
+  size: integer("size").notNull(),
+  path: text("path").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const rolesRelations = relations(roles, ({ many }) => ({
   users: many(users),
@@ -66,6 +85,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   createdMembers: many(members, { relationName: "createdBy" }),
   updatedMembers: many(members, { relationName: "updatedBy" }),
+  uploads: many(uploads),
+}));
+
+export const uploadsRelations = relations(uploads, ({ one }) => ({
+  uploader: one(users, {
+    fields: [uploads.uploadedBy],
+    references: [users.id],
+  }),
 }));
 
 export const departmentsRelations = relations(departments, ({ many }) => ({
@@ -135,6 +162,12 @@ export type MemberWithDepartment = Member & {
   department: Department;
 };
 
+// Settings and uploads types
+export type Setting = typeof settings.$inferSelect;
+export type InsertSetting = typeof settings.$inferInsert;
+export type Upload = typeof uploads.$inferSelect;
+export type InsertUpload = typeof uploads.$inferInsert;
+
 // Position hierarchy enum
 export const POSITIONS = {
   president: "Chủ nhiệm",
@@ -175,6 +208,15 @@ export const PERMISSIONS = {
   ROLE_CREATE: "role:create",
   ROLE_EDIT: "role:edit",
   ROLE_DELETE: "role:delete",
+  
+  // Settings permissions
+  SETTINGS_VIEW: "settings:view",
+  SETTINGS_EDIT: "settings:edit",
+  
+  // Upload permissions
+  UPLOAD_CREATE: "upload:create",
+  UPLOAD_VIEW: "upload:view",
+  UPLOAD_DELETE: "upload:delete",
   
   // System permissions
   SYSTEM_ADMIN: "system:admin",

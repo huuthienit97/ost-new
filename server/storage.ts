@@ -53,6 +53,19 @@ export interface IStorage {
   getMembersByType(memberType: string): Promise<Member[]>;
   getMembersByPosition(position: string): Promise<Member[]>;
   searchMembers(query: string): Promise<Member[]>;
+
+  // Settings methods
+  getSettings(): Promise<Setting[]>;
+  getSetting(key: string): Promise<Setting | undefined>;
+  setSetting(key: string, value: string, description?: string): Promise<Setting>;
+  deleteSetting(key: string): Promise<boolean>;
+
+  // Upload methods
+  getUploads(): Promise<Upload[]>;
+  getUpload(id: number): Promise<Upload | undefined>;
+  createUpload(upload: InsertUpload): Promise<Upload>;
+  deleteUpload(id: number): Promise<boolean>;
+  getUploadsByUser(userId: number): Promise<Upload[]>;
 }
 
 export class DatabaseStorage implements IStorage {
