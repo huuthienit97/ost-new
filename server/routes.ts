@@ -4,6 +4,9 @@ import { storage } from "./storage";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 /**
  * @swagger

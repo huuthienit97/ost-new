@@ -3,6 +3,8 @@ import {
   departments,
   users,
   roles,
+  settings,
+  uploads,
   type Member, 
   type Department, 
   type InsertMember, 
@@ -12,10 +14,14 @@ import {
   type Role,
   type InsertUser,
   type InsertRole,
-  type UserWithRole
+  type UserWithRole,
+  type Setting,
+  type Upload,
+  type InsertSetting,
+  type InsertUpload
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Role methods
@@ -272,6 +278,57 @@ export class DatabaseStorage implements IStorage {
           ilike(members.email, `%${query}%`)
         )
       );
+  }
+
+  // Settings methods
+  async getSettings(): Promise<Setting[]> {
+    return await db.select().from(settings).orderBy(settings.key);
+  }
+
+  async getSetting(key: string): Promise<Setting | undefined> {
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting;
+  }
+
+  async setSetting(key: string, value: string, description?: string): Promise<Setting> {
+    const [setting] = await db
+      .insert(settings)
+      .values({ key, value, description, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: { value, description, updatedAt: new Date() }
+      })
+      .returning();
+    return setting;
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    const result = await db.delete(settings).where(eq(settings.key, key));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Upload methods
+  async getUploads(): Promise<Upload[]> {
+    return await db.select().from(uploads).orderBy(desc(uploads.createdAt));
+  }
+
+  async getUpload(id: number): Promise<Upload | undefined> {
+    const [upload] = await db.select().from(uploads).where(eq(uploads.id, id));
+    return upload;
+  }
+
+  async createUpload(upload: InsertUpload): Promise<Upload> {
+    const [newUpload] = await db.insert(uploads).values(upload).returning();
+    return newUpload;
+  }
+
+  async deleteUpload(id: number): Promise<boolean> {
+    const result = await db.delete(uploads).where(eq(uploads.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getUploadsByUser(userId: number): Promise<Upload[]> {
+    return await db.select().from(uploads).where(eq(uploads.uploadedBy, userId)).orderBy(desc(uploads.createdAt));
   }
 }
 
