@@ -402,6 +402,53 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public API - Must be before other routes
+  /**
+   * @swagger
+   * /api/public/users:
+   *   get:
+   *     summary: Lấy danh sách tất cả users (Public API)
+   *     description: Endpoint công khai để lấy danh sách users đang hoạt động, không cần token xác thực
+   *     tags: [Public]
+   *     responses:
+   *       200:
+   *         description: Danh sách users đang hoạt động
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                     description: ID của user
+   *                   username:
+   *                     type: string
+   *                     description: Tên đăng nhập
+   *                   fullName:
+   *                     type: string
+   *                     description: Họ và tên đầy đủ
+   *                   email:
+   *                     type: string
+   *                     description: Email của user
+   *                   avatarUrl:
+   *                     type: string
+   *                     nullable: true
+   *                     description: URL ảnh đại diện
+   *                   isActive:
+   *                     type: boolean
+   *                     description: Trạng thái hoạt động
+   *                   createdAt:
+   *                     type: string
+   *                     format: date-time
+   *                     description: Thời gian tạo tài khoản
+   *       500:
+   *         description: Lỗi server
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   app.get("/api/public/users", async (req, res) => {
     try {
       const users = await dbStorage.getUsers();
