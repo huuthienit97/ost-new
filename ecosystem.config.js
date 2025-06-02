@@ -10,7 +10,8 @@ module.exports = {
     max_memory_restart: '1G',
     env: {
       NODE_ENV: 'production',
-      PORT: 5000
+      PORT: 5000,
+      PUBLIC_URL: 'https://your-domain.com'
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',

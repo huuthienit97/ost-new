@@ -1,6 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 
 const options = {
   definition: {
@@ -282,10 +282,16 @@ const specs = swaggerJsdoc(options);
 
 export function setupSwagger(app: Express) {
   // Dynamic server configuration based on request
-  app.use('/api-docs', swaggerUi.serve, (req, res, next) => {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const serverUrl = `${protocol}://${host}`;
+  app.use('/api-docs', swaggerUi.serve, (req: Request, res: Response, next: NextFunction) => {
+    // Priority: Environment variable > Headers > Default
+    let serverUrl;
+    if (process.env.PUBLIC_URL) {
+      serverUrl = process.env.PUBLIC_URL;
+    } else {
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      serverUrl = `${protocol}://${host}`;
+    }
     
     // Update specs with dynamic server URL
     const dynamicSpecs = {
@@ -307,9 +313,15 @@ export function setupSwagger(app: Express) {
   
   // Serve the OpenAPI spec as JSON with dynamic server URL
   app.get('/api-docs.json', (req, res) => {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const serverUrl = `${protocol}://${host}`;
+    // Priority: Environment variable > Headers > Default
+    let serverUrl;
+    if (process.env.PUBLIC_URL) {
+      serverUrl = process.env.PUBLIC_URL;
+    } else {
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      serverUrl = `${protocol}://${host}`;
+    }
     
     const dynamicSpecs = {
       ...specs,
