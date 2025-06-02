@@ -2,11 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, beePoints, pointTransactions, achievements, userAchievements } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1330,6 +1330,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user achievements:", error);
       res.status(500).json({ message: "Lỗi lấy thành tích người dùng" });
+    }
+  });
+
+  // Get users for awarding achievements
+  app.get("/api/members-with-accounts", authenticate, authorize([PERMISSIONS.ACHIEVEMENT_AWARD]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const usersForAwards = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+        })
+        .from(users);
+
+      res.json(usersForAwards);
+    } catch (error) {
+      console.error("Error fetching users for awards:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách người dùng" });
     }
   });
 

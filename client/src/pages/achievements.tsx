@@ -73,9 +73,9 @@ export default function AchievementsPage() {
     queryKey: ["/api/achievements/me"],
   });
 
-  // Fetch members for awarding achievements
+  // Fetch users for awarding achievements
   const { data: members = [] } = useQuery({
-    queryKey: ["/api/members"],
+    queryKey: ["/api/members-with-accounts"],
     enabled: canAwardAchievements,
   });
 
