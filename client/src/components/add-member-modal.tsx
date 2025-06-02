@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { createMemberSchema, Department, MemberWithDepartment } from "@shared/schema";
@@ -28,6 +27,7 @@ interface AddMemberModalProps {
 export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [newUserInfo, setNewUserInfo] = useState<{username: string, password: string} | null>(null);
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"],
@@ -42,10 +42,11 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
       phone: editingMember?.phone || "",
       class: editingMember?.class || "",
       departmentId: editingMember?.departmentId || 0,
-      position: editingMember?.position || "member",
-      memberType: editingMember?.memberType || "active",
+      position: (editingMember?.position as any) || "member",
+      memberType: (editingMember?.memberType as any) || "active",
       joinDate: editingMember?.joinDate || "",
       notes: editingMember?.notes || "",
+      createUserAccount: false,
     },
   });
 
@@ -54,14 +55,23 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
       const response = await apiRequest("POST", "/api/members", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
-      toast({
-        title: "Thành công",
-        description: "Thành viên mới đã được thêm thành công",
-      });
-      onOpenChange(false);
+      
+      // Check if user account was created and show credentials
+      if (result?.userCredentials) {
+        setNewUserInfo({
+          username: result.userCredentials.username,
+          password: result.userCredentials.password
+        });
+      } else {
+        toast({
+          title: "Thành công",
+          description: "Thành viên mới đã được thêm thành công",
+        });
+        onOpenChange(false);
+      }
       form.reset();
     },
     onError: (error: any) => {
@@ -113,7 +123,8 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -300,6 +311,31 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
               )}
             />
 
+            {!editingMember && (
+              <FormField
+                control={form.control}
+                name="createUserAccount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Tạo tài khoản đăng nhập
+                      </FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Tạo tài khoản đăng nhập cho thành viên này để họ có thể truy cập hệ thống
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+
             <div className="flex justify-end space-x-4 pt-4">
               <Button 
                 type="button" 
@@ -317,6 +353,69 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
             </div>
           </form>
         </Form>
+      </DialogContent>
+    </Dialog>
+
+    {/* Dialog hiển thị thông tin đăng nhập */}
+    <Dialog open={!!newUserInfo} onOpenChange={() => {
+      setNewUserInfo(null);
+      onOpenChange(false);
+    }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Tài khoản đã được tạo thành công!</DialogTitle>
+        </DialogHeader>
+        {newUserInfo && (
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-800 mb-2">Thông tin đăng nhập:</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Tên đăng nhập:</span>
+                  <div className="flex items-center space-x-2">
+                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.username}</code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigator.clipboard.writeText(newUserInfo.username)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Mật khẩu:</span>
+                  <div className="flex items-center space-x-2">
+                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">{newUserInfo.password}</code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigator.clipboard.writeText(newUserInfo.password)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Lưu ý:</strong> Hãy lưu lại thông tin này và chuyển cho thành viên. 
+                Thành viên sẽ được yêu cầu đổi mật khẩu khi đăng nhập lần đầu.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => {
+                setNewUserInfo(null);
+                onOpenChange(false);
+              }}>
+                Đã hiểu
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
