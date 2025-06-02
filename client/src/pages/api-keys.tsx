@@ -471,7 +471,19 @@ export default function ApiKeysPage() {
                       </div>
                     </div>
                     
-                    <div className="ml-4">
+                    <div className="ml-4 flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedApiKey(apiKey);
+                          updateForm.setValue("permissions", apiKey.permissions);
+                          setIsUpdateModalOpen(true);
+                        }}
+                      >
+                        <Shield className="h-4 w-4 mr-1" />
+                        Cập nhật quyền
+                      </Button>
                       <Button
                         variant="destructive"
                         size="sm"
@@ -487,6 +499,81 @@ export default function ApiKeysPage() {
             ))
           )}
         </div>
+
+        {/* Update API Key Permissions Modal */}
+        <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Cập nhật quyền hạn</DialogTitle>
+            </DialogHeader>
+            {selectedApiKey && (
+              <Form {...updateForm}>
+                <form onSubmit={updateForm.handleSubmit((data) => 
+                  updateApiKeyMutation.mutate({ ...data, id: selectedApiKey.id })
+                )} className="space-y-4">
+                  <div className="text-sm text-gray-600 mb-4">
+                    Cập nhật quyền hạn cho: <strong>{selectedApiKey.name}</strong>
+                  </div>
+
+                  <FormField
+                    control={updateForm.control}
+                    name="permissions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quyền hạn</FormLabel>
+                        <FormControl>
+                          <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-3">
+                            {Object.entries(PERMISSIONS).map(([key, value]) => (
+                              <div key={key} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`update-${key}`}
+                                  checked={field.value.includes(value)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([...field.value, value]);
+                                    } else {
+                                      field.onChange(field.value.filter(p => p !== value));
+                                    }
+                                  }}
+                                />
+                                <label htmlFor={`update-${key}`} className="text-sm">
+                                  {value}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsUpdateModalOpen(false);
+                        setSelectedApiKey(null);
+                        updateForm.reset();
+                      }}
+                      className="flex-1"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateApiKeyMutation.isPending}
+                      className="flex-1"
+                    >
+                      {updateApiKeyMutation.isPending ? "Đang cập nhật..." : "Cập nhật"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

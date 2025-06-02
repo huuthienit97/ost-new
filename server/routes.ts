@@ -1811,6 +1811,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: API key đã được xóa
    */
+  /**
+   * @swagger
+   * /api/admin/api-keys/{id}:
+   *   put:
+   *     summary: Cập nhật quyền hạn cho API key (Admin only)
+   *     tags: [Admin API Keys]
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: ID của API key
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               permissions:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Danh sách quyền hạn mới
+   *     responses:
+   *       200:
+   *         description: Quyền hạn đã được cập nhật
+   */
+  app.put("/api/admin/api-keys/:id", authenticate, authorize("system:admin"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID không hợp lệ" });
+      }
+
+      const { permissions } = req.body;
+      if (!permissions || !Array.isArray(permissions)) {
+        return res.status(400).json({ message: "Quyền hạn là bắt buộc và phải là mảng" });
+      }
+
+      const updatedApiKey = await dbStorage.updateApiKey(id, { permissions });
+      if (!updatedApiKey) {
+        return res.status(404).json({ message: "API key không tồn tại" });
+      }
+
+      res.json({ 
+        message: "Quyền hạn API key đã được cập nhật",
+        apiKey: updatedApiKey
+      });
+    } catch (error) {
+      console.error("Error updating API key permissions:", error);
+      res.status(500).json({ message: "Lỗi cập nhật quyền hạn API key" });
+    }
+  });
+
   app.delete("/api/admin/api-keys/:id", authenticate, authorize("system:admin"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
