@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Users, UserCheck, GraduationCap, Building2, Bell } from "lucide-react";
+import { Plus, Search, Users, UserCheck, GraduationCap, Building2, Bell, LogOut } from "lucide-react";
 import { MemberCard } from "@/components/member-card";
 import { AddMemberModal } from "@/components/add-member-modal";
 import { getInitials, getAvatarGradient } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { MemberWithDepartment, Department } from "@shared/schema";
 
 interface Stats {
@@ -20,6 +21,7 @@ interface Stats {
 }
 
 export default function MembersPage() {
+  const { user, logout } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberWithDepartment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,13 +93,18 @@ export default function MembersPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-              </Button>
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">A</span>
+              <div className="text-right mr-3">
+                <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
+                <p className="text-xs text-gray-500">{user?.role.displayName}</p>
               </div>
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-medium">
+                  {user?.fullName ? getInitials(user.fullName) : "A"}
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={logout} title="Đăng xuất">
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
