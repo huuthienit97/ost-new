@@ -192,6 +192,45 @@ export default function HomePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* BeePoint Card */}
+        <div className="mt-6">
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-amber-800">
+                <Coins className="h-5 w-5" />
+                <span>BeePoint của bạn</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-amber-600">
+                    {beePoints?.currentPoints ?? 0}
+                  </div>
+                  <div className="text-sm text-amber-700">Điểm hiện tại</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {beePoints?.totalEarned ?? 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Tổng kiếm được</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {beePoints?.totalSpent ?? 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Đã sử dụng</div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-amber-200">
+                <p className="text-xs text-amber-600 text-center">
+                  Tích lũy điểm qua các hoạt động và sử dụng để đổi phần thưởng
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
