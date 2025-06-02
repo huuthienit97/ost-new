@@ -90,13 +90,11 @@ export default function ProfilePage() {
       return response.json();
     },
     onSuccess: () => {
-      // Force refetch user data immediately
+      // Force complete cache invalidation and refetch
+      queryClient.removeQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      toast({
-        title: "Thành công",
-        description: "Avatar đã được cập nhật",
-      });
+      // Force a fresh page reload to ensure avatar shows
+      window.location.reload();
     },
     onError: (error: any) => {
       toast({
