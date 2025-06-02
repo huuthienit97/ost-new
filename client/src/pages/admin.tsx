@@ -96,6 +96,29 @@ function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
   );
 }
 
+function UserRoleDialog({ user, roles }: { user: UserWithRole; roles: Role[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="pt-2">
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full">
+            <Edit className="h-4 w-4 mr-2" />
+            Phân quyền
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Phân quyền cho {user.fullName}</DialogTitle>
+          </DialogHeader>
+          <UserRoleEditor user={user} roles={roles} onClose={() => setIsOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user, hasPermission } = useAuth();
   const { toast } = useToast();
@@ -557,22 +580,7 @@ export default function AdminPage() {
                         </div>
 
                         {hasPermission("user_edit") && (
-                          <div className="pt-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full">
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Phân quyền
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Phân quyền cho {userItem.fullName}</DialogTitle>
-                                </DialogHeader>
-                                <UserRoleEditor user={userItem} roles={roles} onClose={() => {}} />
-                              </DialogContent>
-                            </Dialog>
-                          </div>
+                          <UserRoleDialog user={userItem} roles={roles} />
                         )}
                       </div>
                     </CardContent>
