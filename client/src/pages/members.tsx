@@ -53,9 +53,7 @@ export default function MembersPage() {
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: number) => {
-      await apiRequest(`/api/members/${memberId}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/members/${memberId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -84,6 +82,16 @@ export default function MembersPage() {
   const handleEditMember = (member: MemberWithDepartment) => {
     setEditingMember(member);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteMember = (member: MemberWithDepartment) => {
+    setDeletingMember(member);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingMember) {
+      deleteMemberMutation.mutate(deletingMember.id);
+    }
   };
 
   const handleAddMember = () => {
@@ -353,6 +361,8 @@ export default function MembersPage() {
                 index={index}
                 onView={handleViewMember}
                 onEdit={handleEditMember}
+                onDelete={handleDeleteMember}
+                canDelete={hasPermission(PERMISSIONS.MEMBER_DELETE)}
               />
             ))}
           </div>
@@ -375,6 +385,28 @@ export default function MembersPage() {
         onOpenChange={handleModalClose}
         editingMember={editingMember}
       />
+
+      <AlertDialog open={!!deletingMember} onOpenChange={() => setDeletingMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa thành viên</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa thành viên "{deletingMember?.fullName}"? 
+              Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMemberMutation.isPending}
+            >
+              {deleteMemberMutation.isPending ? "Đang xóa..." : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
