@@ -78,15 +78,7 @@ export const rolesRelations = relations(roles, ({ many }) => ({
   users: many(users),
 }));
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  role: one(roles, {
-    fields: [users.roleId],
-    references: [roles.id],
-  }),
-  createdMembers: many(members, { relationName: "createdBy" }),
-  updatedMembers: many(members, { relationName: "updatedBy" }),
-  uploads: many(uploads),
-}));
+
 
 export const uploadsRelations = relations(uploads, ({ one }) => ({
   uploader: one(users, {
@@ -113,6 +105,61 @@ export const membersRelations = relations(members, ({ one }) => ({
     fields: [members.updatedBy],
     references: [users.id],
     relationName: "updatedBy",
+  }),
+}));
+
+// BeePoint system tables
+export const beePoints = pgTable("bee_points", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  currentPoints: integer("current_points").default(0).notNull(),
+  totalEarned: integer("total_earned").default(0).notNull(),
+  totalSpent: integer("total_spent").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const pointTransactions = pgTable("point_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  amount: integer("amount").notNull(), // Positive for earning, negative for spending
+  type: text("type").notNull(), // 'welcome_bonus', 'activity', 'reward', 'purchase', etc.
+  description: text("description").notNull(),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// BeePoint relations
+export const beePointsRelations = relations(beePoints, ({ one }) => ({
+  user: one(users, {
+    fields: [beePoints.userId],
+    references: [users.id],
+  }),
+}));
+
+export const pointTransactionsRelations = relations(pointTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [pointTransactions.userId],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [pointTransactions.createdBy],
+    references: [users.id],
+    relationName: "transactionCreatedBy",
+  }),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  role: one(roles, {
+    fields: [users.roleId],
+    references: [roles.id],
+  }),
+  createdMembers: many(members, { relationName: "createdBy" }),
+  updatedMembers: many(members, { relationName: "updatedBy" }),
+  uploads: many(uploads),
+  beePoints: one(beePoints),
+  pointTransactions: many(pointTransactions),
+  createdTransactions: many(pointTransactions, {
+    relationName: "transactionCreatedBy",
   }),
 }));
 
@@ -167,6 +214,16 @@ export type Setting = typeof settings.$inferSelect;
 export type InsertSetting = typeof settings.$inferInsert;
 export type Upload = typeof uploads.$inferSelect;
 export type InsertUpload = typeof uploads.$inferInsert;
+
+export type BeePoint = typeof beePoints.$inferSelect;
+export type InsertBeePoint = typeof beePoints.$inferInsert;
+
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+export type InsertPointTransaction = typeof pointTransactions.$inferInsert;
+
+export type UserWithBeePoints = User & {
+  beePoints?: BeePoint;
+};
 
 // Position hierarchy enum
 export const POSITIONS = {
