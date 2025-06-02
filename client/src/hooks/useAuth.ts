@@ -13,7 +13,8 @@ export function useAuth() {
 
   const logout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    // Force reload to clear all state and redirect to login
+    window.location.reload();
   };
 
   const hasPermission = (permission: string): boolean => {
