@@ -6,6 +6,36 @@ import { authenticate, authorize, hashPassword, verifyPassword, generateToken, A
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize default admin user
+  app.post("/api/auth/init", async (req, res) => {
+    try {
+      // Check if any users exist
+      const users = await storage.getUsers();
+      if (users.length > 0) {
+        return res.status(400).json({ message: "Hệ thống đã được khởi tạo" });
+      }
+
+      // Create default admin user
+      const passwordHash = await hashPassword("admin123");
+      const adminUser = await storage.createUser({
+        username: "admin",
+        email: "admin@club.edu.vn",
+        passwordHash,
+        fullName: "Quản trị viên",
+        roleId: 1, // super_admin role
+        isActive: true,
+      });
+
+      res.json({ 
+        message: "Tài khoản quản trị viên đã được tạo",
+        username: "admin",
+        defaultPassword: "admin123"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khởi tạo hệ thống" });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
