@@ -10,7 +10,7 @@ export interface ApiKeyRequest extends Request {
     name: string;
     permissions: string[];
     rateLimit: number;
-  };
+  } | null | undefined;
 }
 
 // Rate limiting storage (in production, use Redis)
@@ -18,6 +18,12 @@ const rateLimitStore = new Map<number, { count: number; resetTime: number }>();
 
 export async function authenticateApiKey(req: ApiKeyRequest, res: Response, next: NextFunction) {
   try {
+    // Skip API key authentication in development environment
+    if (process.env.NODE_ENV === 'development') {
+      req.apiKey = null;
+      return next();
+    }
+
     const apiKeyHeader = req.headers['x-api-key'] as string;
     
     if (!apiKeyHeader) {
@@ -103,6 +109,11 @@ export async function authenticateApiKey(req: ApiKeyRequest, res: Response, next
 
 export function requireApiPermission(permission: string) {
   return (req: ApiKeyRequest, res: Response, next: NextFunction) => {
+    // Skip permission check in development environment
+    if (process.env.NODE_ENV === 'development') {
+      return next();
+    }
+
     if (!req.apiKey) {
       return res.status(401).json({ 
         error: "Authentication required",
