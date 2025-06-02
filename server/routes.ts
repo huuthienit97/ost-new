@@ -6,6 +6,7 @@ import { users, beePoints, pointTransactions, achievements, userAchievements } f
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
+import { eq, and, desc, ilike, or } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1201,6 +1202,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error uploading avatar:", error);
       res.status(500).json({ message: "Lỗi tải lên avatar" });
+    }
+  });
+
+  // Achievement management routes
+  app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const achievementsList = await db.select().from(achievements).where(eq(achievements.isActive, true));
+      res.json(achievementsList);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách thành tích" });
+    }
+  });
+
+  app.post("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_CREATE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validationResult = createAchievementSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const [newAchievement] = await db
+        .insert(achievements)
+        .values(validationResult.data)
+        .returning();
+
+      res.status(201).json(newAchievement);
+    } catch (error) {
+      console.error("Error creating achievement:", error);
+      res.status(500).json({ message: "Lỗi tạo thành tích" });
+    }
+  });
+
+  // Award achievement to user
+  app.post("/api/achievements/award", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_AWARD), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validationResult = awardAchievementSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const { userId, achievementId, notes } = validationResult.data;
+
+      // Check if user already has this achievement
+      const existingAward = await db
+        .select()
+        .from(userAchievements)
+        .where(and(
+          eq(userAchievements.userId, userId),
+          eq(userAchievements.achievementId, achievementId)
+        ));
+
+      if (existingAward.length > 0) {
+        return res.status(400).json({ message: "Người dùng đã có thành tích này" });
+      }
+
+      // Get achievement details for points reward
+      const achievement = await db
+        .select()
+        .from(achievements)
+        .where(eq(achievements.id, achievementId));
+
+      if (achievement.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy thành tích" });
+      }
+
+      // Award the achievement
+      const [userAchievement] = await db
+        .insert(userAchievements)
+        .values({
+          userId,
+          achievementId,
+          notes,
+          awardedBy: req.user!.id,
+        })
+        .returning();
+
+      // Award BeePoints if applicable
+      if (achievement[0].pointsReward && achievement[0].pointsReward > 0) {
+        await dbStorage.addPointTransaction({
+          userId,
+          amount: achievement[0].pointsReward,
+          type: 'achievement',
+          description: `Thành tích: ${achievement[0].title}`,
+          createdBy: req.user!.id,
+        });
+      }
+
+      res.status(201).json({
+        message: "Trao thành tích thành công",
+        userAchievement,
+        pointsAwarded: achievement[0].pointsReward || 0,
+      });
+    } catch (error) {
+      console.error("Error awarding achievement:", error);
+      res.status(500).json({ message: "Lỗi trao thành tích" });
+    }
+  });
+
+  // Get user achievements
+  app.get("/api/users/:userId/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      const userAchievementsList = await db
+        .select({
+          id: userAchievements.id,
+          awardedDate: userAchievements.awardedDate,
+          notes: userAchievements.notes,
+          achievement: achievements,
+        })
+        .from(userAchievements)
+        .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+        .where(eq(userAchievements.userId, userId))
+        .orderBy(desc(userAchievements.awardedDate));
+
+      res.json(userAchievementsList);
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ message: "Lỗi lấy thành tích người dùng" });
+    }
+  });
+
+  // Get my achievements
+  app.get("/api/achievements/me", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const myAchievements = await db
+        .select({
+          id: userAchievements.id,
+          awardedDate: userAchievements.awardedDate,
+          notes: userAchievements.notes,
+          achievement: achievements,
+        })
+        .from(userAchievements)
+        .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+        .where(eq(userAchievements.userId, userId))
+        .orderBy(desc(userAchievements.awardedDate));
+
+      res.json(myAchievements);
+    } catch (error) {
+      console.error("Error fetching my achievements:", error);
+      res.status(500).json({ message: "Lỗi lấy thành tích của tôi" });
     }
   });
 

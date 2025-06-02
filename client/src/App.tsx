@@ -12,6 +12,7 @@ import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 import ProfilePage from "@/pages/profile";
+import AchievementsPage from "@/pages/achievements";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
