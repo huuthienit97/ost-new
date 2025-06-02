@@ -963,14 +963,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const beePoints = await dbStorage.getUserBeePoints(userId);
       
       if (!beePoints) {
-        // Create BeePoints for user if not exists
+        // Create BeePoints for user if not exists (without automatic welcome bonus)
         const newBeePoints = await dbStorage.createUserBeePoints(userId);
-        await dbStorage.addPointTransaction({
-          userId,
-          amount: 50,
-          type: "welcome_bonus",
-          description: "Chào mừng thành viên mới - Tặng 50 BeePoint",
-        });
         return res.json(newBeePoints);
       }
 
@@ -1110,6 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         hasAccount: true,
+        userId: user.id,
         username: user.username,
         email: user.email,
         mustChangePassword: user.mustChangePassword,
