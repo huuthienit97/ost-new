@@ -281,15 +281,47 @@ const options = {
 const specs = swaggerJsdoc(options);
 
 export function setupSwagger(app: Express) {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
-    explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'CLB Sáng Tạo API',
-  }));
+  // Dynamic server configuration based on request
+  app.use('/api-docs', swaggerUi.serve, (req, res, next) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const serverUrl = `${protocol}://${host}`;
+    
+    // Update specs with dynamic server URL
+    const dynamicSpecs = {
+      ...specs,
+      servers: [
+        {
+          url: serverUrl,
+          description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
+        },
+      ],
+    };
+    
+    swaggerUi.setup(dynamicSpecs, {
+      explorer: true,
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'CLB Sáng Tạo API',
+    })(req, res, next);
+  });
   
-  // Serve the OpenAPI spec as JSON
+  // Serve the OpenAPI spec as JSON with dynamic server URL
   app.get('/api-docs.json', (req, res) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const serverUrl = `${protocol}://${host}`;
+    
+    const dynamicSpecs = {
+      ...specs,
+      servers: [
+        {
+          url: serverUrl,
+          description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
+        },
+      ],
+    };
+    
     res.setHeader('Content-Type', 'application/json');
-    res.send(specs);
+    res.send(dynamicSpecs);
   });
 }
