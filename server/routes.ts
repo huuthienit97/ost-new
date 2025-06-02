@@ -1431,7 +1431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           achievement: achievementsTable,
         })
         .from(userAchievements)
-        .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
+        .innerJoin(achievementsTable, eq(userAchievements.achievementId, achievementsTable.id))
         .where(eq(userAchievements.userId, userId))
         .orderBy(desc(userAchievements.awardedDate));
 
@@ -1497,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           achievement: achievementsTable,
         })
         .from(userAchievements)
-        .innerJoin(achievements, eq(userAchievements.achievementId, achievementsTable.id))
+        .innerJoin(achievementsTable, eq(userAchievements.achievementId, achievementsTable.id))
         .where(eq(userAchievements.userId, userId))
         .orderBy(desc(userAchievements.awardedDate));
 

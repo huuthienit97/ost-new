@@ -13,6 +13,7 @@ import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 import ProfilePage from "@/pages/profile";
 import AchievementsPage from "@/pages/achievements";
+import ApiKeysPage from "@/pages/api-keys";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
+          <Route path="/api-keys" component={ApiKeysPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
