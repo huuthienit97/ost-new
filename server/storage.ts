@@ -7,6 +7,9 @@ import {
   uploads,
   beePoints,
   pointTransactions,
+  apiKeys,
+  achievements,
+  userAchievements,
   type Member, 
   type Department, 
   type InsertMember, 
@@ -25,7 +28,13 @@ import {
   type BeePoint,
   type InsertBeePoint,
   type PointTransaction,
-  type InsertPointTransaction
+  type InsertPointTransaction,
+  type ApiKey,
+  type InsertApiKey,
+  type Achievement,
+  type InsertAchievement,
+  type UserAchievement,
+  type InsertUserAchievement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc } from "drizzle-orm";
@@ -87,6 +96,23 @@ export interface IStorage {
   addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
   getUserPointTransactions(userId: number): Promise<PointTransaction[]>;
   getUserWithBeePoints(userId: number): Promise<UserWithBeePoints | undefined>;
+
+  // Achievement methods
+  getAchievements(): Promise<Achievement[]>;
+  getAchievement(id: number): Promise<Achievement | undefined>;
+  createAchievement(achievement: InsertAchievement): Promise<Achievement>;
+  updateAchievement(id: number, updates: Partial<InsertAchievement>): Promise<Achievement | undefined>;
+  deleteAchievement(id: number): Promise<boolean>;
+  getUserAchievements(userId: number): Promise<UserAchievement[]>;
+  awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+
+  // API Key methods
+  getApiKeys(): Promise<ApiKey[]>;
+  getApiKey(id: number): Promise<ApiKey | undefined>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined>;
+  deleteApiKey(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -516,6 +542,87 @@ export class DatabaseStorage implements IStorage {
       ...user,
       beePoints: userBeePoints,
     };
+  }
+
+  // Achievement methods
+  async getAchievements(): Promise<Achievement[]> {
+    return await db.select().from(achievements);
+  }
+
+  async getAchievement(id: number): Promise<Achievement | undefined> {
+    const [achievement] = await db.select().from(achievements).where(eq(achievements.id, id));
+    return achievement || undefined;
+  }
+
+  async createAchievement(insertAchievement: InsertAchievement): Promise<Achievement> {
+    const [achievement] = await db
+      .insert(achievements)
+      .values(insertAchievement)
+      .returning();
+    return achievement;
+  }
+
+  async updateAchievement(id: number, updates: Partial<InsertAchievement>): Promise<Achievement | undefined> {
+    const [achievement] = await db
+      .update(achievements)
+      .set(updates)
+      .where(eq(achievements.id, id))
+      .returning();
+    return achievement || undefined;
+  }
+
+  async deleteAchievement(id: number): Promise<boolean> {
+    const result = await db.delete(achievements).where(eq(achievements.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getUserAchievements(userId: number): Promise<UserAchievement[]> {
+    return await db.select().from(userAchievements).where(eq(userAchievements.userId, userId));
+  }
+
+  async awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+    const [awarded] = await db
+      .insert(userAchievements)
+      .values(userAchievement)
+      .returning();
+    return awarded;
+  }
+
+  // API Key methods
+  async getApiKeys(): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys);
+  }
+
+  async getApiKey(id: number): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    return apiKey || undefined;
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.keyHash, keyHash));
+    return apiKey || undefined;
+  }
+
+  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
+    const [apiKey] = await db
+      .insert(apiKeys)
+      .values(insertApiKey)
+      .returning();
+    return apiKey;
+  }
+
+  async updateApiKey(id: number, updates: Partial<InsertApiKey>): Promise<ApiKey | undefined> {
+    const [apiKey] = await db
+      .update(apiKeys)
+      .set(updates)
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return apiKey || undefined;
+  }
+
+  async deleteApiKey(id: number): Promise<boolean> {
+    const result = await db.delete(apiKeys).where(eq(apiKeys.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

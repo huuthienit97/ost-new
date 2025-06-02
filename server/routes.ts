@@ -1506,14 +1506,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public API endpoints (không yêu cầu authentication)
+  // API endpoints with flexible authentication (JWT or API Key)
+  // Import API key authentication middleware
+  const { flexibleAuth, requireApiPermission } = await import("./apiKeyAuth");
   
   /**
    * @swagger
-   * /api/public/stats:
+   * /api/external/stats:
    *   get:
-   *     summary: Lấy thống kê công khai
-   *     tags: [Public API]
+   *     summary: Lấy thống kê hệ thống (cho ứng dụng thứ 3)
+   *     tags: [External API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: header
+   *         name: x-api-key
+   *         schema:
+   *           type: string
+   *         description: API key cho ứng dụng thứ 3
    *     responses:
    *       200:
    *         description: Thống kê hệ thống
@@ -1534,8 +1545,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *                 totalAchievements:
    *                   type: number
    *                   description: Tổng số thành tích
+   *       401:
+   *         description: API key không hợp lệ
+   *       403:
+   *         description: Không đủ quyền truy cập
    */
-  app.get("/api/public/stats", async (req, res) => {
+  app.get("/api/external/stats", flexibleAuth, requireApiPermission("stats:view"), async (req, res) => {
     try {
       const members = await dbStorage.getMembers();
       const departments = await dbStorage.getDepartments();
@@ -1543,60 +1558,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const stats = {
         totalMembers: members.length,
-        activeMembers: members.filter(m => m.isActive).length,
+        activeMembers: members.filter((m: any) => m.isActive).length,
         totalDepartments: departments.length,
         totalAchievements: achievements.length,
       };
       
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching public stats:", error);
+      console.error("Error fetching external stats:", error);
       res.status(500).json({ message: "Lỗi lấy thống kê" });
     }
   });
 
   /**
    * @swagger
-   * /api/public/departments:
+   * /api/external/members:
    *   get:
-   *     summary: Lấy danh sách các ban (công khai)
-   *     tags: [Public API]
+   *     summary: Lấy danh sách thành viên (cho ứng dụng thứ 3)
+   *     tags: [External API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: header
+   *         name: x-api-key
+   *         schema:
+   *           type: string
+   *         description: API key cho ứng dụng thứ 3
+   *       - in: query
+   *         name: departmentId
+   *         schema:
+   *           type: number
+   *         description: Lọc theo ID ban
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: Lọc theo trạng thái hoạt động
    *     responses:
    *       200:
-   *         description: Danh sách các ban
+   *         description: Danh sách thành viên
    *         content:
    *           application/json:
    *             schema:
    *               type: array
    *               items:
-   *                 type: object
-   *                 properties:
-   *                   id:
-   *                     type: number
-   *                   name:
-   *                     type: string
-   *                   icon:
-   *                     type: string
-   *                   color:
-   *                     type: string
+   *                 $ref: '#/components/schemas/MemberWithDepartment'
    */
-  app.get("/api/public/departments", async (req, res) => {
+  app.get("/api/external/members", flexibleAuth, requireApiPermission("member:view"), async (req, res) => {
     try {
-      const departments = await dbStorage.getDepartments();
-      res.json(departments);
+      const { departmentId, active } = req.query;
+      let members = await dbStorage.getMembersWithDepartments();
+      
+      // Apply filters
+      if (departmentId && typeof departmentId === 'string') {
+        const deptId = parseInt(departmentId);
+        if (!isNaN(deptId)) {
+          members = members.filter((m: any) => m.departmentId === deptId);
+        }
+      }
+      
+      if (active && typeof active === 'string') {
+        const isActive = active.toLowerCase() === 'true';
+        members = members.filter((m: any) => m.isActive === isActive);
+      }
+      
+      res.json(members);
     } catch (error) {
-      console.error("Error fetching public departments:", error);
-      res.status(500).json({ message: "Lỗi lấy danh sách ban" });
+      console.error("Error fetching external members:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách thành viên" });
     }
   });
 
   /**
    * @swagger
-   * /api/public/achievements:
+   * /api/external/achievements:
    *   get:
-   *     summary: Lấy danh sách thành tích (công khai)
-   *     tags: [Public API]
+   *     summary: Lấy danh sách thành tích (cho ứng dụng thứ 3)
+   *     tags: [External API]
+   *     security:
+   *       - ApiKeyAuth: []
+   *       - BearerAuth: []
    *     parameters:
+   *       - in: header
+   *         name: x-api-key
+   *         schema:
+   *           type: string
+   *         description: API key cho ứng dụng thứ 3
    *       - in: query
    *         name: category
    *         schema:
@@ -1619,71 +1667,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               items:
    *                 $ref: '#/components/schemas/Achievement'
    */
-  app.get("/api/public/achievements", async (req, res) => {
+  app.get("/api/external/achievements", flexibleAuth, requireApiPermission("achievement:view"), async (req, res) => {
     try {
       const { category, level } = req.query;
       let achievements = await dbStorage.getAchievements();
       
       // Apply filters
       if (category && typeof category === 'string') {
-        achievements = achievements.filter(a => a.category === category);
+        achievements = achievements.filter((a: any) => a.category === category);
       }
       
       if (level && typeof level === 'string') {
-        achievements = achievements.filter(a => a.level === level);
+        achievements = achievements.filter((a: any) => a.level === level);
       }
       
       res.json(achievements);
     } catch (error) {
-      console.error("Error fetching public achievements:", error);
+      console.error("Error fetching external achievements:", error);
       res.status(500).json({ message: "Lỗi lấy danh sách thành tích" });
-    }
-  });
-
-  /**
-   * @swagger
-   * /api/public/members/count:
-   *   get:
-   *     summary: Lấy số lượng thành viên theo ban
-   *     tags: [Public API]
-   *     responses:
-   *       200:
-   *         description: Số lượng thành viên theo ban
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
-   *                 properties:
-   *                   departmentId:
-   *                     type: number
-   *                   departmentName:
-   *                     type: string
-   *                   memberCount:
-   *                     type: number
-   *                   activeCount:
-   *                     type: number
-   */
-  app.get("/api/public/members/count", async (req, res) => {
-    try {
-      const membersWithDepartments = await dbStorage.getMembersWithDepartments();
-      const departments = await dbStorage.getDepartments();
-      
-      const departmentStats = departments.map(dept => {
-        const deptMembers = membersWithDepartments.filter(m => m.departmentId === dept.id);
-        return {
-          departmentId: dept.id,
-          departmentName: dept.name,
-          memberCount: deptMembers.length,
-          activeCount: deptMembers.filter(m => m.isActive).length,
-        };
-      });
-      
-      res.json(departmentStats);
-    } catch (error) {
-      console.error("Error fetching public member count:", error);
-      res.status(500).json({ message: "Lỗi lấy thống kê thành viên" });
     }
   });
 
