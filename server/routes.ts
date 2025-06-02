@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
+import { db } from "./db";
+import { pointTransactions } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -570,15 +572,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create BeePoints for new user with welcome bonus
       await dbStorage.createUserBeePoints(user.id);
-      
-      // Add welcome transaction
-      await dbStorage.addPointTransaction({
-        userId: user.id,
-        amount: 50,
-        type: "welcome_bonus",
-        description: "Chào mừng thành viên mới - Tặng 50 BeePoint",
-        createdBy: req.user!.id,
-      });
 
       // Remove password hash from response
       res.status(201).json({

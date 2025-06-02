@@ -395,7 +395,7 @@ export class DatabaseStorage implements IStorage {
       .values(transaction)
       .returning();
 
-    // Update user's bee points
+    // Update user's bee points (only for the transaction user, not the creator)
     await this.updateUserBeePoints(transaction.userId, transaction.amount);
 
     return newTransaction;
