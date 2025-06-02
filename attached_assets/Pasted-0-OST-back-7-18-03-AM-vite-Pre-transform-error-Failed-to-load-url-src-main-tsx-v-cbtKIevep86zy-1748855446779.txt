@@ -1,0 +1,74 @@
+0|OST-back | 7:18:03 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=cbtKIevep86zyJNtqm02H (resolved id: /src/main.tsx?v=cbtKIevep86zyJNtqm02H). Does the file exist?
+0|OST-back | 8:54:47 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=xE4GdJSc07a13Ut3zYpge (resolved id: /src/main.tsx?v=xE4GdJSc07a13Ut3zYpge). Does the file exist?
+
+/root/.pm2/logs/OST-backend-error-6.log last 15 lines:
+6|OST-back | 8:54:56 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=phravEcSxxop-4lG8uyP9 (resolved id: /src/main.tsx?v=phravEcSxxop-4lG8uyP9). Does the file exist?
+
+/root/.pm2/logs/OST-backend-out-0.log last 15 lines:
+0|OST-back | 7:09:33 AM [express] serving on port 5000
+0|OST-back | 7:18:04 AM [express] serving on port 5000
+0|OST-back | 8:53:20 AM [express] serving on port 5000
+0|OST-back | 8:54:48 AM [express] serving on port 5000
+0|OST-back | 9:09:15 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-out-2.log last 15 lines:
+2|OST-back | 7:09:34 AM [express] serving on port 5000
+2|OST-back | 8:53:21 AM [express] serving on port 5000
+2|OST-back | 9:09:15 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-out-5.log last 15 lines:
+5|OST-back | 7:09:34 AM [express] serving on port 5000
+5|OST-back | 8:53:21 AM [express] serving on port 5000
+5|OST-back | 9:09:16 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-out-6.log last 15 lines:
+6|OST-back | 7:09:34 AM [express] serving on port 5000
+6|OST-back | 8:53:21 AM [express] serving on port 5000
+6|OST-back | 8:54:57 AM [express] serving on port 5000
+6|OST-back | 9:09:16 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-error-3.log last 15 lines:
+3|OST-back | 7:18:03 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=CqkF7g9K1XmTwpspDu0yO (resolved id: /src/main.tsx?v=CqkF7g9K1XmTwpspDu0yO). Does the file exist?
+3|OST-back | 8:54:55 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=4FPB-oIr6ibbOnu_Vpcgb (resolved id: /src/main.tsx?v=4FPB-oIr6ibbOnu_Vpcgb). Does the file exist?
+3|OST-back | 9:09:26 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=rXQRQKxPbJ6-Z6P7uqR_2 (resolved id: /src/main.tsx?v=rXQRQKxPbJ6-Z6P7uqR_2). Does the file exist?
+
+/root/.pm2/logs/OST-backend-error-4.log last 15 lines:
+4|OST-back | 9:09:26 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=r2bRoXNqmmYQcKok25CV2 (resolved id: /src/main.tsx?v=r2bRoXNqmmYQcKok25CV2). Does the file exist?
+
+/root/.pm2/logs/OST-backend-out-3.log last 15 lines:
+3|OST-back | 7:09:34 AM [express] serving on port 5000
+3|OST-back | 7:18:04 AM [express] serving on port 5000
+3|OST-back | 8:53:21 AM [express] serving on port 5000
+3|OST-back | 8:54:56 AM [express] serving on port 5000
+3|OST-back | 9:09:15 AM [express] serving on port 5000
+3|OST-back | 9:09:27 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-out-4.log last 15 lines:
+4|OST-back | 7:09:34 AM [express] serving on port 5000
+4|OST-back | 8:53:21 AM [express] serving on port 5000
+4|OST-back | 9:09:16 AM [express] serving on port 5000
+4|OST-back | 9:09:27 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-error-1.log last 15 lines:
+1|OST-back | 7:18:04 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=qW_JNgJlh6T3aVX6w6Pl- (resolved id: /src/main.tsx?v=qW_JNgJlh6T3aVX6w6Pl-). Does the file exist?
+1|OST-back | 8:54:48 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=SyEdIVRuGXnv_0fGNxQtq (resolved id: /src/main.tsx?v=SyEdIVRuGXnv_0fGNxQtq). Does the file exist?
+1|OST-back | 9:09:30 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=tDubTfJaol7umyanzjd_Z (resolved id: /src/main.tsx?v=tDubTfJaol7umyanzjd_Z). Does the file exist?
+
+/root/.pm2/logs/OST-backend-error-7.log last 15 lines:
+7|OST-back | 9:09:30 AM [vite] Pre-transform error: Failed to load url /src/main.tsx?v=aNrc1qpeQdBEftFZbh0zm (resolved id: /src/main.tsx?v=aNrc1qpeQdBEftFZbh0zm). Does the file exist?
+
+/root/.pm2/logs/OST-backend-out-1.log last 15 lines:
+1|OST-back | 7:09:34 AM [express] serving on port 5000
+1|OST-back | 7:18:05 AM [express] serving on port 5000
+1|OST-back | 8:53:20 AM [express] serving on port 5000
+1|OST-back | 8:54:49 AM [express] serving on port 5000
+1|OST-back | 9:09:15 AM [express] serving on port 5000
+1|OST-back | 9:09:31 AM [express] serving on port 5000
+
+/root/.pm2/logs/OST-backend-out-7.log last 15 lines:
+7|OST-back | 7:09:34 AM [express] serving on port 5000
+7|OST-back | 8:53:21 AM [express] serving on port 5000
+7|OST-back | 9:09:16 AM [express] serving on port 5000
+7|OST-back | 9:09:31 AM [express] serving on port 5000
+
+
