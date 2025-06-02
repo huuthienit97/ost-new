@@ -976,6 +976,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // BeePoint API endpoints
+  /**
+   * @swagger
+   * /api/bee-points/me:
+   *   get:
+   *     tags: [BeePoints]
+   *     summary: Lấy thông tin BeePoints của người dùng hiện tại
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Thông tin BeePoints
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BeePointsInfo'
+   *       401:
+   *         description: Chưa đăng nhập
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   app.get("/api/bee-points/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -1206,6 +1228,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Achievement management routes
+  /**
+   * @swagger
+   * /api/achievements:
+   *   get:
+   *     tags: [Achievements]
+   *     summary: Lấy danh sách tất cả thành tích
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách thành tích
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Achievement'
+   *       401:
+   *         description: Chưa đăng nhập
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievements).where(eq(achievements.isActive, true));
@@ -1216,6 +1262,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @swagger
+   * /api/achievements:
+   *   post:
+   *     tags: [Achievements]
+   *     summary: Tạo thành tích mới
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateAchievementRequest'
+   *     responses:
+   *       201:
+   *         description: Thành tích được tạo thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Achievement'
+   *       400:
+   *         description: Dữ liệu không hợp lệ
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   app.post("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createAchievementSchema.safeParse(req.body);
@@ -1239,6 +1313,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @swagger
+   * /api/achievements/award:
+   *   post:
+   *     tags: [Achievements]
+   *     summary: Trao thành tích cho người dùng
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AwardAchievementRequest'
+   *     responses:
+   *       201:
+   *         description: Trao thành tích thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                 pointsAwarded:
+   *                   type: integer
+   *       400:
+   *         description: Dữ liệu không hợp lệ hoặc đã có thành tích
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // Award achievement to user
   app.post("/api/achievements/award", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_AWARD), async (req: AuthenticatedRequest, res) => {
     try {
@@ -1351,6 +1458,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @swagger
+   * /api/achievements/me:
+   *   get:
+   *     tags: [Achievements]
+   *     summary: Lấy thành tích cá nhân của người dùng hiện tại
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách thành tích cá nhân
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/UserAchievement'
+   *       401:
+   *         description: Chưa đăng nhập
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // Get my achievements
   app.get("/api/achievements/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

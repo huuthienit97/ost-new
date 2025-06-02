@@ -151,6 +151,90 @@ const options = {
             notes: { type: 'string' },
           },
         },
+        Achievement: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            category: { 
+              type: 'string',
+              enum: ['academic', 'creative', 'leadership', 'participation', 'special']
+            },
+            level: { 
+              type: 'string',
+              enum: ['bronze', 'silver', 'gold', 'special']
+            },
+            badgeIcon: { type: 'string' },
+            badgeColor: { type: 'string' },
+            pointsReward: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateAchievementRequest: {
+          type: 'object',
+          required: ['title', 'category', 'level', 'pointsReward'],
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            category: { 
+              type: 'string',
+              enum: ['academic', 'creative', 'leadership', 'participation', 'special']
+            },
+            level: { 
+              type: 'string',
+              enum: ['bronze', 'silver', 'gold', 'special']
+            },
+            badgeIcon: { type: 'string' },
+            badgeColor: { type: 'string', default: '#3B82F6' },
+            pointsReward: { type: 'integer', minimum: 0 },
+          },
+        },
+        AwardAchievementRequest: {
+          type: 'object',
+          required: ['userId', 'achievementId'],
+          properties: {
+            userId: { type: 'integer' },
+            achievementId: { type: 'integer' },
+            notes: { type: 'string' },
+          },
+        },
+        UserAchievement: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            awardedDate: { type: 'string', format: 'date-time' },
+            notes: { type: 'string' },
+            achievement: { $ref: '#/components/schemas/Achievement' },
+          },
+        },
+        BeePointsInfo: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            userId: { type: 'integer' },
+            currentPoints: { type: 'integer' },
+            totalEarned: { type: 'integer' },
+            totalSpent: { type: 'integer' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PointTransaction: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            userId: { type: 'integer' },
+            type: { 
+              type: 'string',
+              enum: ['earned', 'spent', 'admin_adjustment']
+            },
+            amount: { type: 'integer' },
+            description: { type: 'string' },
+            achievementId: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
         Error: {
           type: 'object',
           properties: {
@@ -180,6 +264,14 @@ const options = {
       {
         name: 'Super Admin',
         description: '🛡️ API chỉ dành cho Super Admin - Quyền cao nhất',
+      },
+      {
+        name: 'Achievements',
+        description: '🏆 Quản lý thành tích và trao thưởng',
+      },
+      {
+        name: 'BeePoints',
+        description: '🍯 Hệ thống điểm thưởng BeePoints',
       },
     ],
   },
