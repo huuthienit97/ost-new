@@ -24,12 +24,19 @@ const createApiKeySchema = z.object({
   expiresAt: z.string().optional(),
 });
 
+const updateApiKeySchema = z.object({
+  permissions: z.array(z.string()).min(1, "Ít nhất một quyền hạn là bắt buộc"),
+});
+
 type CreateApiKeyData = z.infer<typeof createApiKeySchema>;
+type UpdateApiKeyData = z.infer<typeof updateApiKeySchema>;
 
 export default function ApiKeysPage() {
   const { user, hasPermission } = useAuth();
   const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [selectedApiKey, setSelectedApiKey] = useState<ApiKey | null>(null);
   const [showApiKey, setShowApiKey] = useState<string | null>(null);
   const [createdApiKey, setCreatedApiKey] = useState<string | null>(null);
 
@@ -39,6 +46,13 @@ export default function ApiKeysPage() {
       name: "",
       permissions: [],
       expiresAt: "",
+    },
+  });
+
+  const updateForm = useForm<UpdateApiKeyData>({
+    resolver: zodResolver(updateApiKeySchema),
+    defaultValues: {
+      permissions: [],
     },
   });
 
@@ -84,6 +98,46 @@ export default function ApiKeysPage() {
       toast({
         title: "Lỗi",
         description: "Không thể tạo API key",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update API key permissions mutation
+  const updateApiKeyMutation = useMutation({
+    mutationFn: async (data: UpdateApiKeyData & { id: number }) => {
+      const response = await fetch(`/api/admin/api-keys/${data.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          permissions: data.permissions,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] });
+      setIsUpdateModalOpen(false);
+      setSelectedApiKey(null);
+      updateForm.reset();
+      toast({
+        title: "Thành công",
+        description: "Quyền hạn API key đã được cập nhật",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật quyền hạn API key",
         variant: "destructive",
       });
     },
