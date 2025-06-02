@@ -332,6 +332,17 @@ import { z } from "zod";
  */
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Check if system needs initialization
+  app.get("/api/auth/check-init", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json({ needsInit: users.length === 0 });
+    } catch (error) {
+      console.error("Error checking system initialization:", error);
+      res.status(500).json({ message: "Lỗi kiểm tra khởi tạo hệ thống" });
+    }
+  });
+
   // Initialize default admin user
   app.post("/api/auth/init", async (req, res) => {
     try {

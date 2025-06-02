@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,22 @@ import { Users, Lock, User } from "lucide-react";
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [needsInit, setNeedsInit] = useState(false);
   const { toast } = useToast();
+
+  // Check if system needs initialization
+  const { data: initStatus } = useQuery<{ needsInit: boolean }>({
+    queryKey: ["/api/auth/check-init"],
+    retry: false,
+  });
+
+  React.useEffect(() => {
+    if (initStatus?.needsInit) {
+      setNeedsInit(true);
+    } else if (initStatus?.needsInit === false) {
+      setNeedsInit(false);
+    }
+  }, [initStatus]);
 
   const initMutation = useMutation({
     mutationFn: async () => {
@@ -25,6 +40,7 @@ export default function LoginPage() {
       });
       setUsername(data.username);
       setPassword(data.defaultPassword);
+      setNeedsInit(false); // Hide init button after success
     },
     onError: (error: any) => {
       toast({
@@ -131,19 +147,21 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 pt-4 border-t">
-              <p className="text-sm text-gray-600 text-center mb-3">
-                Lần đầu sử dụng? Khởi tạo hệ thống
-              </p>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => initMutation.mutate()}
-                disabled={initMutation.isPending}
-              >
-                {initMutation.isPending ? "Đang khởi tạo..." : "Khởi tạo hệ thống"}
-              </Button>
-            </div>
+            {needsInit && (
+              <div className="mt-6 pt-4 border-t">
+                <p className="text-sm text-gray-600 text-center mb-3">
+                  Lần đầu sử dụng? Khởi tạo hệ thống
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => initMutation.mutate()}
+                  disabled={initMutation.isPending}
+                >
+                  {initMutation.isPending ? "Đang khởi tạo..." : "Khởi tạo hệ thống"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

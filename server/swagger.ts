@@ -162,28 +162,24 @@ const options = {
     },
     tags: [
       {
+        name: 'Public',
+        description: '🌐 API công khai - Không cần xác thực',
+      },
+      {
         name: 'Authentication',
-        description: 'Xác thực và phân quyền',
+        description: '🔑 Xác thực và phiên đăng nhập',
       },
       {
-        name: 'Roles',
-        description: 'Quản lý vai trò',
+        name: 'User Access',
+        description: '👤 API cho người dùng thông thường - Cần quyền cơ bản',
       },
       {
-        name: 'Users',
-        description: 'Quản lý người dùng',
+        name: 'Admin Only',
+        description: '⚡ API chỉ dành cho quản trị viên - Cần quyền admin',
       },
       {
-        name: 'Departments',
-        description: 'Quản lý ban',
-      },
-      {
-        name: 'Members',
-        description: 'Quản lý thành viên',
-      },
-      {
-        name: 'Statistics',
-        description: 'Thống kê',
+        name: 'Super Admin',
+        description: '🛡️ API chỉ dành cho Super Admin - Quyền cao nhất',
       },
     ],
   },
