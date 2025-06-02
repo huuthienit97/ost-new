@@ -232,9 +232,9 @@ export default function AchievementsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(members as any[]).map((member: any) => (
-                                  <SelectItem key={member.id} value={member.id.toString()}>
-                                    {member.fullName} - {member.studentId}
+                                {(members as any[]).map((user: any) => (
+                                  <SelectItem key={user.id} value={user.id.toString()}>
+                                    {user.fullName || user.username}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
