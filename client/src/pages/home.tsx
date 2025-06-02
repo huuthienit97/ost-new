@@ -227,19 +227,19 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-amber-600">
-                    {beePoints?.currentPoints ?? 0}
+                    {(beePoints as BeePoint)?.currentPoints ?? 0}
                   </div>
                   <div className="text-sm text-amber-700">Điểm hiện tại</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {beePoints?.totalEarned ?? 0}
+                    {(beePoints as BeePoint)?.totalEarned ?? 0}
                   </div>
                   <div className="text-sm text-gray-600">Tổng kiếm được</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-red-600">
-                    {beePoints?.totalSpent ?? 0}
+                    {(beePoints as BeePoint)?.totalSpent ?? 0}
                   </div>
                   <div className="text-sm text-gray-600">Đã sử dụng</div>
                 </div>
