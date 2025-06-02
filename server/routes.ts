@@ -1,12 +1,160 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { createMemberSchema, insertMemberSchema } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
+import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Tên đăng nhập và mật khẩu là bắt buộc" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
+      }
+
+      const isValidPassword = await verifyPassword(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
+      }
+
+      const userWithRole = await storage.getUserWithRole(user.id);
+      if (!userWithRole) {
+        return res.status(500).json({ message: "Lỗi hệ thống" });
+      }
+
+      const token = generateToken(user, userWithRole.role.permissions);
+      
+      // Update last login would require updating the schema to include lastLogin in update type
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          role: userWithRole.role,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi đăng nhập" });
+    }
+  });
+
+  app.get("/api/auth/me", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userWithRole = await storage.getUserWithRole(req.user!.id);
+      if (!userWithRole) {
+        return res.status(404).json({ message: "Người dùng không tồn tại" });
+      }
+
+      res.json({
+        user: {
+          id: userWithRole.id,
+          username: userWithRole.username,
+          email: userWithRole.email,
+          fullName: userWithRole.fullName,
+          role: userWithRole.role,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi lấy thông tin người dùng" });
+    }
+  });
+
+  // Role management routes
+  app.get("/api/roles", authenticate, authorize(PERMISSIONS.ROLE_VIEW), async (req, res) => {
+    try {
+      const roles = await storage.getRoles();
+      res.json(roles);
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi lấy danh sách vai trò" });
+    }
+  });
+
+  app.post("/api/roles", authenticate, authorize(PERMISSIONS.ROLE_CREATE), async (req, res) => {
+    try {
+      const validationResult = createRoleSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const role = await storage.createRole(validationResult.data);
+      res.status(201).json(role);
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi tạo vai trò" });
+    }
+  });
+
+  // User management routes
+  app.get("/api/users", authenticate, authorize(PERMISSIONS.USER_VIEW), async (req, res) => {
+    try {
+      const users = await storage.getUsersWithRoles();
+      // Remove password hashes from response
+      const safeUsers = users.map(user => ({
+        ...user,
+        passwordHash: undefined,
+      }));
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi lấy danh sách người dùng" });
+    }
+  });
+
+  app.post("/api/users", authenticate, authorize(PERMISSIONS.USER_CREATE), async (req, res) => {
+    try {
+      const validationResult = createUserSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const { password, ...userData } = validationResult.data;
+      
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Tên đăng nhập đã tồn tại" });
+      }
+
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email đã tồn tại" });
+      }
+
+      const passwordHash = await hashPassword(password);
+      const user = await storage.createUser({
+        ...userData,
+        passwordHash,
+      });
+
+      // Remove password hash from response
+      res.status(201).json({
+        ...user,
+        passwordHash: undefined,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi tạo người dùng" });
+    }
+  });
+
   // Get all departments
-  app.get("/api/departments", async (req, res) => {
+  app.get("/api/departments", authenticate, authorize(PERMISSIONS.DEPARTMENT_VIEW), async (req, res) => {
     try {
       const departments = await storage.getDepartments();
       res.json(departments);
@@ -16,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all members with department info
-  app.get("/api/members", async (req, res) => {
+  app.get("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const { type, department, position, search } = req.query;
       
@@ -74,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new member
-  app.post("/api/members", async (req, res) => {
+  app.post("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createMemberSchema.safeParse(req.body);
       

@@ -56,6 +56,109 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Role methods
+  async getRoles(): Promise<Role[]> {
+    return await db.select().from(roles);
+  }
+
+  async getRole(id: number): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.id, id));
+    return role || undefined;
+  }
+
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const [role] = await db
+      .insert(roles)
+      .values(insertRole)
+      .returning();
+    return role;
+  }
+
+  async updateRole(id: number, updates: Partial<InsertRole>): Promise<Role | undefined> {
+    const [role] = await db
+      .update(roles)
+      .set(updates)
+      .where(eq(roles.id, id))
+      .returning();
+    return role || undefined;
+  }
+
+  async deleteRole(id: number): Promise<boolean> {
+    const result = await db.delete(roles).where(eq(roles.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // User methods
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUsersWithRoles(): Promise<UserWithRole[]> {
+    const result = await db
+      .select()
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id));
+    
+    return result.map(row => ({
+      ...row.users,
+      role: row.roles!,
+    }));
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserWithRole(id: number): Promise<UserWithRole | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.id, id));
+    
+    if (result.length === 0) return undefined;
+    
+    const row = result[0];
+    return {
+      ...row.users,
+      role: row.roles!,
+    };
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Department methods
   async getDepartments(): Promise<Department[]> {
     return await db.select().from(departments);
   }
