@@ -53,7 +53,7 @@ export default function MembersPage() {
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: number) => {
-      await apiRequest(`/api/members/${memberId}`, "DELETE");
+      await apiRequest("DELETE", `/api/members/${memberId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
