@@ -79,11 +79,11 @@ export default function HomePage() {
 
           {/* Admin Panel - Only for authorized users */}
           {hasPermission("system_admin") && (
-            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/admin"}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/roles"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Shield className="h-5 w-5 text-red-600" />
-                  <span>Quản trị hệ thống</span>
+                  <span>Quản lý vai trò</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
