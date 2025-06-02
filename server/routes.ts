@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { pointTransactions } from "@shared/schema";
+import { users, beePoints, pointTransactions } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -732,33 +732,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error("Member role not found");
           }
           
-          // Create user account
-          const userData = {
+          // Create user account using storage method
+          const newUser = await dbStorage.createUser({
             username,
             email: memberData.email || `${username}@example.com`,
             fullName: memberData.fullName,
-            password: hashedPassword,
+            passwordHash: hashedPassword,
             roleId: memberRole.id,
             mustChangePassword: true,
-          };
-          
-          const newUser = await dbStorage.createUser(userData);
-          
-          // Create BeePoint record for new user
-          await dbStorage.createBeePoint({
-            userId: newUser.id,
-            currentPoints: 50,
-            totalEarned: 50,
-            totalSpent: 0,
-          });
-          
-          // Create welcome transaction
-          await dbStorage.createPointTransaction({
-            userId: newUser.id,
-            amount: 50,
-            type: 'welcome_bonus',
-            description: 'Điểm chào mừng thành viên mới',
-            createdBy: req.user?.id,
+            isActive: true,
           });
           
           userCredentials = {
