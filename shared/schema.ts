@@ -57,6 +57,7 @@ export const members = pgTable("members", {
   memberType: text("member_type").notNull(), // active, alumni
   joinDate: text("join_date").notNull(),
   notes: text("notes"),
+  userId: integer("user_id").references(() => users.id),
   isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by").references(() => users.id),
   updatedBy: integer("updated_by").references(() => users.id),
@@ -105,6 +106,10 @@ export const membersRelations = relations(members, ({ one }) => ({
   department: one(departments, {
     fields: [members.departmentId],
     references: [departments.id],
+  }),
+  user: one(users, {
+    fields: [members.userId],
+    references: [users.id],
   }),
   createdByUser: one(users, {
     fields: [members.createdBy],
@@ -281,6 +286,12 @@ export type UserWithRole = User & {
 
 export type MemberWithDepartment = Member & {
   department: Department;
+  user?: {
+    id: number;
+    username: string;
+    fullName: string;
+    email: string;
+  } | null;
 };
 
 // Settings and uploads types

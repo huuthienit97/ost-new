@@ -216,13 +216,61 @@ export class DatabaseStorage implements IStorage {
 
   async getMembersWithDepartments(): Promise<MemberWithDepartment[]> {
     const result = await db
-      .select()
+      .select({
+        id: members.id,
+        fullName: members.fullName,
+        studentId: members.studentId,
+        email: members.email,
+        phone: members.phone,
+        class: members.class,
+        departmentId: members.departmentId,
+        position: members.position,
+        memberType: members.memberType,
+        joinDate: members.joinDate,
+        notes: members.notes,
+        userId: members.userId,
+        isActive: members.isActive,
+        createdBy: members.createdBy,
+        updatedBy: members.updatedBy,
+        createdAt: members.createdAt,
+        updatedAt: members.updatedAt,
+        department: {
+          id: departments.id,
+          name: departments.name,
+          icon: departments.icon,
+          color: departments.color,
+        },
+        user: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          email: users.email,
+        }
+      })
       .from(members)
-      .leftJoin(departments, eq(members.departmentId, departments.id));
+      .leftJoin(departments, eq(members.departmentId, departments.id))
+      .leftJoin(users, eq(members.userId, users.id));
     
     return result.map(row => ({
-      ...row.members,
-      department: row.departments!,
+      id: row.id,
+      fullName: row.fullName,
+      studentId: row.studentId,
+      email: row.email,
+      phone: row.phone,
+      class: row.class,
+      departmentId: row.departmentId,
+      position: row.position,
+      memberType: row.memberType,
+      joinDate: row.joinDate,
+      notes: row.notes,
+      userId: row.userId,
+      isActive: row.isActive,
+      createdBy: row.createdBy,
+      updatedBy: row.updatedBy,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      department: row.department,
+      user: row.user,
     }));
   }
 
