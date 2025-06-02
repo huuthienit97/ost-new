@@ -287,51 +287,152 @@ export function setupSwagger(app: Express) {
     res.send(specs);
   });
 
-  // Simple HTML page for API documentation
+  // Simple API list page without external dependencies
   app.get('/api-docs', (req, res) => {
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <title>CLB Sáng Tạo - API Documentation</title>
-  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+  <meta charset="utf-8">
   <style>
-    html {
-      box-sizing: border-box;
-      overflow: -moz-scrollbars-vertical;
-      overflow-y: scroll;
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 40px; 
+      line-height: 1.6; 
+      background: #f5f5f5;
     }
-    *, *:before, *:after {
-      box-sizing: inherit;
+    .container { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      background: white; 
+      padding: 30px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    body {
-      margin:0;
-      background: #fafafa;
+    h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+    h2 { color: #0056b3; margin-top: 30px; }
+    .endpoint { 
+      background: #f8f9fa; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-radius: 5px; 
+      border-left: 4px solid #007bff;
     }
-    .swagger-ui .topbar { display: none }
+    .method { 
+      display: inline-block; 
+      padding: 4px 8px; 
+      border-radius: 3px; 
+      color: white; 
+      font-weight: bold; 
+      margin-right: 10px;
+    }
+    .get { background: #28a745; }
+    .post { background: #007bff; }
+    .put { background: #ffc107; color: #000; }
+    .delete { background: #dc3545; }
+    .path { font-family: monospace; font-size: 16px; }
+    .desc { margin-top: 8px; color: #666; }
+    .json-link { 
+      display: inline-block; 
+      margin-top: 20px; 
+      padding: 10px 20px; 
+      background: #007bff; 
+      color: white; 
+      text-decoration: none; 
+      border-radius: 5px;
+    }
+    .json-link:hover { background: #0056b3; }
   </style>
 </head>
 <body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
-  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
-  <script>
-    window.onload = function() {
-      const ui = SwaggerUIBundle({
-        url: '/api-docs.json',
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
-        ],
-        layout: "StandaloneLayout"
-      });
-    };
-  </script>
+  <div class="container">
+    <h1>CLB Sáng Tạo - API Documentation</h1>
+    
+    <h2>🌐 Public APIs</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/public/users</span>
+      <div class="desc">Lấy danh sách tất cả users đang hoạt động (không cần token)</div>
+    </div>
+
+    <h2>🔐 Authentication</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/auth/check-init</span>
+      <div class="desc">Kiểm tra xem hệ thống đã được khởi tạo chưa</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/auth/login</span>
+      <div class="desc">Đăng nhập với username và password</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/auth/logout</span>
+      <div class="desc">Đăng xuất</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/auth/me</span>
+      <div class="desc">Lấy thông tin user hiện tại</div>
+    </div>
+
+    <h2>👥 Users Management</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/users</span>
+      <div class="desc">Lấy danh sách users (cần quyền USER_VIEW)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/users</span>
+      <div class="desc">Tạo user mới (cần quyền USER_CREATE)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method put">PUT</span>
+      <span class="path">/api/users/:id</span>
+      <div class="desc">Cập nhật thông tin user (cần quyền USER_UPDATE)</div>
+    </div>
+
+    <h2>🏆 BeePoints System</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/bee-points/me</span>
+      <div class="desc">Lấy BeePoints của user hiện tại</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/bee-points/add</span>
+      <div class="desc">Thêm BeePoints cho user (cần quyền BEEPOINTS_MANAGE)</div>
+    </div>
+
+    <h2>🎯 Achievements</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/achievements</span>
+      <div class="desc">Lấy danh sách thành tích</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/achievements</span>
+      <div class="desc">Tạo thành tích mới (cần quyền ACHIEVEMENT_CREATE)</div>
+    </div>
+
+    <h2>🔑 API Keys</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/admin/api-keys</span>
+      <div class="desc">Lấy danh sách API keys (cần quyền ADMIN)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/admin/api-keys</span>
+      <div class="desc">Tạo API key mới (cần quyền ADMIN)</div>
+    </div>
+
+    <a href="/api-docs.json" class="json-link">📄 View OpenAPI JSON Spec</a>
+  </div>
 </body>
 </html>`;
     res.send(html);
