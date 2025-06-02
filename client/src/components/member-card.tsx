@@ -142,23 +142,16 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Tài khoản:</span>
-              {accountInfo?.hasAccount ? (
+              {member.user ? (
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline" className="text-xs">
                     <User className="h-3 w-3 mr-1" />
-                    {accountInfo.username}
+                    {member.user.username}
                   </Badge>
-                  {accountInfo.mustChangePassword ? (
-                    <Badge variant="secondary" className="text-xs text-orange-600">
-                      <Key className="h-3 w-3 mr-1" />
-                      Chưa đổi MK
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs text-green-600">
-                      <Key className="h-3 w-3 mr-1" />
-                      Đã đổi MK
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="text-xs text-green-600">
+                    <Key className="h-3 w-3 mr-1" />
+                    Có tài khoản
+                  </Badge>
                 </div>
               ) : (
                 <Badge variant="secondary" className="text-xs">
@@ -188,11 +181,11 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
             <Edit className="h-4 w-4 mr-1" />
             Sửa
           </Button>
-          {canResetPassword && accountInfo?.hasAccount && (
+          {canResetPassword && member.user && (
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => resetPasswordMutation.mutate(accountInfo.userId)}
+              onClick={() => resetPasswordMutation.mutate(member.user!.id)}
               disabled={resetPasswordMutation.isPending}
               className="px-3"
             >

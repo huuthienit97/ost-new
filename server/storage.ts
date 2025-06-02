@@ -251,7 +251,78 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(departments, eq(members.departmentId, departments.id))
       .leftJoin(users, eq(members.userId, users.id));
     
-    return result.map(row => ({
+    return result
+      .filter(row => row.department !== null)
+      .map(row => ({
+        id: row.id,
+        fullName: row.fullName,
+        studentId: row.studentId,
+        email: row.email,
+        phone: row.phone,
+        class: row.class,
+        departmentId: row.departmentId,
+        position: row.position,
+        memberType: row.memberType,
+        joinDate: row.joinDate,
+        notes: row.notes,
+        userId: row.userId,
+        isActive: row.isActive,
+        createdBy: row.createdBy,
+        updatedBy: row.updatedBy,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        department: row.department as Department,
+        user: row.user,
+      }));
+  }
+
+  async getMember(id: number): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.id, id));
+    return member || undefined;
+  }
+
+  async getMemberWithDepartment(id: number): Promise<MemberWithDepartment | undefined> {
+    const result = await db
+      .select({
+        id: members.id,
+        fullName: members.fullName,
+        studentId: members.studentId,
+        email: members.email,
+        phone: members.phone,
+        class: members.class,
+        departmentId: members.departmentId,
+        position: members.position,
+        memberType: members.memberType,
+        joinDate: members.joinDate,
+        notes: members.notes,
+        userId: members.userId,
+        isActive: members.isActive,
+        createdBy: members.createdBy,
+        updatedBy: members.updatedBy,
+        createdAt: members.createdAt,
+        updatedAt: members.updatedAt,
+        department: {
+          id: departments.id,
+          name: departments.name,
+          icon: departments.icon,
+          color: departments.color,
+        },
+        user: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          email: users.email,
+        }
+      })
+      .from(members)
+      .leftJoin(departments, eq(members.departmentId, departments.id))
+      .leftJoin(users, eq(members.userId, users.id))
+      .where(eq(members.id, id));
+    
+    if (result.length === 0 || !result[0].department) return undefined;
+    
+    const row = result[0];
+    return {
       id: row.id,
       fullName: row.fullName,
       studentId: row.studentId,
@@ -269,29 +340,8 @@ export class DatabaseStorage implements IStorage {
       updatedBy: row.updatedBy,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      department: row.department,
+      department: row.department as Department,
       user: row.user,
-    }));
-  }
-
-  async getMember(id: number): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.id, id));
-    return member || undefined;
-  }
-
-  async getMemberWithDepartment(id: number): Promise<MemberWithDepartment | undefined> {
-    const result = await db
-      .select()
-      .from(members)
-      .leftJoin(departments, eq(members.departmentId, departments.id))
-      .where(eq(members.id, id));
-    
-    if (result.length === 0) return undefined;
-    
-    const row = result[0];
-    return {
-      ...row.members,
-      department: row.departments!,
     };
   }
 
