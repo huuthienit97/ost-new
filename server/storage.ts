@@ -1,16 +1,41 @@
 import { 
   members, 
-  departments, 
+  departments,
+  users,
+  roles,
   type Member, 
   type Department, 
   type InsertMember, 
   type InsertDepartment, 
-  type MemberWithDepartment 
+  type MemberWithDepartment,
+  type User,
+  type Role,
+  type InsertUser,
+  type InsertRole,
+  type UserWithRole
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or } from "drizzle-orm";
 
 export interface IStorage {
+  // Role methods
+  getRoles(): Promise<Role[]>;
+  getRole(id: number): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: number, updates: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(id: number): Promise<boolean>;
+
+  // User methods
+  getUsers(): Promise<User[]>;
+  getUsersWithRoles(): Promise<UserWithRole[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserWithRole(id: number): Promise<UserWithRole | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+
   // Department methods
   getDepartments(): Promise<Department[]>;
   getDepartment(id: number): Promise<Department | undefined>;
