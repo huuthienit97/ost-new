@@ -309,7 +309,7 @@ import { z } from "zod";
  *             schema:
  *               $ref: '#/components/schemas/Member'
  *   delete:
- *     tags: [Members]
+ *     tags: [Admin Only]
  *     summary: Xóa thành viên
  *     security:
  *       - bearerAuth: []
@@ -331,7 +331,7 @@ import { z } from "zod";
  * @swagger
  * /api/stats:
  *   get:
- *     tags: [Statistics]
+ *     tags: [Public]
  *     summary: Lấy thống kê hệ thống
  *     responses:
  *       200:
