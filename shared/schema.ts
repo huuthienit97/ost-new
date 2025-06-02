@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -189,6 +189,20 @@ export const userAchievements = pgTable("user_achievements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// API Keys table for public API access
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  keyHash: varchar("key_hash", { length: 255 }).notNull().unique(),
+  permissions: jsonb("permissions").notNull().default('[]'), // Array of permissions
+  isActive: boolean("is_active").default(true).notNull(),
+  rateLimit: integer("rate_limit").default(1000).notNull(), // Requests per hour
+  lastUsed: timestamp("last_used"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Optional expiration
+});
+
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({
   userAchievements: many(userAchievements),
@@ -210,6 +224,13 @@ export const userAchievementsRelations = relations(userAchievements, ({ one }) =
   }),
 }));
 
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [apiKeys.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, {
     fields: [users.roleId],
@@ -223,6 +244,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdTransactions: many(pointTransactions, {
     relationName: "transactionCreatedBy",
   }),
+  userAchievements: many(userAchievements),
+  awardedAchievements: many(userAchievements, { relationName: "achievementAwardedBy" }),
+  createdApiKeys: many(apiKeys),
 }));
 
 // Insert schemas
