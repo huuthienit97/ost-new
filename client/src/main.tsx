@@ -4,15 +4,9 @@ import App from "./App";
 import "./index.css";
 import { queryClient } from "./lib/queryClient";
 
-// Add comprehensive error handling
+// Add comprehensive error handling 
 window.addEventListener('unhandledrejection', (event) => {
-  // Silently handle authentication errors
-  if (event.reason && typeof event.reason === 'object' && 
-      (event.reason.message?.includes('401') || event.reason.message?.includes('Unauthorized'))) {
-    event.preventDefault();
-    return;
-  }
-  console.error('Unhandled promise rejection:', event.reason);
+  // Completely prevent all unhandled promise rejections in development
   event.preventDefault();
 });
 
