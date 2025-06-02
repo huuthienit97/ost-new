@@ -8,35 +8,36 @@ export interface FlexibleAuthRequest extends Request {
   authType?: 'jwt' | 'apikey' | 'same-origin';
 }
 
-// Middleware that allows both JWT authentication (same-origin) and API key authentication (external)
+// Simplified middleware that allows public access from same origin, requires API key for external
 export function flexibleAuth(req: FlexibleAuthRequest, res: Response, next: NextFunction) {
-  // Check if request is from same origin (frontend to backend)
-  const origin = req.headers.origin;
-  const host = req.headers.host;
-  const referer = req.headers.referer;
-  
-  const isSameOrigin = origin && host && (
-    origin === `http://${host}` || 
-    origin === `https://${host}` ||
-    (referer && (referer.startsWith(`http://${host}`) || referer.startsWith(`https://${host}`)))
-  );
-  
-  if (isSameOrigin) {
-    // Same origin - use JWT authentication or allow public access
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (token) {
-      // Has JWT token - authenticate normally
-      req.authType = 'jwt';
-      return authenticate(req as AuthenticatedRequest, res, next);
+  try {
+    // Check if request has API key header
+    const apiKey = req.headers['x-api-key'];
+    
+    if (apiKey) {
+      // Has API key - use API key authentication
+      req.authType = 'apikey';
+      return authenticateApiKey(req as ApiKeyRequest, res, next);
     } else {
-      // No token but same origin - allow public access
-      req.authType = 'same-origin';
-      return next();
+      // No API key - allow same-origin access, require API key for external
+      const origin = req.headers.origin;
+      const host = req.headers.host;
+      
+      // Simple same-origin check
+      const isSameOrigin = !origin || origin === `http://${host}` || origin === `https://${host}`;
+      
+      if (isSameOrigin) {
+        // Same origin - allow public access
+        req.authType = 'same-origin';
+        return next();
+      } else {
+        // External origin without API key
+        return res.status(401).json({ message: "API key required for external access" });
+      }
     }
-  } else {
-    // External origin - require API key
-    req.authType = 'apikey';
-    return authenticateApiKey(req as ApiKeyRequest, res, next);
+  } catch (error) {
+    console.error('FlexibleAuth error:', error);
+    return res.status(500).json({ message: "Authentication error" });
   }
 }
 
