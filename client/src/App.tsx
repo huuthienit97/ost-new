@@ -10,6 +10,7 @@ import MembersPage from "@/pages/members";
 import AdminPage from "@/pages/admin";
 import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login";
+import ChangePasswordPage from "@/pages/change-password";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();

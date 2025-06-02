@@ -968,6 +968,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change password endpoint
+  app.post("/api/auth/change-password", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user!.id;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Thiếu mật khẩu hiện tại hoặc mật khẩu mới" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+      }
+
+      // Get current user
+      const user = await dbStorage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await verifyPassword(currentPassword, user.passwordHash);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Mật khẩu hiện tại không chính xác" });
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Update password and clear mustChangePassword flag
+      await dbStorage.updateUser(userId, {
+        passwordHash: newPasswordHash,
+        mustChangePassword: false,
+        updatedAt: new Date(),
+      });
+
+      res.json({ message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Lỗi đổi mật khẩu" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
