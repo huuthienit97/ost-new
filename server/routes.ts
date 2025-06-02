@@ -4,8 +4,6 @@ import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, members, beePoints, pointTransactions, achievements as achievementsTable, userAchievements } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS, PUBLIC_API_PERMISSIONS, createApiKeySchema } from "@shared/schema";
-import { authenticateApiKey, requireApiPermission, type ApiKeyRequest } from "./apiKeyAuth";
-import { flexibleAuth, requireFlexiblePermission, FlexibleAuthRequest } from "./flexibleAuth";
 import crypto from "crypto";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -1531,7 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               items:
    *                 $ref: '#/components/schemas/Department'
    */
-  app.get("/api/departments", async (req, res) => {
+  app.get("/api/departments", authenticate, authorize([PERMISSIONS.DEPARTMENT_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -1553,7 +1551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: Basic statistics
    */
-  app.get("/api/stats", async (req, res) => {
+  app.get("/api/stats", authenticate, authorize([PERMISSIONS.MEMBER_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const totalMembers = await db.select().from(members);
       const activeMembers = totalMembers.filter(m => m.memberType === 'active');
@@ -1584,7 +1582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: List of achievements
    */
-  app.get("/api/achievements", async (req, res) => {
+  app.get("/api/achievements", authenticate, authorize([PERMISSIONS.ACHIEVEMENT_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievementsTable).orderBy(achievementsTable.createdAt);
       res.json(achievementsList);
