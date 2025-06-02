@@ -401,6 +401,31 @@ const upload = multer({
  */
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Public API - Must be before other routes
+  app.get("/api/public/users", async (req, res) => {
+    try {
+      const users = await dbStorage.getUsers();
+      
+      // Return public user information without sensitive data
+      const publicUsers = users
+        .filter(user => user.isActive)
+        .map(user => ({
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+        }));
+      
+      res.json(publicUsers);
+    } catch (error) {
+      console.error("Error fetching public users:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách users" });
+    }
+  });
+
   // Check if system needs initialization
   app.get("/api/auth/check-init", async (req, res) => {
     try {
@@ -873,104 +898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  /**
-   * @swagger
-   * /api/public/leadership:
-   *   get:
-   *     summary: Lấy thông tin ban chủ nhiệm (Public API)
-   *     tags: [Public]
-   *     responses:
-   *       200:
-   *         description: Danh sách ban chủ nhiệm
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
-   *                 properties:
-   *                   id:
-   *                     type: integer
-   *                   fullName:
-   *                     type: string
-   *                   position:
-   *                     type: string
-   *                   department:
-   *                     type: object
-   *                     properties:
-   *                       name:
-   *                         type: string
-   *                       icon:
-   *                         type: string
-   *                       color:
-   *                         type: string
-   *                   email:
-   *                     type: string
-   *                   phone:
-   *                     type: string
-   *       500:
-   *         description: Lỗi server
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   */
-  app.get("/api/public/leadership", async (req, res) => {
-    try {
-      const membersWithDepartments = await dbStorage.getMembersWithDepartments();
-      
-      // Get all active members first
-      const activeMembers = membersWithDepartments.filter(member => 
-        member.memberType === 'active' && member.isActive
-      );
-      
-      // Define leadership keywords to identify leadership positions
-      const leadershipKeywords = [
-        'chủ nhiệm', 'president', 
-        'phó chủ nhiệm', 'vice-president',
-        'thư ký', 'secretary',
-        'trưởng', 'head',
-        'phó', 'vice'
-      ];
-      
-      // Filter members who have leadership positions based on actual data
-      const leadership = activeMembers
-        .filter(member => {
-          const position = member.position.toLowerCase();
-          return leadershipKeywords.some(keyword => position.includes(keyword));
-        })
-        .map(member => ({
-          id: member.id,
-          fullName: member.fullName,
-          position: member.position,
-          department: {
-            name: member.department.name,
-            icon: member.department.icon,
-            color: member.department.color,
-          },
-          email: member.email,
-          phone: member.phone,
-        }))
-        .sort((a, b) => {
-          // Sort by position hierarchy based on keywords
-          const getPositionPriority = (position: string) => {
-            const pos = position.toLowerCase();
-            if (pos.includes('chủ nhiệm') && !pos.includes('phó')) return 1;
-            if (pos.includes('phó chủ nhiệm') || pos.includes('vice-president')) return 2;
-            if (pos.includes('thư ký') || pos.includes('secretary')) return 3;
-            if (pos.includes('trưởng') && !pos.includes('phó')) return 4;
-            if (pos.includes('phó') && pos.includes('trưởng')) return 5;
-            return 6;
-          };
-          return getPositionPriority(a.position) - getPositionPriority(b.position);
-        });
-      
-      res.json(leadership);
-    } catch (error) {
-      console.error("Error fetching leadership:", error);
-      res.status(500).json({ message: "Lỗi lấy thông tin ban chủ nhiệm" });
-    }
-  });
+
 
   // Settings API
   app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req, res) => {
