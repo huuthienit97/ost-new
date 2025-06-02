@@ -1531,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               items:
    *                 $ref: '#/components/schemas/Department'
    */
-  app.get("/api/departments", flexibleAuth, requireFlexiblePermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: FlexibleAuthRequest, res) => {
+  app.get("/api/departments", async (req, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -1553,7 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: Basic statistics
    */
-  app.get("/api/stats", flexibleAuth, requireFlexiblePermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: FlexibleAuthRequest, res) => {
+  app.get("/api/stats", async (req, res) => {
     try {
       const totalMembers = await db.select().from(members);
       const activeMembers = totalMembers.filter(m => m.memberType === 'active');
@@ -1584,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: List of achievements
    */
-  app.get("/api/achievements", flexibleAuth, requireFlexiblePermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: FlexibleAuthRequest, res) => {
+  app.get("/api/achievements", async (req, res) => {
     try {
       const achievementsList = await db.select().from(achievementsTable).orderBy(achievementsTable.createdAt);
       res.json(achievementsList);
