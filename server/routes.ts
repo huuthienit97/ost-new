@@ -1530,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               items:
    *                 $ref: '#/components/schemas/Department'
    */
-  app.get("/api/external/departments", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/departments", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.DEPARTMENTS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -1552,7 +1552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: Basic statistics
    */
-  app.get("/api/external/stats", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/stats", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.STATS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const totalMembers = await db.select().from(members);
       const activeMembers = totalMembers.filter(m => m.memberType === 'active');
@@ -1583,7 +1583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: List of achievements
    */
-  app.get("/api/external/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
+  app.get("/api/achievements", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.ACHIEVEMENTS_READ), async (req: ApiKeyRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievementsTable).orderBy(achievementsTable.createdAt);
       res.json(achievementsList);
@@ -1611,41 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       200:
    *         description: List of members (public info only)
    */
-  app.get("/api/external/members", authenticateApiKey, requireApiPermission(PUBLIC_API_PERMISSIONS.MEMBERS_READ), async (req: ApiKeyRequest, res) => {
-    try {
-      const { department } = req.query;
-      let members = await dbStorage.getMembersWithDepartments();
-      
-      // Filter by department if specified
-      if (department && typeof department === 'string') {
-        const deptId = parseInt(department);
-        if (!isNaN(deptId)) {
-          members = members.filter(member => member.departmentId === deptId);
-        }
-      }
 
-      // Return only public information
-      const publicMembers = members.map(member => ({
-        id: member.id,
-        fullName: member.fullName,
-        class: member.class,
-        position: member.position,
-        memberType: member.memberType,
-        joinDate: member.joinDate,
-        department: {
-          id: member.department.id,
-          name: member.department.name,
-          icon: member.department.icon,
-          color: member.department.color,
-        }
-      }));
-
-      res.json(publicMembers);
-    } catch (error) {
-      console.error("Error fetching members:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
 
   // ===========================================
   // API KEY MANAGEMENT (Admin Only)
