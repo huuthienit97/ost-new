@@ -88,6 +88,17 @@ export const getQueryFn: <T>(options: {
     }
   };
 
+// Global error handling for queries
+const globalErrorHandler = (error: any) => {
+  // Silently handle 401 errors and network issues
+  if (error?.message?.includes('401') || 
+      error?.message?.includes('Unauthorized') ||
+      error?.message?.includes('fetch')) {
+    return;
+  }
+  console.error('Query error:', error);
+};
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -98,10 +109,12 @@ export const queryClient = new QueryClient({
       retry: false,
       throwOnError: false,
       refetchOnMount: false,
+      onError: globalErrorHandler,
     },
     mutations: {
       retry: false,
       throwOnError: false,
+      onError: globalErrorHandler,
     },
   },
 });

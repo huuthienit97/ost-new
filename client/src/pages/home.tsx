@@ -14,6 +14,8 @@ export default function HomePage() {
   const { data: beePoints } = useQuery<BeePoint>({
     queryKey: ["/api/bee-points/me"],
     enabled: !!user,
+    retry: false,
+    throwOnError: false,
   });
 
   if (!user) {
