@@ -919,14 +919,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const membersWithDepartments = await dbStorage.getMembersWithDepartments();
       
-      // Filter leadership positions and active members only
-      const leadershipPositions = ['president', 'vice-president', 'secretary', 'head', 'vice-head'];
-      const leadership = membersWithDepartments
-        .filter(member => 
-          member.memberType === 'active' &&
-          member.isActive &&
-          leadershipPositions.includes(member.position)
-        )
+      // Get all active members first
+      const activeMembers = membersWithDepartments.filter(member => 
+        member.memberType === 'active' && member.isActive
+      );
+      
+      // Define leadership keywords to identify leadership positions
+      const leadershipKeywords = [
+        'chủ tịch', 'chủ nhiệm', 'president', 
+        'phó chủ tịch', 'phó chủ nhiệm', 'vice-president',
+        'thư ký', 'secretary',
+        'trưởng', 'head',
+        'phó', 'vice'
+      ];
+      
+      // Filter members who have leadership positions based on actual data
+      const leadership = activeMembers
+        .filter(member => {
+          const position = member.position.toLowerCase();
+          return leadershipKeywords.some(keyword => position.includes(keyword));
+        })
         .map(member => ({
           id: member.id,
           fullName: member.fullName,
@@ -940,16 +952,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: member.phone,
         }))
         .sort((a, b) => {
-          // Sort by position hierarchy
-          const positionOrder = {
-            'president': 1,
-            'vice-president': 2,
-            'secretary': 3,
-            'head': 4,
-            'vice-head': 5,
+          // Sort by position hierarchy based on keywords
+          const getPositionPriority = (position: string) => {
+            const pos = position.toLowerCase();
+            if (pos.includes('chủ tịch') || pos.includes('president')) return 1;
+            if (pos.includes('phó chủ tịch') || pos.includes('vice-president')) return 2;
+            if (pos.includes('thư ký') || pos.includes('secretary')) return 3;
+            if (pos.includes('trưởng') && !pos.includes('phó')) return 4;
+            if (pos.includes('phó') && pos.includes('trưởng')) return 5;
+            return 6;
           };
-          return (positionOrder[a.position as keyof typeof positionOrder] || 6) - 
-                 (positionOrder[b.position as keyof typeof positionOrder] || 6);
+          return getPositionPriority(a.position) - getPositionPriority(b.position);
         });
       
       res.json(leadership);
