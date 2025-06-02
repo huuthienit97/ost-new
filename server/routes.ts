@@ -873,6 +873,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @swagger
+   * /api/public/leadership:
+   *   get:
+   *     summary: Lấy thông tin ban chủ nhiệm (Public API)
+   *     tags: [Public]
+   *     responses:
+   *       200:
+   *         description: Danh sách ban chủ nhiệm
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                   fullName:
+   *                     type: string
+   *                   position:
+   *                     type: string
+   *                   department:
+   *                     type: object
+   *                     properties:
+   *                       name:
+   *                         type: string
+   *                       icon:
+   *                         type: string
+   *                       color:
+   *                         type: string
+   *                   email:
+   *                     type: string
+   *                   phone:
+   *                     type: string
+   *       500:
+   *         description: Lỗi server
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  app.get("/api/public/leadership", async (req, res) => {
+    try {
+      const membersWithDepartments = await dbStorage.getMembersWithDepartments();
+      
+      // Filter leadership positions and active members only
+      const leadershipPositions = ['president', 'vice-president', 'secretary', 'head', 'vice-head'];
+      const leadership = membersWithDepartments
+        .filter(member => 
+          member.memberType === 'active' &&
+          member.isActive &&
+          leadershipPositions.includes(member.position)
+        )
+        .map(member => ({
+          id: member.id,
+          fullName: member.fullName,
+          position: member.position,
+          department: {
+            name: member.department.name,
+            icon: member.department.icon,
+            color: member.department.color,
+          },
+          email: member.email,
+          phone: member.phone,
+        }))
+        .sort((a, b) => {
+          // Sort by position hierarchy
+          const positionOrder = {
+            'president': 1,
+            'vice-president': 2,
+            'secretary': 3,
+            'head': 4,
+            'vice-head': 5,
+          };
+          return (positionOrder[a.position as keyof typeof positionOrder] || 6) - 
+                 (positionOrder[b.position as keyof typeof positionOrder] || 6);
+        });
+      
+      res.json(leadership);
+    } catch (error) {
+      console.error("Error fetching leadership:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin ban chủ nhiệm" });
+    }
+  });
+
   // Settings API
   app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req, res) => {
     try {
