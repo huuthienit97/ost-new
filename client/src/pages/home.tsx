@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +47,11 @@ export default function HomePage() {
                 <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
                 <p className="text-xs text-gray-500">{user.role.displayName}</p>
               </div>
+              <Link href="/profile">
+                <Button variant="ghost" size="sm" title="Thông tin cá nhân">
+                  <User className="h-4 w-4" />
+                </Button>
+              </Link>
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
                   {user.fullName ? getInitials(user.fullName) : "A"}

@@ -167,11 +167,23 @@ export default function ProfilePage() {
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
                   {user?.avatarUrl ? (
                     <img 
-                      src={user.avatarUrl} 
+                      src={user.avatarUrl}
                       alt="Avatar" 
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Avatar load error:', user.avatarUrl);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('Avatar loaded successfully:', user.avatarUrl);
+                      }}
                     />
                   ) : (
+                    <span className="text-white text-3xl font-bold">
+                      {user?.fullName?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                  {!user?.avatarUrl && (
                     <span className="text-white text-3xl font-bold">
                       {user?.fullName?.charAt(0) || 'U'}
                     </span>
