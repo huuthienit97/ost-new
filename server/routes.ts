@@ -33,14 +33,22 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|txt/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    // Extended support for mobile image formats
+    const allowedImageTypes = /jpeg|jpg|png|gif|webp|heic|heif|avif/;
+    const allowedDocTypes = /pdf|doc|docx|xls|xlsx|ppt|pptx|txt/;
+    const allAllowedTypes = new RegExp(`${allowedImageTypes.source}|${allowedDocTypes.source}`);
     
-    if (mimetype && extname) {
+    const extname = allAllowedTypes.test(path.extname(file.originalname).toLowerCase());
+    
+    // Check MIME types with mobile format support
+    const isImage = file.mimetype.startsWith('image/') || 
+                   ['image/heic', 'image/heif', 'image/avif'].includes(file.mimetype);
+    const isDoc = /application\/|text\//.test(file.mimetype);
+    
+    if ((isImage || isDoc) && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Chỉ cho phép upload file ảnh và tài liệu'));
+      cb(new Error('Chỉ cho phép upload file ảnh (JPG, PNG, WebP, HEIC, HEIF) và tài liệu'));
     }
   }
 });

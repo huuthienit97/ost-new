@@ -116,29 +116,94 @@ export default function ProfilePage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Function to compress image for mobile devices
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 800x800 for profile pictures)
+        const maxSize = 800;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.85); // 85% quality for good balance
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      // Extended file type support for iOS and Android
+      const allowedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 
+        'image/heic', 'image/heif', // iOS formats
+        'image/avif' // Modern format
+      ];
+      
+      if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/')) {
         toast({
           title: "Lỗi",
-          description: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Lỗi",
-          description: "Vui lòng chọn file hình ảnh",
+          description: "Định dạng file không được hỗ trợ. Vui lòng chọn file JPG, PNG, WebP, HEIC hoặc HEIF",
           variant: "destructive",
         });
         return;
       }
 
       setUploading(true);
-      uploadAvatarMutation.mutate(file);
+      
+      try {
+        let processedFile = file;
+        
+        // Always compress images for better performance and storage
+        if (file.size > 500 * 1024) { // 500KB threshold
+          toast({
+            title: "Đang xử lý",
+            description: "Đang tối ưu hóa ảnh...",
+          });
+          processedFile = await compressImage(file);
+        }
+        
+        uploadAvatarMutation.mutate(processedFile);
+      } catch (error) {
+        toast({
+          title: "Lỗi",
+          description: "Không thể xử lý ảnh. Vui lòng thử lại",
+          variant: "destructive",
+        });
+        setUploading(false);
+      }
     }
   };
 
@@ -205,22 +270,30 @@ export default function ProfilePage() {
                 </div>
                 <Button
                   size="sm"
-                  className="absolute -bottom-2 -right-2 rounded-full"
+                  className="absolute -bottom-2 -right-2 rounded-full shadow-lg"
                   onClick={handleAvatarClick}
                   disabled={uploading}
+                  title="Chụp ảnh hoặc chọn từ thư viện"
                 >
-                  <Camera className="h-4 w-4" />
+                  {uploading ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
               <p className="text-sm text-gray-500 text-center">
                 Nhấp để thay đổi avatar
                 <br />
-                Tối đa 5MB, định dạng JPG/PNG
+                Hỗ trợ JPG, PNG, WebP, HEIC (iOS)
+                <br />
+                <span className="text-xs">Ảnh sẽ được tự động tối ưu hóa</span>
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,image/heic,image/heif"
+                capture="environment"
                 onChange={handleFileChange}
                 className="hidden"
               />
