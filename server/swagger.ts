@@ -418,6 +418,16 @@ export function setupSwagger(app: Express) {
       <span class="path">/api/achievements</span>
       <div class="desc">Tạo thành tích mới (cần quyền ACHIEVEMENT_CREATE)</div>
     </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/achievements/award</span>
+      <div class="desc">Trao thành tích cho user - tự động cộng BeePoints (cần quyền ACHIEVEMENT_AWARD)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/achievements/me</span>
+      <div class="desc">Lấy danh sách thành tích của user hiện tại</div>
+    </div>
 
     <h2>🏢 Departments</h2>
     <div class="endpoint">
