@@ -48,10 +48,7 @@ export default function SettingsPage() {
   // Setting mutation
   const settingMutation = useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: string; description?: string }) => {
-      await apiRequest(`/api/settings`, {
-        method: "POST",
-        body: { key, value, description },
-      });
+      await apiRequest(`/api/settings`, "POST", { key, value, description });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -109,9 +106,7 @@ export default function SettingsPage() {
   // Delete upload mutation
   const deleteUploadMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/uploads/${id}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/uploads/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uploads"] });
@@ -130,7 +125,7 @@ export default function SettingsPage() {
   });
 
   const getSetting = (key: string): string => {
-    const setting = settings.find((s: Setting) => s.key === key);
+    const setting = (settings as Setting[]).find((s: Setting) => s.key === key);
     return setting?.value || "";
   };
 
@@ -318,11 +313,11 @@ export default function SettingsPage() {
                     <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
                   ))}
                 </div>
-              ) : uploads.length === 0 ? (
+              ) : (uploads as Upload[]).length === 0 ? (
                 <p className="text-center text-gray-500 py-8">Chưa có file nào được upload</p>
               ) : (
                 <div className="space-y-2">
-                  {uploads.map((upload: Upload) => (
+                  {(uploads as Upload[]).map((upload: Upload) => (
                     <div key={upload.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         {getFileTypeIcon(upload.mimetype)}

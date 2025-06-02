@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings } from "lucide-react";
+import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 
 export default function HomePage() {
@@ -88,6 +89,23 @@ export default function HomePage() {
               <CardContent>
                 <p className="text-gray-600 text-sm">
                   Quản lý vai trò và người dùng hệ thống
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Settings - Only for admin and super admin */}
+          {(hasPermission("system_admin") || hasPermission("settings:edit")) && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/settings"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Settings className="h-5 w-5 text-purple-600" />
+                  <span>Cài đặt hệ thống</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Quản lý thông tin app, logo và file upload
                 </p>
               </CardContent>
             </Card>
