@@ -73,8 +73,13 @@ export const getQueryFn: <T>(options: {
       }
 
       await throwIfResNotOk(res);
-      return await res.json();
+      const data = await res.json();
+      return data;
     } catch (error) {
+      // Silent handling for 401 errors when configured to return null
+      if (unauthorizedBehavior === "returnNull" && error instanceof Error && error.message.includes('401')) {
+        return null;
+      }
       console.error('Query error:', error);
       if (unauthorizedBehavior === "returnNull") {
         return null;
@@ -92,6 +97,7 @@ export const queryClient = new QueryClient({
       staleTime: Infinity,
       retry: false,
       throwOnError: false,
+      refetchOnMount: false,
     },
     mutations: {
       retry: false,

@@ -6,10 +6,12 @@ interface UserWithRole extends User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<{ user: UserWithRole }>({
+  const { data: user, isLoading, error } = useQuery<{ user: UserWithRole } | null>({
     queryKey: ["/api/auth/me"],
     retry: false,
     throwOnError: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const logout = () => {
