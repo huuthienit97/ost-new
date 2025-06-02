@@ -27,7 +27,14 @@ const createAchievementSchema = z.object({
   pointsReward: z.number().min(0, "Điểm thưởng phải là số dương"),
 });
 
+const awardAchievementSchema = z.object({
+  userId: z.number().min(1, "Vui lòng chọn thành viên"),
+  achievementId: z.number().min(1, "Vui lòng chọn thành tích"),
+  notes: z.string().optional(),
+});
+
 type CreateAchievementForm = z.infer<typeof createAchievementSchema>;
+type AwardAchievementForm = z.infer<typeof awardAchievementSchema>;
 
 const achievementIcons = {
   academic: "📚",
@@ -48,6 +55,7 @@ export default function AchievementsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [awardDialogOpen, setAwardDialogOpen] = useState(false);
 
   // Check permissions
   const canManageAchievements = user?.role?.permissions?.includes("achievement:create") || user?.role?.permissions?.includes("system:admin");
@@ -63,6 +71,12 @@ export default function AchievementsPage() {
     queryKey: ["/api/achievements/me"],
   });
 
+  // Fetch members for awarding achievements
+  const { data: members = [] } = useQuery({
+    queryKey: ["/api/members"],
+    enabled: canAwardAchievements,
+  });
+
   const form = useForm<CreateAchievementForm>({
     resolver: zodResolver(createAchievementSchema),
     defaultValues: {
@@ -76,12 +90,30 @@ export default function AchievementsPage() {
     },
   });
 
+  const awardForm = useForm<AwardAchievementForm>({
+    resolver: zodResolver(awardAchievementSchema),
+    defaultValues: {
+      userId: 0,
+      achievementId: 0,
+      notes: "",
+    },
+  });
+
   const createAchievementMutation = useMutation({
     mutationFn: async (data: CreateAchievementForm) => {
-      return apiRequest("/api/achievements", {
+      const response = await fetch("/api/achievements", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
         body: JSON.stringify(data),
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Không thể tạo thành tích");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
@@ -101,8 +133,47 @@ export default function AchievementsPage() {
     },
   });
 
+  const awardAchievementMutation = useMutation({
+    mutationFn: async (data: AwardAchievementForm) => {
+      const response = await fetch("/api/achievements/award", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Không thể trao thành tích");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/achievements/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setAwardDialogOpen(false);
+      awardForm.reset();
+      toast({
+        title: "Thành công",
+        description: `Đã trao thành tích thành công! ${data.pointsAwarded > 0 ? `+${data.pointsAwarded} BeePoints` : ""}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể trao thành tích",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (data: CreateAchievementForm) => {
     createAchievementMutation.mutate(data);
+  };
+
+  const handleAwardSubmit = (data: AwardAchievementForm) => {
+    awardAchievementMutation.mutate(data);
   };
 
   const getLevelIcon = (level: string) => {
@@ -131,14 +202,106 @@ export default function AchievementsPage() {
             </div>
           </div>
           
-          {canManageAchievements && (
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tạo thành tích mới
-                </Button>
-              </DialogTrigger>
+          <div className="flex gap-2">
+            {canAwardAchievements && (
+              <Dialog open={awardDialogOpen} onOpenChange={setAwardDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Award className="h-4 w-4 mr-2" />
+                    Trao thành tích
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Trao thành tích cho thành viên</DialogTitle>
+                  </DialogHeader>
+                  <Form {...awardForm}>
+                    <form onSubmit={awardForm.handleSubmit(handleAwardSubmit)} className="space-y-4">
+                      <FormField
+                        control={awardForm.control}
+                        name="userId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Chọn thành viên *</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Chọn thành viên" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {members.map((member: any) => (
+                                  <SelectItem key={member.id} value={member.id.toString()}>
+                                    {member.fullName} - {member.studentId}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={awardForm.control}
+                        name="achievementId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Chọn thành tích *</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Chọn thành tích" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {achievements.map((achievement: any) => (
+                                  <SelectItem key={achievement.id} value={achievement.id.toString()}>
+                                    {achievement.title} ({achievement.level})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={awardForm.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ghi chú</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Ghi chú về việc trao thành tích..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={() => setAwardDialogOpen(false)}>
+                          Hủy
+                        </Button>
+                        <Button type="submit" disabled={awardAchievementMutation.isPending}>
+                          {awardAchievementMutation.isPending ? "Đang trao..." : "Trao thành tích"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canManageAchievements && (
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tạo thành tích mới
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Tạo thành tích mới</DialogTitle>
