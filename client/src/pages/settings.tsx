@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Settings2, Upload, FileImage, Trash2, Download, Save, Copy } from "lucide-react";
+import { Settings2, Upload, FileImage, Trash2, Download, Save, Copy, Home, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 interface Setting {
   id: number;
@@ -228,9 +229,39 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Settings2 className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Cài đặt hệ thống</h1>
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay về
+            </Button>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Settings2 className="h-8 w-8" />
+            <h1 className="text-3xl font-bold">Cài đặt hệ thống</h1>
+          </div>
+        </div>
+        
+        <nav className="flex items-center gap-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm">
+              <Home className="h-4 w-4 mr-2" />
+              Trang chủ
+            </Button>
+          </Link>
+          <Link href="/members">
+            <Button variant="ghost" size="sm">
+              Thành viên
+            </Button>
+          </Link>
+          <Link href="/admin">
+            <Button variant="ghost" size="sm">
+              Quản trị
+            </Button>
+          </Link>
+        </nav>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
