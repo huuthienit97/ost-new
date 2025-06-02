@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Settings2, Upload, FileImage, Trash2, Download } from "lucide-react";
+import { Settings2, Upload, FileImage, Trash2, Download, Save, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Setting {
@@ -34,6 +34,19 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("app");
+  
+  // Form states
+  const [appSettings, setAppSettings] = useState({
+    app_name: "",
+    app_description: "",
+    school_name: "",
+  });
+  
+  const [brandingSettings, setBrandingSettings] = useState({
+    logo_url: "",
+    favicon_url: "",
+    logo_text: "",
+  });
 
   // Settings queries
   const { data: settings = [], isLoading: settingsLoading } = useQuery({
@@ -44,6 +57,28 @@ export default function SettingsPage() {
   const { data: uploads = [], isLoading: uploadsLoading } = useQuery({
     queryKey: ["/api/uploads"],
   });
+
+  // Initialize form when settings are loaded
+  useEffect(() => {
+    if (settings && Array.isArray(settings) && settings.length > 0) {
+      const settingsMap = (settings as Setting[]).reduce((acc, setting) => {
+        acc[setting.key] = setting.value || "";
+        return acc;
+      }, {} as Record<string, string>);
+      
+      setAppSettings({
+        app_name: settingsMap.app_name || "",
+        app_description: settingsMap.app_description || "",
+        school_name: settingsMap.school_name || "",
+      });
+      
+      setBrandingSettings({
+        logo_url: settingsMap.logo_url || "",
+        favicon_url: settingsMap.favicon_url || "",
+        logo_text: settingsMap.logo_text || "",
+      });
+    }
+  }, [settings]);
 
   // Setting mutation
   const settingMutation = useMutation({
@@ -124,13 +159,37 @@ export default function SettingsPage() {
     },
   });
 
-  const getSetting = (key: string): string => {
-    const setting = (settings as Setting[]).find((s: Setting) => s.key === key);
-    return setting?.value || "";
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: "Đã copy",
+        description: "Đường dẫn đã được copy vào clipboard",
+      });
+    });
   };
 
-  const handleSettingChange = (key: string, value: string, description?: string) => {
-    settingMutation.mutate({ key, value, description });
+  const saveAppSettings = () => {
+    Object.entries(appSettings).forEach(([key, value]) => {
+      settingMutation.mutate({ key, value, description: getSettingDescription(key) });
+    });
+  };
+
+  const saveBrandingSettings = () => {
+    Object.entries(brandingSettings).forEach(([key, value]) => {
+      settingMutation.mutate({ key, value, description: getSettingDescription(key) });
+    });
+  };
+
+  const getSettingDescription = (key: string): string => {
+    const descriptions = {
+      app_name: "Tên hiển thị của ứng dụng",
+      app_description: "Mô tả về ứng dụng",
+      school_name: "Tên trường học",
+      logo_url: "Đường dẫn đến logo",
+      favicon_url: "Đường dẫn đến favicon",
+      logo_text: "Text hiển thị khi không có logo",
+    };
+    return descriptions[key as keyof typeof descriptions] || "";
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,30 +253,38 @@ export default function SettingsPage() {
                 <Label htmlFor="app-name">Tên ứng dụng</Label>
                 <Input
                   id="app-name"
-                  defaultValue={getSetting("app_name")}
+                  value={appSettings.app_name}
                   placeholder="Tên câu lạc bộ sáng tạo"
-                  onBlur={(e) => handleSettingChange("app_name", e.target.value, "Tên hiển thị của ứng dụng")}
+                  onChange={(e) => setAppSettings({ ...appSettings, app_name: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="app-description">Mô tả</Label>
                 <Textarea
                   id="app-description"
-                  defaultValue={getSetting("app_description")}
+                  value={appSettings.app_description}
                   placeholder="Mô tả về câu lạc bộ..."
                   rows={3}
-                  onBlur={(e) => handleSettingChange("app_description", e.target.value, "Mô tả về ứng dụng")}
+                  onChange={(e) => setAppSettings({ ...appSettings, app_description: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="school-name">Tên trường</Label>
                 <Input
                   id="school-name"
-                  defaultValue={getSetting("school_name")}
+                  value={appSettings.school_name}
                   placeholder="THPT ABC"
-                  onBlur={(e) => handleSettingChange("school_name", e.target.value, "Tên trường học")}
+                  onChange={(e) => setAppSettings({ ...appSettings, school_name: e.target.value })}
                 />
               </div>
+              <Button 
+                onClick={saveAppSettings} 
+                disabled={settingMutation.isPending}
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {settingMutation.isPending ? "Đang lưu..." : "Lưu cài đặt"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -235,29 +302,37 @@ export default function SettingsPage() {
                 <Label htmlFor="logo-url">Logo URL</Label>
                 <Input
                   id="logo-url"
-                  defaultValue={getSetting("logo_url")}
+                  value={brandingSettings.logo_url}
                   placeholder="/uploads/logo.png"
-                  onBlur={(e) => handleSettingChange("logo_url", e.target.value, "Đường dẫn đến logo")}
+                  onChange={(e) => setBrandingSettings({ ...brandingSettings, logo_url: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="favicon-url">Favicon URL</Label>
                 <Input
                   id="favicon-url"
-                  defaultValue={getSetting("favicon_url")}
+                  value={brandingSettings.favicon_url}
                   placeholder="/uploads/favicon.ico"
-                  onBlur={(e) => handleSettingChange("favicon_url", e.target.value, "Đường dẫn đến favicon")}
+                  onChange={(e) => setBrandingSettings({ ...brandingSettings, favicon_url: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="logo-text">Text logo</Label>
                 <Input
                   id="logo-text"
-                  defaultValue={getSetting("logo_text")}
+                  value={brandingSettings.logo_text}
                   placeholder="CLB Sáng tạo"
-                  onBlur={(e) => handleSettingChange("logo_text", e.target.value, "Text hiển thị khi không có logo")}
+                  onChange={(e) => setBrandingSettings({ ...brandingSettings, logo_text: e.target.value })}
                 />
               </div>
+              <Button 
+                onClick={saveBrandingSettings} 
+                disabled={settingMutation.isPending}
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {settingMutation.isPending ? "Đang lưu..." : "Lưu cài đặt"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -303,7 +378,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>File đã upload</CardTitle>
               <CardDescription>
-                Danh sách các file trong hệ thống
+                Danh sách các file trong hệ thống. Click copy để sao chép đường dẫn.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -326,6 +401,7 @@ export default function SettingsPage() {
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>{formatFileSize(upload.size)}</span>
                             <Badge variant="secondary">{upload.mimetype}</Badge>
+                            <code className="text-xs bg-gray-100 px-2 py-1 rounded">{upload.path}</code>
                           </div>
                         </div>
                       </div>
@@ -333,7 +409,16 @@ export default function SettingsPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => copyToClipboard(upload.path)}
+                          title="Copy đường dẫn"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => window.open(upload.path, "_blank")}
+                          title="Xem file"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -342,6 +427,7 @@ export default function SettingsPage() {
                           size="sm"
                           onClick={() => deleteUploadMutation.mutate(upload.id)}
                           disabled={deleteUploadMutation.isPending}
+                          title="Xóa file"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
