@@ -419,6 +419,25 @@ export function setupSwagger(app: Express) {
       <div class="desc">Tạo thành tích mới (cần quyền ACHIEVEMENT_CREATE)</div>
     </div>
 
+    <h2>🏢 Departments</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/departments</span>
+      <div class="desc">Lấy danh sách phòng ban</div>
+    </div>
+
+    <h2>👥 Members Management</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/members</span>
+      <div class="desc">Lấy danh sách thành viên</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/members/:id</span>
+      <div class="desc">Lấy thông tin chi tiết thành viên</div>
+    </div>
+
     <h2>🔑 API Keys</h2>
     <div class="endpoint">
       <span class="method get">GET</span>
@@ -429,6 +448,42 @@ export function setupSwagger(app: Express) {
       <span class="method post">POST</span>
       <span class="path">/api/admin/api-keys</span>
       <div class="desc">Tạo API key mới (cần quyền ADMIN)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method put">PUT</span>
+      <span class="path">/api/admin/api-keys/:id</span>
+      <div class="desc">Cập nhật quyền API key (cần quyền ADMIN)</div>
+    </div>
+
+    <h2>🌐 External APIs</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/external/members</span>
+      <div class="desc">API cho ứng dụng bên ngoài - Lấy danh sách thành viên (cần API key)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/external/achievements</span>
+      <div class="desc">API cho ứng dụng bên ngoài - Lấy danh sách thành tích (cần API key)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/external/stats</span>
+      <div class="desc">API cho ứng dụng bên ngoài - Lấy thống kê (cần API key)</div>
+    </div>
+
+    <h2>📊 Statistics</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/stats</span>
+      <div class="desc">Lấy thống kê tổng quan hệ thống</div>
+    </div>
+
+    <h2>👑 Roles</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/roles</span>
+      <div class="desc">Lấy danh sách vai trò trong hệ thống</div>
     </div>
 
     <a href="/api-docs.json" class="json-link">📄 View OpenAPI JSON Spec</a>
