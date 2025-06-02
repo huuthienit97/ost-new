@@ -16,6 +16,86 @@ import { apiRequest } from "@/lib/queryClient";
 import { Shield, Users, Settings, Plus, Edit, Trash2, Key } from "lucide-react";
 import { Role, User, UserWithRole, PERMISSIONS } from "@shared/schema";
 
+interface UserRoleEditorProps {
+  user: UserWithRole;
+  roles: Role[];
+  onClose: () => void;
+}
+
+function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedRoleId, setSelectedRoleId] = useState(user.roleId);
+  const [isActive, setIsActive] = useState(user.isActive);
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { roleId: number; isActive: boolean }) => {
+      const response = await apiRequest("PUT", `/api/users/${user.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Thành công",
+        description: "Quyền hạn người dùng đã được cập nhật",
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Có lỗi xảy ra khi cập nhật quyền hạn",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    updateUserMutation.mutate({
+      roleId: selectedRoleId,
+      isActive: isActive,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="user-role">Vai trò</Label>
+        <Select value={selectedRoleId.toString()} onValueChange={(value) => setSelectedRoleId(parseInt(value))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {roles.map((role) => (
+              <SelectItem key={role.id} value={role.id.toString()}>
+                {role.displayName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="user-active"
+          checked={isActive}
+          onCheckedChange={(checked) => setIsActive(checked as boolean)}
+        />
+        <Label htmlFor="user-active">Tài khoản hoạt động</Label>
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={() => {}}>
+          Hủy
+        </Button>
+        <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
+          {updateUserMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user, hasPermission } = useAuth();
   const { toast } = useToast();
@@ -460,18 +540,40 @@ export default function AdminPage() {
                       <p className="text-sm text-gray-600">@{userItem.username}</p>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <strong>Email:</strong> {userItem.email}
-                        </p>
-                        <p className="text-sm">
-                          <strong>Vai trò:</strong> {userItem.role.displayName}
-                        </p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm">
+                            <strong>Email:</strong> {userItem.email}
+                          </p>
+                          <p className="text-sm">
+                            <strong>Vai trò hiện tại:</strong> {userItem.role.displayName}
+                          </p>
+                        </div>
+                        
                         <div className="flex items-center space-x-2">
                           <Badge variant={userItem.isActive ? "default" : "secondary"}>
                             {userItem.isActive ? "Hoạt động" : "Bị khóa"}
                           </Badge>
                         </div>
+
+                        {hasPermission("user_edit") && (
+                          <div className="pt-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Phân quyền
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Phân quyền cho {userItem.fullName}</DialogTitle>
+                                </DialogHeader>
+                                <UserRoleEditor user={userItem} roles={roles} onClose={() => {}} />
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

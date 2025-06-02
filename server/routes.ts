@@ -540,6 +540,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/users/:id", authenticate, authorize(PERMISSIONS.USER_EDIT), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { roleId, isActive } = req.body;
+
+      if (!roleId || typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
+      }
+
+      const updatedUser = await storage.updateUser(userId, { roleId, isActive });
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      const userWithRole = await storage.getUserWithRole(userId);
+      const safeUser = {
+        ...userWithRole,
+        passwordHash: undefined,
+      };
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Lỗi khi cập nhật người dùng" });
+    }
+  });
+
   // Get all departments
   app.get("/api/departments", authenticate, authorize(PERMISSIONS.DEPARTMENT_VIEW), async (req, res) => {
     try {
