@@ -897,6 +897,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BeePoint API endpoints
+  app.get("/api/bee-points/me", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const beePoints = await storage.getUserBeePoints(userId);
+      
+      if (!beePoints) {
+        // Create BeePoints for user if not exists
+        const newBeePoints = await storage.createUserBeePoints(userId);
+        await storage.addPointTransaction({
+          userId,
+          amount: 50,
+          type: "welcome_bonus",
+          description: "Chào mừng thành viên mới - Tặng 50 BeePoint",
+        });
+        return res.json(newBeePoints);
+      }
+
+      res.json(beePoints);
+    } catch (error) {
+      console.error("Error fetching bee points:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin BeePoint" });
+    }
+  });
+
+  app.get("/api/bee-points/transactions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactions = await storage.getUserPointTransactions(userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching point transactions:", error);
+      res.status(500).json({ message: "Lỗi lấy lịch sử giao dịch" });
+    }
+  });
+
+  app.post("/api/bee-points/add", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, amount, type, description } = req.body;
+      
+      if (!userId || !amount || !type || !description) {
+        return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+      }
+
+      const transaction = await storage.addPointTransaction({
+        userId: parseInt(userId),
+        amount: parseInt(amount),
+        type,
+        description,
+        createdBy: req.user!.id,
+      });
+
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error adding points:", error);
+      res.status(500).json({ message: "Lỗi thêm điểm" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

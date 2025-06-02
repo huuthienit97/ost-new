@@ -5,6 +5,8 @@ import {
   roles,
   settings,
   uploads,
+  beePoints,
+  pointTransactions,
   type Member, 
   type Department, 
   type InsertMember, 
@@ -15,10 +17,15 @@ import {
   type InsertUser,
   type InsertRole,
   type UserWithRole,
+  type UserWithBeePoints,
   type Setting,
   type Upload,
   type InsertSetting,
-  type InsertUpload
+  type InsertUpload,
+  type BeePoint,
+  type InsertBeePoint,
+  type PointTransaction,
+  type InsertPointTransaction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc } from "drizzle-orm";
@@ -72,6 +79,14 @@ export interface IStorage {
   createUpload(upload: InsertUpload): Promise<Upload>;
   deleteUpload(id: number): Promise<boolean>;
   getUploadsByUser(userId: number): Promise<Upload[]>;
+
+  // BeePoint methods
+  getUserBeePoints(userId: number): Promise<BeePoint | undefined>;
+  createUserBeePoints(userId: number): Promise<BeePoint>;
+  updateUserBeePoints(userId: number, points: number): Promise<BeePoint>;
+  addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
+  getUserPointTransactions(userId: number): Promise<PointTransaction[]>;
+  getUserWithBeePoints(userId: number): Promise<UserWithBeePoints | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -328,7 +343,81 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUploadsByUser(userId: number): Promise<Upload[]> {
-    return await db.select().from(uploads).where(eq(uploads.uploadedBy, userId)).orderBy(desc(uploads.createdAt));
+    return await db.select().from(uploads).where(eq(uploads.uploadedBy, userId)).orderBy(desc(uploads.uploadedAt));
+  }
+
+  // BeePoint methods
+  async getUserBeePoints(userId: number): Promise<BeePoint | undefined> {
+    const [beePoint] = await db.select().from(beePoints).where(eq(beePoints.userId, userId));
+    return beePoint;
+  }
+
+  async createUserBeePoints(userId: number): Promise<BeePoint> {
+    const [beePoint] = await db
+      .insert(beePoints)
+      .values({
+        userId,
+        currentPoints: 50, // Welcome bonus
+        totalEarned: 50,
+        totalSpent: 0,
+      })
+      .returning();
+    return beePoint;
+  }
+
+  async updateUserBeePoints(userId: number, pointsChange: number): Promise<BeePoint> {
+    const currentBeePoints = await this.getUserBeePoints(userId);
+    if (!currentBeePoints) {
+      throw new Error("BeePoints record not found for user");
+    }
+
+    const newCurrentPoints = currentBeePoints.currentPoints + pointsChange;
+    const newTotalEarned = pointsChange > 0 ? currentBeePoints.totalEarned + pointsChange : currentBeePoints.totalEarned;
+    const newTotalSpent = pointsChange < 0 ? currentBeePoints.totalSpent + Math.abs(pointsChange) : currentBeePoints.totalSpent;
+
+    const [updatedBeePoints] = await db
+      .update(beePoints)
+      .set({
+        currentPoints: newCurrentPoints,
+        totalEarned: newTotalEarned,
+        totalSpent: newTotalSpent,
+        updatedAt: new Date(),
+      })
+      .where(eq(beePoints.userId, userId))
+      .returning();
+
+    return updatedBeePoints;
+  }
+
+  async addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction> {
+    const [newTransaction] = await db
+      .insert(pointTransactions)
+      .values(transaction)
+      .returning();
+
+    // Update user's bee points
+    await this.updateUserBeePoints(transaction.userId, transaction.amount);
+
+    return newTransaction;
+  }
+
+  async getUserPointTransactions(userId: number): Promise<PointTransaction[]> {
+    return await db
+      .select()
+      .from(pointTransactions)
+      .where(eq(pointTransactions.userId, userId))
+      .orderBy(desc(pointTransactions.createdAt));
+  }
+
+  async getUserWithBeePoints(userId: number): Promise<UserWithBeePoints | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+
+    const userBeePoints = await this.getUserBeePoints(userId);
+    return {
+      ...user,
+      beePoints: userBeePoints,
+    };
   }
 }
 
