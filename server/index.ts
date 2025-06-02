@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupSwagger } from "./swagger";
@@ -6,6 +7,9 @@ import { setupSwagger } from "./swagger";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 // Setup Swagger documentation
 setupSwagger(app);
