@@ -8,6 +8,7 @@ import LandingPage from "@/pages/landing";
 import HomePage from "@/pages/home";
 import MembersPage from "@/pages/members";
 import AdminPage from "@/pages/admin";
+import SettingsPage from "@/pages/settings";
 import LoginPage from "@/pages/login";
 
 function Router() {

@@ -1,12 +1,47 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage as dbStorage } from "./storage";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), "public", "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: multerStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|txt/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Chỉ cho phép upload file ảnh và tài liệu'));
+    }
+  }
+});
 
 /**
  * @swagger
@@ -358,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check if system needs initialization
   app.get("/api/auth/check-init", async (req, res) => {
     try {
-      const users = await storage.getUsers();
+      const users = await dbStorage.getUsers();
       res.json({ needsInit: users.length === 0 });
     } catch (error) {
       console.error("Error checking system initialization:", error);
@@ -370,14 +405,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/init", async (req, res) => {
     try {
       // Check if any users exist
-      const users = await storage.getUsers();
+      const users = await dbStorage.getUsers();
       if (users.length > 0) {
         return res.status(400).json({ message: "Hệ thống đã được khởi tạo" });
       }
 
       // Create default admin user
       const passwordHash = await hashPassword("admin123");
-      const adminUser = await storage.createUser({
+      const adminUser = await dbStorage.createUser({
         username: "admin",
         email: "admin@club.edu.vn",
         passwordHash,
@@ -405,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Tên đăng nhập và mật khẩu là bắt buộc" });
       }
 
-      const user = await storage.getUserByUsername(username);
+      const user = await dbStorage.getUserByUsername(username);
       if (!user || !user.isActive) {
         return res.status(401).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
       }
@@ -415,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
       }
 
-      const userWithRole = await storage.getUserWithRole(user.id);
+      const userWithRole = await dbStorage.getUserWithRole(user.id);
       if (!userWithRole) {
         return res.status(500).json({ message: "Lỗi hệ thống" });
       }
@@ -441,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userWithRole = await storage.getUserWithRole(req.user!.id);
+      const userWithRole = await dbStorage.getUserWithRole(req.user!.id);
       if (!userWithRole) {
         return res.status(404).json({ message: "Người dùng không tồn tại" });
       }
@@ -463,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role management routes
   app.get("/api/roles", authenticate, authorize(PERMISSIONS.ROLE_VIEW), async (req, res) => {
     try {
-      const roles = await storage.getRoles();
+      const roles = await dbStorage.getRoles();
       res.json(roles);
     } catch (error) {
       res.status(500).json({ message: "Lỗi lấy danh sách vai trò" });
@@ -481,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const role = await storage.createRole(validationResult.data);
+      const role = await dbStorage.createRole(validationResult.data);
       res.status(201).json(role);
     } catch (error) {
       res.status(500).json({ message: "Lỗi tạo vai trò" });
@@ -491,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User management routes
   app.get("/api/users", authenticate, authorize(PERMISSIONS.USER_VIEW), async (req, res) => {
     try {
-      const users = await storage.getUsersWithRoles();
+      const users = await dbStorage.getUsersWithRoles();
       // Remove password hashes from response
       const safeUsers = users.map(user => ({
         ...user,
@@ -517,18 +552,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password, ...userData } = validationResult.data;
       
       // Check if username or email already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
+      const existingUser = await dbStorage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Tên đăng nhập đã tồn tại" });
       }
 
-      const existingEmail = await storage.getUserByEmail(userData.email);
+      const existingEmail = await dbStorage.getUserByEmail(userData.email);
       if (existingEmail) {
         return res.status(400).json({ message: "Email đã tồn tại" });
       }
 
       const passwordHash = await hashPassword(password);
-      const user = await storage.createUser({
+      const user = await dbStorage.createUser({
         ...userData,
         passwordHash,
       });
@@ -552,12 +587,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
       }
 
-      const updatedUser = await storage.updateUser(userId, { roleId, isActive });
+      const updatedUser = await dbStorage.updateUser(userId, { roleId, isActive });
       if (!updatedUser) {
         return res.status(404).json({ message: "Không tìm thấy người dùng" });
       }
 
-      const userWithRole = await storage.getUserWithRole(userId);
+      const userWithRole = await dbStorage.getUserWithRole(userId);
       const safeUser = {
         ...userWithRole,
         passwordHash: undefined,
@@ -572,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all departments
   app.get("/api/departments", authenticate, authorize(PERMISSIONS.DEPARTMENT_VIEW), async (req, res) => {
     try {
-      const departments = await storage.getDepartments();
+      const departments = await dbStorage.getDepartments();
       res.json(departments);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch departments" });
@@ -584,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { type, department, position, search } = req.query;
       
-      let members = await storage.getMembersWithDepartments();
+      let members = await dbStorage.getMembersWithDepartments();
       
       // Apply filters
       if (type && typeof type === 'string') {
@@ -626,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid member ID" });
       }
       
-      const member = await storage.getMemberWithDepartment(id);
+      const member = await dbStorage.getMemberWithDepartment(id);
       if (!member) {
         return res.status(404).json({ message: "Member not found" });
       }
@@ -652,19 +687,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const memberData = validationResult.data;
       
       // Check if studentId already exists
-      const existingMembers = await storage.getMembers();
+      const existingMembers = await dbStorage.getMembers();
       if (existingMembers.some(m => m.studentId === memberData.studentId)) {
         return res.status(400).json({ message: "Mã học sinh đã tồn tại" });
       }
       
       // Validate department exists
-      const department = await storage.getDepartment(memberData.departmentId);
+      const department = await dbStorage.getDepartment(memberData.departmentId);
       if (!department) {
         return res.status(400).json({ message: "Ban không tồn tại" });
       }
 
-      const newMember = await storage.createMember(memberData);
-      const memberWithDepartment = await storage.getMemberWithDepartment(newMember.id);
+      const newMember = await dbStorage.createMember(memberData);
+      const memberWithDepartment = await dbStorage.getMemberWithDepartment(newMember.id);
       
       res.status(201).json(memberWithDepartment);
     } catch (error) {
@@ -693,7 +728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If updating studentId, check for conflicts
       if (updateData.studentId) {
-        const existingMembers = await storage.getMembers();
+        const existingMembers = await dbStorage.getMembers();
         if (existingMembers.some(m => m.studentId === updateData.studentId && m.id !== id)) {
           return res.status(400).json({ message: "Mã học sinh đã tồn tại" });
         }
@@ -701,18 +736,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If updating department, validate it exists
       if (updateData.departmentId) {
-        const department = await storage.getDepartment(updateData.departmentId);
+        const department = await dbStorage.getDepartment(updateData.departmentId);
         if (!department) {
           return res.status(400).json({ message: "Ban không tồn tại" });
         }
       }
 
-      const updatedMember = await storage.updateMember(id, updateData);
+      const updatedMember = await dbStorage.updateMember(id, updateData);
       if (!updatedMember) {
         return res.status(404).json({ message: "Member not found" });
       }
       
-      const memberWithDepartment = await storage.getMemberWithDepartment(updatedMember.id);
+      const memberWithDepartment = await dbStorage.getMemberWithDepartment(updatedMember.id);
       res.json(memberWithDepartment);
     } catch (error) {
       res.status(500).json({ message: "Failed to update member" });
@@ -727,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid member ID" });
       }
 
-      const deleted = await storage.deleteMember(id);
+      const deleted = await dbStorage.deleteMember(id);
       if (!deleted) {
         return res.status(404).json({ message: "Member not found" });
       }
@@ -741,8 +776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get member statistics
   app.get("/api/stats", async (req, res) => {
     try {
-      const allMembers = await storage.getMembers();
-      const departments = await storage.getDepartments();
+      const allMembers = await dbStorage.getMembers();
+      const departments = await dbStorage.getDepartments();
       
       const activeMembers = allMembers.filter(m => m.memberType === 'active').length;
       const alumniMembers = allMembers.filter(m => m.memberType === 'alumni').length;
@@ -757,6 +792,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+
+  // Settings API
+  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req, res) => {
+    try {
+      const settings = await dbStorage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Lỗi khi tải cài đặt" });
+    }
+  });
+
+  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req, res) => {
+    try {
+      const { key, value, description } = req.body;
+      if (!key || value === undefined) {
+        return res.status(400).json({ message: "Key và value là bắt buộc" });
+      }
+      
+      const setting = await dbStorage.setSetting(key, value, description);
+      res.json(setting);
+    } catch (error) {
+      console.error("Error saving setting:", error);
+      res.status(500).json({ message: "Lỗi khi lưu cài đặt" });
+    }
+  });
+
+  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req, res) => {
+    try {
+      const { key } = req.params;
+      const deleted = await dbStorage.deleteSetting(key);
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy cài đặt" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting setting:", error);
+      res.status(500).json({ message: "Lỗi khi xóa cài đặt" });
+    }
+  });
+
+  // Upload API
+  app.get("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_VIEW]), async (req, res) => {
+    try {
+      const uploads = await dbStorage.getUploads();
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching uploads:", error);
+      res.status(500).json({ message: "Lỗi khi tải danh sách file" });
+    }
+  });
+
+  app.post("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_CREATE]), upload.single('file'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Vui lòng chọn file để upload" });
+      }
+
+      const uploadData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: `/uploads/${req.file.filename}`,
+        uploadedBy: req.user!.id
+      };
+
+      const upload = await dbStorage.createUpload(uploadData);
+      res.status(201).json(upload);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: "Lỗi khi upload file" });
+    }
+  });
+
+  app.delete("/api/uploads/:id", authenticate, authorize([PERMISSIONS.UPLOAD_DELETE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const upload = await dbStorage.getUpload(id);
+      
+      if (!upload) {
+        return res.status(404).json({ message: "Không tìm thấy file" });
+      }
+
+      // Delete file from filesystem
+      const filePath = path.join(uploadsDir, upload.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Delete from database
+      const deleted = await dbStorage.deleteUpload(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy file" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting upload:", error);
+      res.status(500).json({ message: "Lỗi khi xóa file" });
     }
   });
 
