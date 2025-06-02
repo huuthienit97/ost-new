@@ -18,11 +18,54 @@ interface MemberCardProps {
   canResetPassword?: boolean;
 }
 
-export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false }: MemberCardProps) {
+export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false, canResetPassword = false }: MemberCardProps) {
   const initials = getInitials(member.fullName);
   const gradientClass = getAvatarGradient(index);
   const positionColor = getPositionColor(member.position);
   const memberTypeColor = getMemberTypeColor(member.memberType);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showCredentials, setShowCredentials] = useState(false);
+
+  // Query to get account info for this member
+  const { data: accountInfo } = useQuery({
+    queryKey: ["/api/members", member.id, "account"],
+    enabled: !!member.id,
+  });
+
+  // Mutation to reset password
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await fetch(`/api/users/${userId}/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Reset mật khẩu thành công",
+        description: `Tên đăng nhập: ${data.username}\nMật khẩu mới: ${data.newPassword}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/members", member.id, "account"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể reset mật khẩu",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
@@ -94,6 +137,36 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
               <span>{member.phone}</span>
             </div>
           )}
+
+          {/* Account Information */}
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Tài khoản:</span>
+              {accountInfo?.hasAccount ? (
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="text-xs">
+                    <User className="h-3 w-3 mr-1" />
+                    {accountInfo.username}
+                  </Badge>
+                  {accountInfo.mustChangePassword ? (
+                    <Badge variant="secondary" className="text-xs text-orange-600">
+                      <Key className="h-3 w-3 mr-1" />
+                      Chưa đổi MK
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-green-600">
+                      <Key className="h-3 w-3 mr-1" />
+                      Đã đổi MK
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  Chưa có tài khoản
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex space-x-2">
@@ -115,6 +188,17 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
             <Edit className="h-4 w-4 mr-1" />
             Sửa
           </Button>
+          {canResetPassword && accountInfo?.hasAccount && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => resetPasswordMutation.mutate(accountInfo.userId)}
+              disabled={resetPasswordMutation.isPending}
+              className="px-3"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
           {canDelete && (
             <Button
               variant="destructive"
