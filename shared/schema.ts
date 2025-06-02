@@ -24,6 +24,15 @@ export const users = pgTable("users", {
   roleId: integer("role_id").references(() => roles.id).notNull(),
   isActive: boolean("is_active").notNull().default(true),
   mustChangePassword: boolean("must_change_password").default(true).notNull(),
+  avatarUrl: text("avatar_url"),
+  bio: text("bio"),
+  phone: text("phone"),
+  facebookUrl: text("facebook_url"),
+  instagramUrl: text("instagram_url"),
+  tiktokUrl: text("tiktok_url"),
+  youtubeUrl: text("youtube_url"),
+  linkedinUrl: text("linkedin_url"),
+  githubUrl: text("github_url"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -190,6 +199,19 @@ export const insertMemberSchema = createInsertSchema(members).omit({
   studentId: z.string().optional(),
 });
 
+export const updateUserProfileSchema = z.object({
+  fullName: z.string().min(1, "Họ tên là bắt buộc"),
+  email: z.string().email("Email không hợp lệ"),
+  bio: z.string().optional(),
+  phone: z.string().optional(),
+  facebookUrl: z.string().url("URL Facebook không hợp lệ").optional().or(z.literal("")),
+  instagramUrl: z.string().url("URL Instagram không hợp lệ").optional().or(z.literal("")),
+  tiktokUrl: z.string().url("URL TikTok không hợp lệ").optional().or(z.literal("")),
+  youtubeUrl: z.string().url("URL YouTube không hợp lệ").optional().or(z.literal("")),
+  linkedinUrl: z.string().url("URL LinkedIn không hợp lệ").optional().or(z.literal("")),
+  githubUrl: z.string().url("URL GitHub không hợp lệ").optional().or(z.literal("")),
+});
+
 // Types
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Role = typeof roles.$inferSelect;
@@ -202,6 +224,8 @@ export type Department = typeof departments.$inferSelect;
 
 export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Member = typeof members.$inferSelect;
+
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 
 // Extended types
 export type UserWithRole = User & {

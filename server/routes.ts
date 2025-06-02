@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, beePoints, pointTransactions } from "@shared/schema";
-import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, PERMISSIONS } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 import multer from "multer";
@@ -1113,6 +1113,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting member account:", error);
       res.status(500).json({ message: "Lỗi server" });
+    }
+  });
+
+  // Update user profile
+  app.put("/api/auth/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validationResult = updateUserProfileSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const updateData = validationResult.data;
+      const userId = req.user!.id;
+
+      const updatedUser = await dbStorage.updateUser(userId, {
+        fullName: updateData.fullName,
+        email: updateData.email,
+        bio: updateData.bio || null,
+        phone: updateData.phone || null,
+        facebookUrl: updateData.facebookUrl || null,
+        instagramUrl: updateData.instagramUrl || null,
+        tiktokUrl: updateData.tiktokUrl || null,
+        youtubeUrl: updateData.youtubeUrl || null,
+        linkedinUrl: updateData.linkedinUrl || null,
+        githubUrl: updateData.githubUrl || null,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      res.json({ 
+        message: "Cập nhật thông tin thành công",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Lỗi cập nhật thông tin" });
+    }
+  });
+
+  // Upload avatar
+  app.post("/api/auth/avatar", authenticate, upload.single('avatar'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Không có file được tải lên" });
+      }
+
+      const userId = req.user!.id;
+      const avatarUrl = `/uploads/${req.file.filename}`;
+
+      const updatedUser = await dbStorage.updateUser(userId, {
+        avatarUrl: avatarUrl
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      res.json({ 
+        message: "Cập nhật avatar thành công",
+        avatarUrl: avatarUrl
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      res.status(500).json({ message: "Lỗi tải lên avatar" });
     }
   });
 
