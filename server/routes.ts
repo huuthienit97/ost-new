@@ -5,6 +5,332 @@ import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSch
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 
+/**
+ * @swagger
+ * /api/auth/init:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Khởi tạo tài khoản quản trị viên đầu tiên
+ *     description: Tạo tài khoản quản trị viên mặc định nếu chưa có người dùng nào trong hệ thống
+ *     responses:
+ *       200:
+ *         description: Tài khoản được tạo thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 defaultPassword:
+ *                   type: string
+ *       400:
+ *         description: Hệ thống đã được khởi tạo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Đăng nhập vào hệ thống
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Đăng nhập thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Thông tin đăng nhập không chính xác
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     tags: [Authentication]
+ *     summary: Lấy thông tin người dùng hiện tại
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Thông tin người dùng
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Chưa đăng nhập
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/roles:
+ *   get:
+ *     tags: [Roles]
+ *     summary: Lấy danh sách vai trò
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Danh sách vai trò
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Role'
+ *   post:
+ *     tags: [Roles]
+ *     summary: Tạo vai trò mới
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateRoleRequest'
+ *     responses:
+ *       201:
+ *         description: Vai trò được tạo thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Role'
+ */
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     tags: [Users]
+ *     summary: Lấy danh sách người dùng
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Danh sách người dùng
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *   post:
+ *     tags: [Users]
+ *     summary: Tạo người dùng mới
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateUserRequest'
+ *     responses:
+ *       201:
+ *         description: Người dùng được tạo thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ */
+
+/**
+ * @swagger
+ * /api/departments:
+ *   get:
+ *     tags: [Departments]
+ *     summary: Lấy danh sách ban
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Danh sách ban
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Department'
+ */
+
+/**
+ * @swagger
+ * /api/members:
+ *   get:
+ *     tags: [Members]
+ *     summary: Lấy danh sách thành viên
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [active, alumni]
+ *         description: Lọc theo loại thành viên
+ *       - in: query
+ *         name: department
+ *         schema:
+ *           type: integer
+ *         description: Lọc theo ID ban
+ *       - in: query
+ *         name: position
+ *         schema:
+ *           type: string
+ *         description: Lọc theo chức vụ
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Tìm kiếm theo tên, mã học sinh, lớp
+ *     responses:
+ *       200:
+ *         description: Danh sách thành viên
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Member'
+ *   post:
+ *     tags: [Members]
+ *     summary: Tạo thành viên mới
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMemberRequest'
+ *     responses:
+ *       201:
+ *         description: Thành viên được tạo thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Member'
+ */
+
+/**
+ * @swagger
+ * /api/members/{id}:
+ *   get:
+ *     tags: [Members]
+ *     summary: Lấy thông tin thành viên
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID thành viên
+ *     responses:
+ *       200:
+ *         description: Thông tin thành viên
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Member'
+ *       404:
+ *         description: Không tìm thấy thành viên
+ *   put:
+ *     tags: [Members]
+ *     summary: Cập nhật thông tin thành viên
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID thành viên
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMemberRequest'
+ *     responses:
+ *       200:
+ *         description: Thành viên được cập nhật thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Member'
+ *   delete:
+ *     tags: [Members]
+ *     summary: Xóa thành viên
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID thành viên
+ *     responses:
+ *       204:
+ *         description: Thành viên được xóa thành công
+ *       404:
+ *         description: Không tìm thấy thành viên
+ */
+
+/**
+ * @swagger
+ * /api/stats:
+ *   get:
+ *     tags: [Statistics]
+ *     summary: Lấy thống kê hệ thống
+ *     responses:
+ *       200:
+ *         description: Thống kê hệ thống
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalMembers:
+ *                   type: integer
+ *                 activeMembers:
+ *                   type: integer
+ *                 alumniMembers:
+ *                   type: integer
+ *                 totalDepartments:
+ *                   type: integer
+ */
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize default admin user
   app.post("/api/auth/init", async (req, res) => {
