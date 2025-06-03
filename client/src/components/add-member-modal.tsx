@@ -261,12 +261,11 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="president">Chủ tịch</SelectItem>
-                          <SelectItem value="vice-president">Phó chủ tịch</SelectItem>
-                          <SelectItem value="secretary">Thư ký</SelectItem>
-                          <SelectItem value="head">Trưởng ban</SelectItem>
-                          <SelectItem value="vice-head">Phó trưởng ban</SelectItem>
-                          <SelectItem value="member">Thành viên</SelectItem>
+                          {positions?.map((position: any) => (
+                            <SelectItem key={position.id} value={position.id.toString()}>
+                              {position.displayName}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

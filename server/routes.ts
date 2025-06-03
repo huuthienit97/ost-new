@@ -764,12 +764,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: academicYears.id,
             name: academicYears.name,
           },
+          user: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            email: users.email,
+          },
         })
         .from(members)
         .leftJoin(departments, eq(departments.id, members.departmentId))
         .leftJoin(positions, eq(positions.id, members.positionId))
         .leftJoin(divisions, eq(divisions.id, members.divisionId))
         .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
+        .leftJoin(users, eq(users.id, members.userId))
         .where(eq(members.isActive, true));
       
       let filteredMembers = membersWithDetails;
