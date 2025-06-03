@@ -15,6 +15,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Calendar, Clock, Edit2, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+// Academic Year type
+type AcademicYear = {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const createAcademicYearSchema = z.object({
   name: z.string().min(1, "Tên khóa học là bắt buộc"),
   startDate: z.string().min(1, "Ngày bắt đầu là bắt buộc"),

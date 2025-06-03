@@ -138,19 +138,19 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Tài khoản:</span>
-              {member.user ? (
+              {member.user && member.user !== null ? (
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline" className="text-xs">
                     <User className="h-3 w-3 mr-1" />
                     {member.user.username}
                   </Badge>
-                  <Badge variant="outline" className="text-xs text-green-600">
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-600">
                     <Key className="h-3 w-3 mr-1" />
                     Có tài khoản
                   </Badge>
                 </div>
               ) : (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs text-red-600 bg-red-50 border-red-200">
                   Chưa có tài khoản
                 </Badge>
               )}

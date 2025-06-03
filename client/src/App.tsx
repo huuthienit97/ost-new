@@ -15,6 +15,9 @@ import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 import ProfilePage from "@/pages/profile";
 import AchievementsPage from "@/pages/achievements";
+import AcademicYearsPage from "@/pages/academic-years";
+import DivisionsPage from "@/pages/divisions";
+import PositionsPage from "@/pages/positions";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -47,6 +50,9 @@ function Router() {
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
+          <Route path="/academic-years" component={AcademicYearsPage} />
+          <Route path="/divisions" component={DivisionsPage} />
+          <Route path="/positions" component={PositionsPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

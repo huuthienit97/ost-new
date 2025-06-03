@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key, Calendar, Building, Crown } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -142,6 +142,55 @@ export default function HomePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Academic Years Management - Only for system admin */}
+          {hasPermission("system:admin") && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/academic-years"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <span>Quản lý khóa học</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Quản lý khóa học từ tháng 11 đến tháng 11 năm sau
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Divisions Management - Only for system admin */}
+          {hasPermission("system:admin") && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/divisions"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="h-5 w-5 text-orange-600" />
+                  <span>Quản lý ban</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Quản lý các ban trong câu lạc bộ
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Positions Management - Available for viewing */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/positions"}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Crown className="h-5 w-5 text-purple-600" />
+                <span>Hệ thống chức vụ</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Xem danh sách chức vụ được chuẩn hóa
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Achievements - Available for all users */}
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/achievements"}>
