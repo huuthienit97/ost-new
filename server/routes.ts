@@ -726,36 +726,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { type, department, position, search } = req.query;
       
-      let members = await dbStorage.getMembersWithDepartments();
+      const membersWithDetails = await db
+        .select({
+          id: members.id,
+          fullName: members.fullName,
+          studentId: members.studentId,
+          email: members.email,
+          phone: members.phone,
+          class: members.class,
+          departmentId: members.departmentId,
+          positionId: members.positionId,
+          divisionId: members.divisionId,
+          academicYearId: members.academicYearId,
+          memberType: members.memberType,
+          joinDate: members.joinDate,
+          notes: members.notes,
+          userId: members.userId,
+          isActive: members.isActive,
+          createdAt: members.createdAt,
+          department: {
+            id: departments.id,
+            name: departments.name,
+            icon: departments.icon,
+            color: departments.color,
+          },
+          position: {
+            id: positions.id,
+            name: positions.name,
+            displayName: positions.displayName,
+            level: positions.level,
+          },
+          division: {
+            id: divisions.id,
+            name: divisions.name,
+          },
+          academicYear: {
+            id: academicYears.id,
+            name: academicYears.name,
+          },
+        })
+        .from(members)
+        .leftJoin(departments, eq(departments.id, members.departmentId))
+        .leftJoin(positions, eq(positions.id, members.positionId))
+        .leftJoin(divisions, eq(divisions.id, members.divisionId))
+        .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
+        .where(eq(members.isActive, true));
+      
+      let filteredMembers = membersWithDetails;
       
       // Apply filters
       if (type && typeof type === 'string') {
-        members = members.filter(member => member.memberType === type);
+        filteredMembers = filteredMembers.filter(member => member.memberType === type);
       }
       
       if (department && typeof department === 'string') {
         const deptId = parseInt(department);
         if (!isNaN(deptId)) {
-          members = members.filter(member => member.departmentId === deptId);
+          filteredMembers = filteredMembers.filter(member => member.departmentId === deptId);
         }
       }
       
       if (position && typeof position === 'string') {
-        members = members.filter(member => member.position === position);
+        const posId = parseInt(position);
+        if (!isNaN(posId)) {
+          filteredMembers = filteredMembers.filter(member => member.positionId === posId);
+        }
       }
       
       if (search && typeof search === 'string') {
         const searchLower = search.toLowerCase();
-        members = members.filter(member =>
+        filteredMembers = filteredMembers.filter(member =>
           member.fullName.toLowerCase().includes(searchLower) ||
           (member.studentId && member.studentId.toLowerCase().includes(searchLower)) ||
           member.class.toLowerCase().includes(searchLower) ||
-          member.department.name.toLowerCase().includes(searchLower)
+          (member.department?.name && member.department.name.toLowerCase().includes(searchLower))
         );
       }
       
-      res.json(members);
+      res.json(filteredMembers);
     } catch (error) {
+      console.error("Error fetching members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
     }
   });
