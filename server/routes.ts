@@ -1021,7 +1021,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Positions API
+  /**
+   * @swagger
+   * /api/positions:
+   *   get:
+   *     summary: Lấy danh sách chức vụ
+   *     description: Lấy danh sách chức vụ được chuẩn hóa
+   *     tags: [Positions]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách chức vụ
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                   name:
+   *                     type: string
+   *                   displayName:
+   *                     type: string
+   *                   level:
+   *                     type: integer
+   *                   isLeadership:
+   *                     type: boolean
+   *                   isDepartmentLevel:
+   *                     type: boolean
+   */
   app.get("/api/positions", authenticate, async (req, res) => {
     try {
       const positionsList = await db.select().from(positions).orderBy(desc(positions.level));
@@ -1032,7 +1063,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Divisions API
+  /**
+   * @swagger
+   * /api/divisions:
+   *   get:
+   *     summary: Lấy danh sách ban
+   *     description: Lấy danh sách các ban hoạt động
+   *     tags: [Divisions]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách ban
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                   name:
+   *                     type: string
+   *                   description:
+   *                     type: string
+   *                   color:
+   *                     type: string
+   *                   icon:
+   *                     type: string
+   *                   isActive:
+   *                     type: boolean
+   */
   app.get("/api/divisions", authenticate, async (req, res) => {
     try {
       const divisionsList = await db.select().from(divisions).where(eq(divisions.isActive, true));
@@ -1092,7 +1154,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Stats API with dynamic data
+  /**
+   * @swagger
+   * /api/enhanced-stats:
+   *   get:
+   *     summary: Lấy thống kê nâng cao
+   *     description: Lấy thống kê nâng cao theo khóa học và chức vụ
+   *     tags: [Statistics]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Thống kê nâng cao
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 totalUsers:
+   *                   type: integer
+   *                 totalMembers:
+   *                   type: integer
+   *                 totalAchievements:
+   *                   type: integer
+   *                 totalDepartments:
+   *                   type: integer
+   *                 totalDivisions:
+   *                   type: integer
+   *                 membersByYear:
+   *                   type: object
+   *                 membersByPosition:
+   *                   type: object
+   *                 lastUpdated:
+   *                   type: string
+   *                   format: date-time
+   */
   app.get("/api/enhanced-stats", authenticate, async (req, res) => {
     try {
       // Calculate real-time statistics
