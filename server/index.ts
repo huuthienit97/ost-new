@@ -2,9 +2,38 @@ import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupSwagger } from "./swagger";
+import { setupFixedSwagger } from "./swagger-fixed";
 
 const app = express();
+
+// CORS configuration for production domains
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:5000',
+    'http://localhost:3000',
+    'https://your-domain.com',
+    'https://api.your-domain.com',
+    'https://clb-sangtao.com',
+    'https://api.clb-sangtao.com'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin as string)) {
+    res.setHeader('Access-Control-Allow-Origin', origin as string);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -12,7 +41,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 // Setup Swagger documentation
-setupSwagger(app);
+setupFixedSwagger(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
