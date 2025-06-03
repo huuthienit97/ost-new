@@ -1,0 +1,712 @@
+{
+  "info": {
+    "name": "CLB Sáng Tạo - Complete API Collection",
+    "description": "Bộ sưu tập API đầy đủ cho hệ thống quản lý câu lạc bộ sáng tạo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "description": "API xác thực và quản lý phiên đăng nhập",
+      "item": [
+        {
+          "name": "Check System Init",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/check-init",
+            "description": "🟢 PUBLIC - Kiểm tra hệ thống đã khởi tạo chưa"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.to.have.status(200)) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "🟢 PUBLIC - Đăng nhập và lấy JWT token"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/me",
+            "description": "🔵 USER - Lấy thông tin user hiện tại"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "🔵 USER - Đăng xuất"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Users Management",
+      "description": "API quản lý người dùng hệ thống (🟡 ADMIN required)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users",
+            "description": "🟡 ADMIN - Lấy danh sách tất cả users"
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"fullName\": \"Người dùng mới\",\n  \"password\": \"password123\",\n  \"roleId\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/users",
+            "description": "🟡 ADMIN - Tạo user mới"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Tên đã cập nhật\",\n  \"email\": \"updated@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/2",
+            "description": "🟡 ADMIN - Cập nhật thông tin user"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/change-password",
+            "description": "🔵 USER - Đổi mật khẩu"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎓 Members Management",
+      "description": "API quản lý thành viên câu lạc bộ",
+      "item": [
+        {
+          "name": "Get All Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "members"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Tìm kiếm theo tên, mã học sinh, lớp",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "active",
+                  "description": "active | alumni",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "1",
+                  "description": "ID phòng ban",
+                  "disabled": true
+                },
+                {
+                  "key": "position",
+                  "value": "1",
+                  "description": "ID chức vụ",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "🔵 USER - Lấy danh sách thành viên với filter"
+          }
+        },
+        {
+          "name": "Get Member by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/members/1",
+            "description": "🔵 USER - Lấy thông tin chi tiết thành viên"
+          }
+        },
+        {
+          "name": "Create Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"studentId\": \"HS001\",\n  \"email\": \"student@example.com\",\n  \"phone\": \"0987654321\",\n  \"class\": \"12A1\",\n  \"departmentId\": 1,\n  \"positionId\": 1,\n  \"academicYearId\": 1,\n  \"memberType\": \"active\",\n  \"joinDate\": \"2024-11-01\",\n  \"notes\": \"Ghi chú thêm\"\n}"
+            },
+            "url": "{{baseUrl}}/api/members",
+            "description": "🟡 ADMIN - Tạo thành viên mới"
+          }
+        },
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A Updated\",\n  \"phone\": \"0987654322\",\n  \"class\": \"12A2\"\n}"
+            },
+            "url": "{{baseUrl}}/api/members/1",
+            "description": "🟡 ADMIN - Cập nhật thông tin thành viên"
+          }
+        },
+        {
+          "name": "Delete Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/members/1",
+            "description": "🟡 ADMIN - Xóa thành viên (soft delete)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Departments",
+      "description": "API quản lý ban trong câu lạc bộ",
+      "item": [
+        {
+          "name": "Get All Departments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/departments",
+            "description": "🔵 USER - Lấy danh sách ban"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Positions",
+      "description": "API quản lý chức vụ chuẩn hóa (🔴 SUPER_ADMIN required)",
+      "item": [
+        {
+          "name": "Get All Positions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/positions",
+            "description": "🔵 USER - Lấy danh sách chức vụ"
+          }
+        },
+        {
+          "name": "Create Position",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"vice-president\",\n  \"displayName\": \"Phó chủ nhiệm\",\n  \"level\": 90,\n  \"description\": \"Phụ trách hỗ trợ chủ nhiệm\",\n  \"color\": \"#10B981\"\n}"
+            },
+            "url": "{{baseUrl}}/api/positions",
+            "description": "🔴 SUPER_ADMIN - Tạo chức vụ mới"
+          }
+        },
+        {
+          "name": "Update Position",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Phó chủ nhiệm cấp cao\",\n  \"level\": 95\n}"
+            },
+            "url": "{{baseUrl}}/api/positions/1",
+            "description": "🔴 SUPER_ADMIN - Cập nhật chức vụ"
+          }
+        },
+        {
+          "name": "Delete Position",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/positions/1",
+            "description": "🔴 SUPER_ADMIN - Xóa chức vụ"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Divisions",
+      "description": "API quản lý ban phụ trách (🔴 SUPER_ADMIN required)",
+      "item": [
+        {
+          "name": "Get All Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/divisions",
+            "description": "🔵 USER - Lấy danh sách ban"
+          }
+        },
+        {
+          "name": "Create Division",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ban Sự kiện\",\n  \"description\": \"Phụ trách tổ chức các sự kiện\",\n  \"color\": \"#8B5CF6\",\n  \"icon\": \"Calendar\"\n}"
+            },
+            "url": "{{baseUrl}}/api/divisions",
+            "description": "🔴 SUPER_ADMIN - Tạo ban mới"
+          }
+        },
+        {
+          "name": "Update Division",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ban Sự kiện và Truyền thông\",\n  \"description\": \"Phụ trách tổ chức sự kiện và truyền thông\"\n}"
+            },
+            "url": "{{baseUrl}}/api/divisions/1",
+            "description": "🔴 SUPER_ADMIN - Cập nhật ban"
+          }
+        },
+        {
+          "name": "Delete Division",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/divisions/1",
+            "description": "🔴 SUPER_ADMIN - Xóa ban"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 Academic Years",
+      "description": "API quản lý khóa học (🔴 SUPER_ADMIN required)",
+      "item": [
+        {
+          "name": "Get All Academic Years",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/academic-years",
+            "description": "🔵 USER - Lấy danh sách khóa học"
+          }
+        },
+        {
+          "name": "Create Academic Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Khóa 2025-2026\",\n  \"startDate\": \"2025-11-01\",\n  \"endDate\": \"2026-11-01\",\n  \"description\": \"Khóa học năm 2025-2026\"\n}"
+            },
+            "url": "{{baseUrl}}/api/academic-years",
+            "description": "🔴 SUPER_ADMIN - Tạo khóa học mới (từ 11/năm này đến 11/năm sau)"
+          }
+        },
+        {
+          "name": "Update Academic Year",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Khóa học đặc biệt 2025-2026\"\n}"
+            },
+            "url": "{{baseUrl}}/api/academic-years/1",
+            "description": "🔴 SUPER_ADMIN - Cập nhật khóa học"
+          }
+        },
+        {
+          "name": "Delete Academic Year",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/academic-years/1",
+            "description": "🔴 SUPER_ADMIN - Xóa khóa học"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏆 Achievements",
+      "description": "API hệ thống thành tích",
+      "item": [
+        {
+          "name": "Get All Achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/achievements",
+            "description": "🔵 USER - Lấy danh sách thành tích"
+          }
+        },
+        {
+          "name": "Create Achievement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Thành viên xuất sắc\",\n  \"description\": \"Dành cho thành viên có đóng góp tích cực\",\n  \"category\": \"participation\",\n  \"level\": \"gold\",\n  \"badgeIcon\": \"Trophy\",\n  \"badgeColor\": \"#FFD700\",\n  \"pointsReward\": 100\n}"
+            },
+            "url": "{{baseUrl}}/api/achievements",
+            "description": "🟡 ADMIN - Tạo thành tích mới"
+          }
+        },
+        {
+          "name": "Award Achievement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"achievementId\": 1,\n  \"notes\": \"Hoàn thành xuất sắc dự án tháng 11\"\n}"
+            },
+            "url": "{{baseUrl}}/api/achievements/award",
+            "description": "🟡 ADMIN - Trao thành tích cho user (tự động cộng BeePoints)"
+          }
+        },
+        {
+          "name": "Get My Achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/achievements/me",
+            "description": "🔵 USER - Lấy danh sách thành tích của bản thân"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🍯 BeePoints",
+      "description": "API hệ thống điểm thưởng",
+      "item": [
+        {
+          "name": "Get My BeePoints",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/bee-points/me",
+            "description": "🔵 USER - Lấy điểm BeePoints của bản thân"
+          }
+        },
+        {
+          "name": "Add BeePoints",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"amount\": 50,\n  \"description\": \"Thưởng hoàn thành nhiệm vụ\"\n}"
+            },
+            "url": "{{baseUrl}}/api/bee-points/add",
+            "description": "🟡 ADMIN - Thêm điểm cho user"
+          }
+        },
+        {
+          "name": "Get Point Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/bee-points/transactions",
+            "description": "🔵 USER - Lấy lịch sử giao dịch điểm"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Statistics",
+      "description": "API thống kê tổng quan",
+      "item": [
+        {
+          "name": "Get Basic Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/stats",
+            "description": "🔵 USER - Lấy thống kê cơ bản"
+          }
+        },
+        {
+          "name": "Get Dynamic Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dynamic-stats",
+            "description": "🔵 USER - Lấy thống kê động"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 API Keys Management",
+      "description": "API quản lý API keys (🟡 ADMIN required)",
+      "item": [
+        {
+          "name": "Get All API Keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/api-keys",
+            "description": "🟡 ADMIN - Lấy danh sách API keys"
+          }
+        },
+        {
+          "name": "Create API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mobile App API\",\n  \"permissions\": [\"members:view\", \"stats:view\", \"achievements:view\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/api-keys",
+            "description": "🟡 ADMIN - Tạo API key mới"
+          }
+        },
+        {
+          "name": "Update API Key",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\"members:view\", \"stats:view\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/api-keys/1",
+            "description": "🟡 ADMIN - Cập nhật quyền API key"
+          }
+        },
+        {
+          "name": "Delete API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/api-keys/1",
+            "description": "🟡 ADMIN - Xóa API key"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌐 External API (API Key Required)",
+      "description": "API dành cho ứng dụng bên ngoài (cần x-api-key header)",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "External Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "description": "API key cho external access"
+              }
+            ],
+            "url": "{{baseUrl}}/api/external/stats",
+            "description": "Lấy thống kê cho ứng dụng bên ngoài"
+          }
+        },
+        {
+          "name": "External Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/external/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "external", "members"],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Lấy danh sách thành viên cho ứng dụng bên ngoài"
+          }
+        },
+        {
+          "name": "External Achievements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/external/achievements",
+            "description": "Lấy danh sách thành tích cho ứng dụng bên ngoài"
+          }
+        }
+      ]
+    }
+  ]
+}

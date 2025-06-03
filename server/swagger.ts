@@ -11,21 +11,29 @@ const options = {
       description: `
 # Hệ thống quản lý câu lạc bộ sáng tạo
 
-API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban và thống kê.
+## Nhóm API theo chức năng:
+1. **Authentication** - Xác thực người dùng
+2. **Users** - Quản lý người dùng hệ thống  
+3. **Members** - Quản lý thành viên CLB
+4. **Departments** - Quản lý ban trong CLB
+5. **Positions** - Quản lý chức vụ chuẩn hóa
+6. **Divisions** - Quản lý ban phụ trách
+7. **Academic Years** - Quản lý khóa học (11/năm này - 11/năm sau)
+8. **Achievements** - Hệ thống thành tích
+9. **BeePoints** - Hệ thống điểm thưởng
+10. **Statistics** - Thống kê tổng quan
+11. **API Keys** - Quản lý API keys cho ứng dụng thứ 3
+12. **External API** - API dành cho ứng dụng bên ngoài
 
-## Xác thực
-- **Bearer Token**: Sử dụng JWT token cho xác thực người dùng
-- **API Key**: Sử dụng x-api-key header cho ứng dụng bên thứ 3
+## Phân quyền:
+- 🟢 **PUBLIC** - Không cần xác thực
+- 🔵 **USER** - Cần đăng nhập
+- 🟡 **ADMIN** - Cần quyền quản trị viên
+- 🔴 **SUPER_ADMIN** - Cần quyền super admin
 
-## Quyền hạn
-- **SYSTEM_ADMIN**: Toàn quyền quản lý hệ thống
-- **MEMBER_VIEW/CREATE/EDIT/DELETE**: Quản lý thành viên
-- **DEPARTMENT_VIEW/CREATE/EDIT/DELETE**: Quản lý ban
-- **ROLE_VIEW/CREATE/EDIT/DELETE**: Quản lý vai trò
-
-## Lưu ý
-- Tất cả ngày tháng sử dụng định dạng ISO 8601
-- Khóa học chạy từ tháng 11 năm này đến tháng 11 năm sau
+## Xác thực:
+- **Bearer Token**: JWT từ /api/auth/login
+- **API Key**: Header x-api-key cho external API
       `,
       contact: {
         name: 'CLB Sáng Tạo',
@@ -36,10 +44,6 @@ API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban 
       {
         url: 'http://localhost:5000',
         description: 'Development Server',
-      },
-      {
-        url: 'https://production-domain.com',
-        description: 'Production Server',
       },
     ],
     components: {
@@ -55,6 +59,61 @@ API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban 
           in: 'header',
           name: 'x-api-key',
           description: 'API key cho ứng dụng thứ 3',
+        },
+      },
+      responses: {
+        Unauthorized: {
+          description: 'Không có quyền truy cập',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Token không hợp lệ' }
+                }
+              }
+            }
+          }
+        },
+        Forbidden: {
+          description: 'Không đủ quyền',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Không đủ quyền thực hiện' }
+                }
+              }
+            }
+          }
+        },
+        BadRequest: {
+          description: 'Dữ liệu không hợp lệ',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Validation failed' },
+                  errors: { type: 'array', items: { type: 'object' } }
+                }
+              }
+            }
+          }
+        },
+        NotFound: {
+          description: 'Không tìm thấy',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Không tìm thấy' }
+                }
+              }
+            }
+          }
         },
       },
       schemas: {
@@ -93,6 +152,34 @@ API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban 
             notes: { type: 'string', nullable: true },
             userId: { type: 'integer', nullable: true },
             isActive: { type: 'boolean', example: true },
+            department: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                icon: { type: 'string' },
+                color: { type: 'string' }
+              }
+            },
+            position: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                displayName: { type: 'string' },
+                level: { type: 'integer' }
+              }
+            },
+            user: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer' },
+                username: { type: 'string' },
+                fullName: { type: 'string' },
+                email: { type: 'string' }
+              }
+            }
           },
         },
         Department: {
@@ -173,85 +260,30 @@ API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban 
             lastUsed: { type: 'string', format: 'date-time', nullable: true },
           },
         },
-        LoginRequest: {
-          type: 'object',
-          required: ['username', 'password'],
-          properties: {
-            username: { type: 'string', example: 'admin' },
-            password: { type: 'string', example: 'password123' },
-          },
-        },
-        CreateMemberRequest: {
-          type: 'object',
-          required: ['fullName', 'class', 'departmentId', 'positionId', 'academicYearId', 'memberType', 'joinDate'],
-          properties: {
-            fullName: { type: 'string', example: 'Nguyễn Văn A' },
-            studentId: { type: 'string', example: 'HS001' },
-            email: { type: 'string', example: 'student@example.com' },
-            phone: { type: 'string', example: '0987654321' },
-            class: { type: 'string', example: '12A1' },
-            departmentId: { type: 'integer', example: 1 },
-            positionId: { type: 'integer', example: 1 },
-            divisionId: { type: 'integer', example: 1 },
-            academicYearId: { type: 'integer', example: 1 },
-            memberType: { type: 'string', enum: ['active', 'alumni'], example: 'active' },
-            joinDate: { type: 'string', format: 'date', example: '2024-11-01' },
-            notes: { type: 'string', example: 'Ghi chú thêm' },
-          },
-        },
-        CreatePositionRequest: {
-          type: 'object',
-          required: ['name', 'displayName', 'level'],
-          properties: {
-            name: { type: 'string', example: 'vice-president' },
-            displayName: { type: 'string', example: 'Phó chủ nhiệm' },
-            level: { type: 'integer', example: 90 },
-            description: { type: 'string', example: 'Phụ trách hỗ trợ chủ nhiệm' },
-            color: { type: 'string', example: '#10B981' },
-          },
-        },
-        CreateDivisionRequest: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', example: 'Ban Sự kiện' },
-            description: { type: 'string', example: 'Phụ trách tổ chức các sự kiện' },
-            color: { type: 'string', example: '#8B5CF6' },
-            icon: { type: 'string', example: 'Calendar' },
-          },
-        },
-        CreateAcademicYearRequest: {
-          type: 'object',
-          required: ['name', 'startDate', 'endDate'],
-          properties: {
-            name: { type: 'string', example: 'Khóa 2025-2026' },
-            startDate: { type: 'string', format: 'date', example: '2025-11-01' },
-            endDate: { type: 'string', format: 'date', example: '2026-11-01' },
-            description: { type: 'string', example: 'Khóa học năm 2025-2026' },
-          },
-        },
-        ErrorResponse: {
+        Stats: {
           type: 'object',
           properties: {
-            message: { type: 'string', example: 'Thông báo lỗi' },
-            errors: { type: 'array', items: { type: 'object' } },
+            totalMembers: { type: 'integer', example: 25 },
+            activeMembers: { type: 'integer', example: 20 },
+            alumniMembers: { type: 'integer', example: 5 },
+            totalDepartments: { type: 'integer', example: 4 },
           },
         },
       },
     },
     tags: [
-      { name: 'Authentication', description: 'Xác thực và phân quyền' },
-      { name: 'Users', description: 'Quản lý người dùng' },
-      { name: 'Members', description: 'Quản lý thành viên' },
-      { name: 'Departments', description: 'Quản lý ban' },
-      { name: 'Positions', description: 'Quản lý chức vụ' },
-      { name: 'Divisions', description: 'Quản lý ban (mở rộng)' },
-      { name: 'Academic Years', description: 'Quản lý khóa học' },
-      { name: 'Achievements', description: 'Quản lý thành tích' },
-      { name: 'BeePoints', description: 'Hệ thống điểm thưởng' },
-      { name: 'Statistics', description: 'Thống kê hệ thống' },
-      { name: 'API Keys', description: 'Quản lý API keys' },
-      { name: 'External API', description: 'API cho ứng dụng thứ 3' },
+      { name: '🔐 Authentication', description: 'Xác thực và đăng nhập' },
+      { name: '👥 Users', description: 'Quản lý người dùng hệ thống (🟡 ADMIN)' },
+      { name: '🎓 Members', description: 'Quản lý thành viên CLB' },
+      { name: '🏢 Departments', description: 'Quản lý ban trong CLB' },
+      { name: '👑 Positions', description: 'Quản lý chức vụ chuẩn hóa (🔴 SUPER_ADMIN)' },
+      { name: '📋 Divisions', description: 'Quản lý ban phụ trách (🔴 SUPER_ADMIN)' },
+      { name: '📅 Academic Years', description: 'Quản lý khóa học (🔴 SUPER_ADMIN)' },
+      { name: '🏆 Achievements', description: 'Hệ thống thành tích (🟡 ADMIN trao thưởng)' },
+      { name: '🍯 BeePoints', description: 'Hệ thống điểm thưởng' },
+      { name: '📊 Statistics', description: 'Thống kê tổng quan' },
+      { name: '🔑 API Keys', description: 'Quản lý API keys (🟡 ADMIN)' },
+      { name: '🌐 External API', description: 'API cho ứng dụng thứ 3 (cần API key)' },
     ],
   },
   apis: ['./server/routes.ts'],
@@ -259,155 +291,101 @@ API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban 
 
 const specs = swaggerJsdoc(options);
 
-const customCss = `
-  .swagger-ui .topbar { display: none; }
-  .swagger-ui .info { margin: 20px 0; }
-  .swagger-ui .info .title { color: #1f2937; font-size: 28px; }
-  .swagger-ui .info .description { font-size: 14px; }
-  .swagger-ui .scheme-container { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; }
-  .swagger-ui .opblock.opblock-post { border-color: #059669; background: rgba(5, 150, 105, 0.1); }
-  .swagger-ui .opblock.opblock-get { border-color: #0284c7; background: rgba(2, 132, 199, 0.1); }
-  .swagger-ui .opblock.opblock-put { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
-  .swagger-ui .opblock.opblock-delete { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
-  .swagger-ui .parameters-col_description { width: 40%; }
-  .swagger-ui .parameter__name { width: 20%; }
-  .swagger-ui .parameter__type { width: 15%; }
-  .swagger-ui .parameter__deprecated { width: 10%; }
-  .swagger-ui .parameter__in { width: 15%; }
-`;
-
 export function setupSwagger(app: Express) {
-  // Serve swagger docs with enhanced UI
+  // Serve swagger docs
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     customSiteTitle: 'CLB Sáng Tạo - API Documentation',
-    customCss,
-    customfavIcon: '/favicon.ico',
+    customCss: `
+      .swagger-ui .topbar { display: none; }
+      .swagger-ui .info { margin: 20px 0; }
+      .swagger-ui .info .title { color: #1f2937; font-size: 24px; }
+      .swagger-ui .info .description { font-size: 14px; line-height: 1.6; }
+      .swagger-ui .scheme-container { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; }
+      .swagger-ui .opblock.opblock-post { border-color: #059669; background: rgba(5, 150, 105, 0.1); }
+      .swagger-ui .opblock.opblock-get { border-color: #0284c7; background: rgba(2, 132, 199, 0.1); }
+      .swagger-ui .opblock.opblock-put { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+      .swagger-ui .opblock.opblock-delete { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+      .swagger-ui .opblock-tag { font-size: 16px; font-weight: 600; }
+    `,
     swaggerOptions: {
       persistAuthorization: true,
       tryItOutEnabled: true,
       filter: true,
       displayRequestDuration: true,
-      defaultModelsExpandDepth: 2,
-      defaultModelExpandDepth: 2,
       docExpansion: 'list',
-      supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
-      validatorUrl: null,
+      tagsSorter: 'alpha',
     },
   }));
 
-  // Serve JSON spec for Postman import
+  // JSON spec
   app.get('/api-docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(specs);
   });
 
-  // Postman collection export
+  // Postman collection
   app.get('/postman-collection.json', (req, res) => {
-    const postmanCollection = {
+    const collection = {
       info: {
         name: 'CLB Sáng Tạo API',
-        description: 'API collection cho hệ thống quản lý câu lạc bộ sáng tạo',
+        description: 'Complete API collection for club management system',
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
       },
+      variable: [
+        { key: 'baseUrl', value: 'http://localhost:5000' },
+        { key: 'authToken', value: '' },
+        { key: 'apiKey', value: '' },
+      ],
       auth: {
         type: 'bearer',
-        bearer: [
-          {
-            key: 'token',
-            value: '{{authToken}}',
-            type: 'string',
-          },
-        ],
+        bearer: [{ key: 'token', value: '{{authToken}}', type: 'string' }],
       },
-      variable: [
-        {
-          key: 'baseUrl',
-          value: 'http://localhost:5000',
-          type: 'string',
-        },
-        {
-          key: 'authToken',
-          value: '',
-          type: 'string',
-        },
-        {
-          key: 'apiKey',
-          value: '',
-          type: 'string',
-        },
-      ],
       item: [
         {
-          name: 'Authentication',
+          name: '🔐 Authentication',
           item: [
             {
               name: 'Login',
               request: {
                 method: 'POST',
-                header: [
-                  {
-                    key: 'Content-Type',
-                    value: 'application/json',
-                  },
-                ],
+                header: [{ key: 'Content-Type', value: 'application/json' }],
                 body: {
                   mode: 'raw',
-                  raw: JSON.stringify({
-                    username: 'admin',
-                    password: 'password123',
-                  }),
+                  raw: JSON.stringify({ username: 'admin', password: 'password123' }),
                 },
-                url: {
-                  raw: '{{baseUrl}}/api/auth/login',
-                  host: ['{{baseUrl}}'],
-                  path: ['api', 'auth', 'login'],
-                },
+                url: '{{baseUrl}}/api/auth/login',
               },
             },
             {
-              name: 'Get User Info',
+              name: 'Get Current User',
               request: {
                 method: 'GET',
-                header: [],
-                url: {
-                  raw: '{{baseUrl}}/api/auth/me',
-                  host: ['{{baseUrl}}'],
-                  path: ['api', 'auth', 'me'],
-                },
+                url: '{{baseUrl}}/api/auth/me',
+              },
+            },
+            {
+              name: 'Logout',
+              request: {
+                method: 'POST',
+                url: '{{baseUrl}}/api/auth/logout',
               },
             },
           ],
         },
         {
-          name: 'Members',
+          name: '🎓 Members',
           item: [
             {
               name: 'Get All Members',
               request: {
                 method: 'GET',
-                header: [],
                 url: {
                   raw: '{{baseUrl}}/api/members',
-                  host: ['{{baseUrl}}'],
-                  path: ['api', 'members'],
                   query: [
-                    {
-                      key: 'search',
-                      value: '',
-                      disabled: true,
-                    },
-                    {
-                      key: 'type',
-                      value: '',
-                      disabled: true,
-                    },
-                    {
-                      key: 'department',
-                      value: '',
-                      disabled: true,
-                    },
+                    { key: 'search', value: '', disabled: true },
+                    { key: 'type', value: '', disabled: true },
+                    { key: 'department', value: '', disabled: true },
                   ],
                 },
               },
@@ -416,12 +394,7 @@ export function setupSwagger(app: Express) {
               name: 'Create Member',
               request: {
                 method: 'POST',
-                header: [
-                  {
-                    key: 'Content-Type',
-                    value: 'application/json',
-                  },
-                ],
+                header: [{ key: 'Content-Type', value: 'application/json' }],
                 body: {
                   mode: 'raw',
                   raw: JSON.stringify({
@@ -437,33 +410,50 @@ export function setupSwagger(app: Express) {
                     joinDate: '2024-11-01',
                   }),
                 },
-                url: {
-                  raw: '{{baseUrl}}/api/members',
-                  host: ['{{baseUrl}}'],
-                  path: ['api', 'members'],
+                url: '{{baseUrl}}/api/members',
+              },
+            },
+            {
+              name: 'Update Member',
+              request: {
+                method: 'PUT',
+                header: [{ key: 'Content-Type', value: 'application/json' }],
+                body: {
+                  mode: 'raw',
+                  raw: JSON.stringify({
+                    fullName: 'Nguyễn Văn A Updated',
+                    phone: '0987654322',
+                  }),
                 },
+                url: '{{baseUrl}}/api/members/1',
+              },
+            },
+            {
+              name: 'Delete Member',
+              request: {
+                method: 'DELETE',
+                url: '{{baseUrl}}/api/members/1',
               },
             },
           ],
         },
         {
-          name: 'External API (with API Key)',
+          name: '🌐 External API (API Key Required)',
           item: [
             {
-              name: 'Get Stats',
+              name: 'External Stats',
               request: {
                 method: 'GET',
-                header: [
-                  {
-                    key: 'x-api-key',
-                    value: '{{apiKey}}',
-                  },
-                ],
-                url: {
-                  raw: '{{baseUrl}}/api/external/stats',
-                  host: ['{{baseUrl}}'],
-                  path: ['api', 'external', 'stats'],
-                },
+                header: [{ key: 'x-api-key', value: '{{apiKey}}' }],
+                url: '{{baseUrl}}/api/external/stats',
+              },
+            },
+            {
+              name: 'External Members',
+              request: {
+                method: 'GET',
+                header: [{ key: 'x-api-key', value: '{{apiKey}}' }],
+                url: '{{baseUrl}}/api/external/members',
               },
             },
           ],
@@ -473,11 +463,9 @@ export function setupSwagger(app: Express) {
 
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'attachment; filename="CLB-SangTao-API.postman_collection.json"');
-    res.send(postmanCollection);
+    res.send(collection);
   });
 
-  // Landing page redirect
-  app.get('/docs', (req, res) => {
-    res.redirect('/api-docs');
-  });
+  // Redirect
+  app.get('/docs', (req, res) => res.redirect('/api-docs'));
 }
