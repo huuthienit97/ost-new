@@ -91,8 +91,44 @@ export default function AcademicYears() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/academic-years/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Không thể xóa khóa học");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/academic-years"] });
+      toast({
+        title: "Thành công",
+        description: "Đã xóa khóa học",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa khóa học",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (data: CreateAcademicYearForm) => {
     createMutation.mutate(data);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Bạn có chắc chắn muốn xóa khóa học này?")) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -260,7 +296,13 @@ export default function AcademicYears() {
                     <Edit2 className="h-4 w-4 mr-1" />
                     Sửa
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDelete(year.id)}
+                    disabled={deleteMutation.isPending}
+                  >
                     <Trash2 className="h-4 w-4 mr-1" />
                     Xóa
                   </Button>

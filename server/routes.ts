@@ -6,7 +6,7 @@ import { users, members, beePoints, pointTransactions, achievements, userAchieve
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or, isNotNull } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull, sql } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1061,13 +1061,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const [newYear] = await db
         .insert(academicYears)
-        .values({ name, startDate, endDate, description, isActive: req.body.isActive || false })
+        .values({ 
+          name, 
+          startDate: new Date(startDate), 
+          endDate: new Date(endDate), 
+          description, 
+          isActive: req.body.isActive || false 
+        })
         .returning();
       
       res.status(201).json(newYear);
     } catch (error) {
       console.error("Error creating academic year:", error);
       res.status(500).json({ message: "Lỗi tạo khóa học" });
+    }
+  });
+
+  app.delete("/api/academic-years/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if academic year has members
+      const membersCount = await db.select({ count: sql`count(*)` }).from(members).where(eq(members.academicYearId, id));
+      if (parseInt(membersCount[0].count as string) > 0) {
+        return res.status(400).json({ message: "Không thể xóa khóa học có thành viên" });
+      }
+      
+      await db.delete(academicYears).where(eq(academicYears.id, id));
+      res.json({ message: "Đã xóa khóa học" });
+    } catch (error) {
+      console.error("Error deleting academic year:", error);
+      res.status(500).json({ message: "Lỗi xóa khóa học" });
     }
   });
 
@@ -1167,6 +1191,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating division:", error);
       res.status(500).json({ message: "Lỗi tạo ban mới" });
+    }
+  });
+
+  app.put("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, description, color, icon } = req.body;
+      
+      const [updatedDivision] = await db
+        .update(divisions)
+        .set({ name, description, color, icon, updatedAt: new Date() })
+        .where(eq(divisions.id, id))
+        .returning();
+      
+      res.json(updatedDivision);
+    } catch (error) {
+      console.error("Error updating division:", error);
+      res.status(500).json({ message: "Lỗi cập nhật ban" });
+    }
+  });
+
+  app.delete("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if division has members
+      const membersCount = await db.select({ count: sql`count(*)` }).from(members).where(eq(members.divisionId, id));
+      if (parseInt(membersCount[0].count as string) > 0) {
+        return res.status(400).json({ message: "Không thể xóa ban có thành viên" });
+      }
+      
+      await db.delete(divisions).where(eq(divisions.id, id));
+      res.json({ message: "Đã xóa ban" });
+    } catch (error) {
+      console.error("Error deleting division:", error);
+      res.status(500).json({ message: "Lỗi xóa ban" });
     }
   });
 
