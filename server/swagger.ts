@@ -1,23 +1,45 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express, Request, Response, NextFunction } from 'express';
+import type { Express } from 'express';
 
 const options = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'CLB Sáng Tạo - API Documentation',
-      version: '1.0.0',
-      description: 'API documentation cho hệ thống quản lý thành viên câu lạc bộ sáng tạo',
+      version: '2.0.0',
+      description: `
+# Hệ thống quản lý câu lạc bộ sáng tạo
+
+API đầy đủ cho việc quản lý thành viên, vai trò, khóa học, ban và thống kê.
+
+## Xác thực
+- **Bearer Token**: Sử dụng JWT token cho xác thực người dùng
+- **API Key**: Sử dụng x-api-key header cho ứng dụng bên thứ 3
+
+## Quyền hạn
+- **SYSTEM_ADMIN**: Toàn quyền quản lý hệ thống
+- **MEMBER_VIEW/CREATE/EDIT/DELETE**: Quản lý thành viên
+- **DEPARTMENT_VIEW/CREATE/EDIT/DELETE**: Quản lý ban
+- **ROLE_VIEW/CREATE/EDIT/DELETE**: Quản lý vai trò
+
+## Lưu ý
+- Tất cả ngày tháng sử dụng định dạng ISO 8601
+- Khóa học chạy từ tháng 11 năm này đến tháng 11 năm sau
+      `,
       contact: {
         name: 'CLB Sáng Tạo',
-        email: 'admin@club.edu.vn',
+        email: 'admin@clbsangtao.com'
       },
     },
     servers: [
       {
         url: 'http://localhost:5000',
-        description: 'Development server',
+        description: 'Development Server',
+      },
+      {
+        url: 'https://production-domain.com',
+        description: 'Production Server',
       },
     ],
     components: {
@@ -26,528 +48,436 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+          description: 'JWT token từ /api/auth/login',
+        },
+        ApiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+          description: 'API key cho ứng dụng thứ 3',
         },
       },
       schemas: {
-        Role: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            displayName: { type: 'string' },
-            description: { type: 'string' },
-            permissions: { type: 'array', items: { type: 'string' } },
-            isSystem: { type: 'boolean' },
-            createdAt: { type: 'string', format: 'date-time' },
-          },
-        },
         User: {
           type: 'object',
           properties: {
-            id: { type: 'integer' },
-            username: { type: 'string' },
-            email: { type: 'string' },
-            fullName: { type: 'string' },
-            roleId: { type: 'integer' },
-            isActive: { type: 'boolean' },
+            id: { type: 'integer', example: 1 },
+            username: { type: 'string', example: 'admin' },
+            email: { type: 'string', example: 'admin@example.com' },
+            fullName: { type: 'string', example: 'Nguyễn Văn A' },
+            roleId: { type: 'integer', example: 1 },
+            isActive: { type: 'boolean', example: true },
+            mustChangePassword: { type: 'boolean', example: false },
+            avatarUrl: { type: 'string', nullable: true },
+            bio: { type: 'string', nullable: true },
+            phone: { type: 'string', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        Department: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            icon: { type: 'string' },
-            color: { type: 'string' },
           },
         },
         Member: {
           type: 'object',
           properties: {
-            id: { type: 'integer' },
-            fullName: { type: 'string' },
-            studentId: { type: 'string' },
-            email: { type: 'string' },
-            phone: { type: 'string' },
-            class: { type: 'string' },
-            departmentId: { type: 'integer' },
-            position: { type: 'string' },
-            memberType: { type: 'string' },
-            joinDate: { type: 'string' },
-            notes: { type: 'string' },
-            isActive: { type: 'boolean' },
-            createdAt: { type: 'string', format: 'date-time' },
+            id: { type: 'integer', example: 1 },
+            fullName: { type: 'string', example: 'Trần Thị B' },
+            studentId: { type: 'string', example: 'HS001' },
+            email: { type: 'string', example: 'student@example.com' },
+            phone: { type: 'string', example: '0987654321' },
+            class: { type: 'string', example: '12A1' },
+            departmentId: { type: 'integer', example: 1 },
+            positionId: { type: 'integer', example: 1 },
+            divisionId: { type: 'integer', nullable: true },
+            academicYearId: { type: 'integer', example: 1 },
+            memberType: { type: 'string', enum: ['active', 'alumni'], example: 'active' },
+            joinDate: { type: 'string', format: 'date', example: '2024-11-01' },
+            notes: { type: 'string', nullable: true },
+            userId: { type: 'integer', nullable: true },
+            isActive: { type: 'boolean', example: true },
+          },
+        },
+        Department: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Ban Thiết Kế' },
+            icon: { type: 'string', example: 'palette' },
+            color: { type: 'string', example: '#3B82F6' },
+          },
+        },
+        Position: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'president' },
+            displayName: { type: 'string', example: 'Chủ nhiệm' },
+            level: { type: 'integer', example: 100 },
+            description: { type: 'string', nullable: true },
+            color: { type: 'string', example: '#EF4444' },
+            isActive: { type: 'boolean', example: true },
+          },
+        },
+        Division: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Ban Truyền thông' },
+            description: { type: 'string', nullable: true },
+            color: { type: 'string', example: '#10B981' },
+            icon: { type: 'string', example: 'Users' },
+            isActive: { type: 'boolean', example: true },
+          },
+        },
+        AcademicYear: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Khóa 2024-2025' },
+            startDate: { type: 'string', format: 'date-time', example: '2024-11-01T00:00:00.000Z' },
+            endDate: { type: 'string', format: 'date-time', example: '2025-11-01T00:00:00.000Z' },
+            isActive: { type: 'boolean', example: true },
+            description: { type: 'string', nullable: true },
+          },
+        },
+        Achievement: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            title: { type: 'string', example: 'Thành viên xuất sắc' },
+            description: { type: 'string', example: 'Dành cho thành viên có đóng góp tích cực' },
+            category: { type: 'string', enum: ['academic', 'creative', 'leadership', 'participation', 'special'] },
+            level: { type: 'string', enum: ['bronze', 'silver', 'gold', 'special'] },
+            badgeIcon: { type: 'string', example: 'Trophy' },
+            badgeColor: { type: 'string', example: '#FFD700' },
+            pointsReward: { type: 'integer', example: 50 },
+          },
+        },
+        BeePoints: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            userId: { type: 'integer', example: 1 },
+            currentPoints: { type: 'integer', example: 150 },
+            totalEarned: { type: 'integer', example: 200 },
+            totalSpent: { type: 'integer', example: 50 },
             updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ApiKey: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Mobile App API' },
+            permissions: { type: 'array', items: { type: 'string' }, example: ['members:view', 'stats:view'] },
+            isActive: { type: 'boolean', example: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            lastUsed: { type: 'string', format: 'date-time', nullable: true },
           },
         },
         LoginRequest: {
           type: 'object',
           required: ['username', 'password'],
           properties: {
-            username: { type: 'string' },
-            password: { type: 'string' },
-          },
-        },
-        LoginResponse: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'integer' },
-                username: { type: 'string' },
-                email: { type: 'string' },
-                fullName: { type: 'string' },
-                role: { $ref: '#/components/schemas/Role' },
-              },
-            },
-          },
-        },
-        CreateRoleRequest: {
-          type: 'object',
-          required: ['name', 'displayName', 'permissions'],
-          properties: {
-            name: { type: 'string' },
-            displayName: { type: 'string' },
-            description: { type: 'string' },
-            permissions: { type: 'array', items: { type: 'string' } },
-            isSystem: { type: 'boolean', default: false },
-          },
-        },
-        CreateUserRequest: {
-          type: 'object',
-          required: ['username', 'email', 'fullName', 'password', 'roleId'],
-          properties: {
-            username: { type: 'string' },
-            email: { type: 'string' },
-            fullName: { type: 'string' },
-            password: { type: 'string' },
-            roleId: { type: 'integer' },
-            isActive: { type: 'boolean', default: true },
+            username: { type: 'string', example: 'admin' },
+            password: { type: 'string', example: 'password123' },
           },
         },
         CreateMemberRequest: {
           type: 'object',
-          required: ['fullName', 'studentId', 'class', 'departmentId', 'position', 'memberType', 'joinDate'],
+          required: ['fullName', 'class', 'departmentId', 'positionId', 'academicYearId', 'memberType', 'joinDate'],
           properties: {
-            fullName: { type: 'string' },
-            studentId: { type: 'string' },
-            email: { type: 'string' },
-            phone: { type: 'string' },
-            class: { type: 'string' },
-            departmentId: { type: 'integer' },
-            position: { 
-              type: 'string',
-              enum: ['president', 'vice-president', 'secretary', 'head', 'vice-head', 'member']
-            },
-            memberType: { 
-              type: 'string',
-              enum: ['active', 'alumni']
-            },
-            joinDate: { type: 'string' },
-            notes: { type: 'string' },
+            fullName: { type: 'string', example: 'Nguyễn Văn A' },
+            studentId: { type: 'string', example: 'HS001' },
+            email: { type: 'string', example: 'student@example.com' },
+            phone: { type: 'string', example: '0987654321' },
+            class: { type: 'string', example: '12A1' },
+            departmentId: { type: 'integer', example: 1 },
+            positionId: { type: 'integer', example: 1 },
+            divisionId: { type: 'integer', example: 1 },
+            academicYearId: { type: 'integer', example: 1 },
+            memberType: { type: 'string', enum: ['active', 'alumni'], example: 'active' },
+            joinDate: { type: 'string', format: 'date', example: '2024-11-01' },
+            notes: { type: 'string', example: 'Ghi chú thêm' },
           },
         },
-        Achievement: {
+        CreatePositionRequest: {
           type: 'object',
+          required: ['name', 'displayName', 'level'],
           properties: {
-            id: { type: 'integer' },
-            title: { type: 'string' },
-            description: { type: 'string' },
-            category: { 
-              type: 'string',
-              enum: ['academic', 'creative', 'leadership', 'participation', 'special']
-            },
-            level: { 
-              type: 'string',
-              enum: ['bronze', 'silver', 'gold', 'special']
-            },
-            badgeIcon: { type: 'string' },
-            badgeColor: { type: 'string' },
-            pointsReward: { type: 'integer' },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
+            name: { type: 'string', example: 'vice-president' },
+            displayName: { type: 'string', example: 'Phó chủ nhiệm' },
+            level: { type: 'integer', example: 90 },
+            description: { type: 'string', example: 'Phụ trách hỗ trợ chủ nhiệm' },
+            color: { type: 'string', example: '#10B981' },
           },
         },
-        CreateAchievementRequest: {
+        CreateDivisionRequest: {
           type: 'object',
-          required: ['title', 'category', 'level', 'pointsReward'],
+          required: ['name'],
           properties: {
-            title: { type: 'string' },
-            description: { type: 'string' },
-            category: { 
-              type: 'string',
-              enum: ['academic', 'creative', 'leadership', 'participation', 'special']
-            },
-            level: { 
-              type: 'string',
-              enum: ['bronze', 'silver', 'gold', 'special']
-            },
-            badgeIcon: { type: 'string' },
-            badgeColor: { type: 'string', default: '#3B82F6' },
-            pointsReward: { type: 'integer', minimum: 0 },
+            name: { type: 'string', example: 'Ban Sự kiện' },
+            description: { type: 'string', example: 'Phụ trách tổ chức các sự kiện' },
+            color: { type: 'string', example: '#8B5CF6' },
+            icon: { type: 'string', example: 'Calendar' },
           },
         },
-        AwardAchievementRequest: {
+        CreateAcademicYearRequest: {
           type: 'object',
-          required: ['userId', 'achievementId'],
+          required: ['name', 'startDate', 'endDate'],
           properties: {
-            userId: { type: 'integer' },
-            achievementId: { type: 'integer' },
-            notes: { type: 'string' },
+            name: { type: 'string', example: 'Khóa 2025-2026' },
+            startDate: { type: 'string', format: 'date', example: '2025-11-01' },
+            endDate: { type: 'string', format: 'date', example: '2026-11-01' },
+            description: { type: 'string', example: 'Khóa học năm 2025-2026' },
           },
         },
-        UserAchievement: {
+        ErrorResponse: {
           type: 'object',
           properties: {
-            id: { type: 'integer' },
-            awardedDate: { type: 'string', format: 'date-time' },
-            notes: { type: 'string' },
-            achievement: { $ref: '#/components/schemas/Achievement' },
-          },
-        },
-        BeePointsInfo: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            userId: { type: 'integer' },
-            currentPoints: { type: 'integer' },
-            totalEarned: { type: 'integer' },
-            totalSpent: { type: 'integer' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        PointTransaction: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            userId: { type: 'integer' },
-            type: { 
-              type: 'string',
-              enum: ['earned', 'spent', 'admin_adjustment']
-            },
-            amount: { type: 'integer' },
-            description: { type: 'string' },
-            achievementId: { type: 'integer' },
-            createdAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        Error: {
-          type: 'object',
-          properties: {
-            message: { type: 'string' },
+            message: { type: 'string', example: 'Thông báo lỗi' },
             errors: { type: 'array', items: { type: 'object' } },
           },
         },
       },
     },
     tags: [
-      {
-        name: 'Public',
-        description: '🌐 API công khai - Không cần xác thực',
-      },
-      {
-        name: 'Authentication',
-        description: '🔑 Xác thực và phiên đăng nhập',
-      },
-      {
-        name: 'User Access',
-        description: '👤 API cho người dùng thông thường - Cần quyền cơ bản',
-      },
-      {
-        name: 'Admin Only',
-        description: '⚡ API chỉ dành cho quản trị viên - Cần quyền admin',
-      },
-      {
-        name: 'Super Admin',
-        description: '🛡️ API chỉ dành cho Super Admin - Quyền cao nhất',
-      },
-      {
-        name: 'Achievements',
-        description: '🏆 Quản lý thành tích và trao thưởng',
-      },
-      {
-        name: 'BeePoints',
-        description: '🍯 Hệ thống điểm thưởng BeePoints',
-      },
+      { name: 'Authentication', description: 'Xác thực và phân quyền' },
+      { name: 'Users', description: 'Quản lý người dùng' },
+      { name: 'Members', description: 'Quản lý thành viên' },
+      { name: 'Departments', description: 'Quản lý ban' },
+      { name: 'Positions', description: 'Quản lý chức vụ' },
+      { name: 'Divisions', description: 'Quản lý ban (mở rộng)' },
+      { name: 'Academic Years', description: 'Quản lý khóa học' },
+      { name: 'Achievements', description: 'Quản lý thành tích' },
+      { name: 'BeePoints', description: 'Hệ thống điểm thưởng' },
+      { name: 'Statistics', description: 'Thống kê hệ thống' },
+      { name: 'API Keys', description: 'Quản lý API keys' },
+      { name: 'External API', description: 'API cho ứng dụng thứ 3' },
     ],
   },
-  apis: ['./server/routes.ts'], // Path to the API files
+  apis: ['./server/routes.ts'],
 };
 
 const specs = swaggerJsdoc(options);
 
+const customCss = `
+  .swagger-ui .topbar { display: none; }
+  .swagger-ui .info { margin: 20px 0; }
+  .swagger-ui .info .title { color: #1f2937; font-size: 28px; }
+  .swagger-ui .info .description { font-size: 14px; }
+  .swagger-ui .scheme-container { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; }
+  .swagger-ui .opblock.opblock-post { border-color: #059669; background: rgba(5, 150, 105, 0.1); }
+  .swagger-ui .opblock.opblock-get { border-color: #0284c7; background: rgba(2, 132, 199, 0.1); }
+  .swagger-ui .opblock.opblock-put { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+  .swagger-ui .opblock.opblock-delete { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+  .swagger-ui .parameters-col_description { width: 40%; }
+  .swagger-ui .parameter__name { width: 20%; }
+  .swagger-ui .parameter__type { width: 15%; }
+  .swagger-ui .parameter__deprecated { width: 10%; }
+  .swagger-ui .parameter__in { width: 15%; }
+`;
+
 export function setupSwagger(app: Express) {
-  // Serve the OpenAPI spec as JSON
+  // Serve swagger docs with enhanced UI
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+    explorer: true,
+    customSiteTitle: 'CLB Sáng Tạo - API Documentation',
+    customCss,
+    customfavIcon: '/favicon.ico',
+    swaggerOptions: {
+      persistAuthorization: true,
+      tryItOutEnabled: true,
+      filter: true,
+      displayRequestDuration: true,
+      defaultModelsExpandDepth: 2,
+      defaultModelExpandDepth: 2,
+      docExpansion: 'list',
+      supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+      validatorUrl: null,
+    },
+  }));
+
+  // Serve JSON spec for Postman import
   app.get('/api-docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(specs);
   });
 
-  // Simple API list page without external dependencies
-  app.get('/api-docs', (req, res) => {
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>CLB Sáng Tạo - API Documentation</title>
-  <meta charset="utf-8">
-  <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      margin: 40px; 
-      line-height: 1.6; 
-      background: #f5f5f5;
-    }
-    .container { 
-      max-width: 800px; 
-      margin: 0 auto; 
-      background: white; 
-      padding: 30px; 
-      border-radius: 8px; 
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
-    h2 { color: #0056b3; margin-top: 30px; }
-    .endpoint { 
-      background: #f8f9fa; 
-      padding: 15px; 
-      margin: 10px 0; 
-      border-radius: 5px; 
-      border-left: 4px solid #007bff;
-    }
-    .method { 
-      display: inline-block; 
-      padding: 4px 8px; 
-      border-radius: 3px; 
-      color: white; 
-      font-weight: bold; 
-      margin-right: 10px;
-    }
-    .get { background: #28a745; }
-    .post { background: #007bff; }
-    .put { background: #ffc107; color: #000; }
-    .delete { background: #dc3545; }
-    .path { font-family: monospace; font-size: 16px; }
-    .desc { margin-top: 8px; color: #666; }
-    .json-link { 
-      display: inline-block; 
-      margin-top: 20px; 
-      padding: 10px 20px; 
-      background: #007bff; 
-      color: white; 
-      text-decoration: none; 
-      border-radius: 5px;
-    }
-    .json-link:hover { background: #0056b3; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>CLB Sáng Tạo - API Documentation</h1>
-    
-    <h2>🌐 Public APIs</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/public/users</span>
-      <div class="desc">Lấy danh sách tất cả users đang hoạt động (không cần token)</div>
-    </div>
+  // Postman collection export
+  app.get('/postman-collection.json', (req, res) => {
+    const postmanCollection = {
+      info: {
+        name: 'CLB Sáng Tạo API',
+        description: 'API collection cho hệ thống quản lý câu lạc bộ sáng tạo',
+        schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+      },
+      auth: {
+        type: 'bearer',
+        bearer: [
+          {
+            key: 'token',
+            value: '{{authToken}}',
+            type: 'string',
+          },
+        ],
+      },
+      variable: [
+        {
+          key: 'baseUrl',
+          value: 'http://localhost:5000',
+          type: 'string',
+        },
+        {
+          key: 'authToken',
+          value: '',
+          type: 'string',
+        },
+        {
+          key: 'apiKey',
+          value: '',
+          type: 'string',
+        },
+      ],
+      item: [
+        {
+          name: 'Authentication',
+          item: [
+            {
+              name: 'Login',
+              request: {
+                method: 'POST',
+                header: [
+                  {
+                    key: 'Content-Type',
+                    value: 'application/json',
+                  },
+                ],
+                body: {
+                  mode: 'raw',
+                  raw: JSON.stringify({
+                    username: 'admin',
+                    password: 'password123',
+                  }),
+                },
+                url: {
+                  raw: '{{baseUrl}}/api/auth/login',
+                  host: ['{{baseUrl}}'],
+                  path: ['api', 'auth', 'login'],
+                },
+              },
+            },
+            {
+              name: 'Get User Info',
+              request: {
+                method: 'GET',
+                header: [],
+                url: {
+                  raw: '{{baseUrl}}/api/auth/me',
+                  host: ['{{baseUrl}}'],
+                  path: ['api', 'auth', 'me'],
+                },
+              },
+            },
+          ],
+        },
+        {
+          name: 'Members',
+          item: [
+            {
+              name: 'Get All Members',
+              request: {
+                method: 'GET',
+                header: [],
+                url: {
+                  raw: '{{baseUrl}}/api/members',
+                  host: ['{{baseUrl}}'],
+                  path: ['api', 'members'],
+                  query: [
+                    {
+                      key: 'search',
+                      value: '',
+                      disabled: true,
+                    },
+                    {
+                      key: 'type',
+                      value: '',
+                      disabled: true,
+                    },
+                    {
+                      key: 'department',
+                      value: '',
+                      disabled: true,
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              name: 'Create Member',
+              request: {
+                method: 'POST',
+                header: [
+                  {
+                    key: 'Content-Type',
+                    value: 'application/json',
+                  },
+                ],
+                body: {
+                  mode: 'raw',
+                  raw: JSON.stringify({
+                    fullName: 'Nguyễn Văn A',
+                    studentId: 'HS001',
+                    email: 'student@example.com',
+                    phone: '0987654321',
+                    class: '12A1',
+                    departmentId: 1,
+                    positionId: 1,
+                    academicYearId: 1,
+                    memberType: 'active',
+                    joinDate: '2024-11-01',
+                  }),
+                },
+                url: {
+                  raw: '{{baseUrl}}/api/members',
+                  host: ['{{baseUrl}}'],
+                  path: ['api', 'members'],
+                },
+              },
+            },
+          ],
+        },
+        {
+          name: 'External API (with API Key)',
+          item: [
+            {
+              name: 'Get Stats',
+              request: {
+                method: 'GET',
+                header: [
+                  {
+                    key: 'x-api-key',
+                    value: '{{apiKey}}',
+                  },
+                ],
+                url: {
+                  raw: '{{baseUrl}}/api/external/stats',
+                  host: ['{{baseUrl}}'],
+                  path: ['api', 'external', 'stats'],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
 
-    <h2>🔐 Authentication</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/auth/check-init</span>
-      <div class="desc">Kiểm tra xem hệ thống đã được khởi tạo chưa</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/auth/login</span>
-      <div class="desc">Đăng nhập với username và password</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/auth/logout</span>
-      <div class="desc">Đăng xuất</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/auth/me</span>
-      <div class="desc">Lấy thông tin user hiện tại</div>
-    </div>
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="CLB-SangTao-API.postman_collection.json"');
+    res.send(postmanCollection);
+  });
 
-    <h2>👥 Users Management</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/users</span>
-      <div class="desc">Lấy danh sách users (cần quyền USER_VIEW)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/users</span>
-      <div class="desc">Tạo user mới (cần quyền USER_CREATE)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method put">PUT</span>
-      <span class="path">/api/users/:id</span>
-      <div class="desc">Cập nhật thông tin user (cần quyền USER_UPDATE)</div>
-    </div>
-
-    <h2>🏆 BeePoints System</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/bee-points/me</span>
-      <div class="desc">Lấy BeePoints của user hiện tại</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/bee-points/add</span>
-      <div class="desc">Thêm BeePoints cho user (cần quyền BEEPOINTS_MANAGE)</div>
-    </div>
-
-    <h2>🎯 Achievements</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/achievements</span>
-      <div class="desc">Lấy danh sách thành tích</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/achievements</span>
-      <div class="desc">Tạo thành tích mới (cần quyền ACHIEVEMENT_CREATE)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/achievements/award</span>
-      <div class="desc">Trao thành tích cho user - tự động cộng BeePoints (cần quyền ACHIEVEMENT_AWARD)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/achievements/me</span>
-      <div class="desc">Lấy danh sách thành tích của user hiện tại</div>
-    </div>
-
-    <h2>🏢 Departments</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/departments</span>
-      <div class="desc">Lấy danh sách phòng ban</div>
-    </div>
-
-    <h2>👥 Members Management</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/members</span>
-      <div class="desc">Lấy danh sách thành viên</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/members/:id</span>
-      <div class="desc">Lấy thông tin chi tiết thành viên</div>
-    </div>
-
-    <h2>🔑 API Keys</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/admin/api-keys</span>
-      <div class="desc">Lấy danh sách API keys (cần quyền ADMIN)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/admin/api-keys</span>
-      <div class="desc">Tạo API key mới (cần quyền ADMIN)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method put">PUT</span>
-      <span class="path">/api/admin/api-keys/:id</span>
-      <div class="desc">Cập nhật quyền API key (cần quyền ADMIN)</div>
-    </div>
-
-    <h2>🌐 External APIs</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/external/members</span>
-      <div class="desc">API cho ứng dụng bên ngoài - Lấy danh sách thành viên (cần API key)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/external/achievements</span>
-      <div class="desc">API cho ứng dụng bên ngoài - Lấy danh sách thành tích (cần API key)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/external/stats</span>
-      <div class="desc">API cho ứng dụng bên ngoài - Lấy thống kê (cần API key)</div>
-    </div>
-
-    <h2>📊 Statistics</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/stats</span>
-      <div class="desc">Lấy thống kê tổng quan hệ thống</div>
-    </div>
-
-    <h2>👑 Roles</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/roles</span>
-      <div class="desc">Lấy danh sách vai trò trong hệ thống</div>
-    </div>
-
-    <h2>📚 Academic Years (Khóa học)</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/academic-years</span>
-      <div class="desc">Lấy danh sách khóa học (từ tháng 11 đến tháng 11 năm sau)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/academic-years</span>
-      <div class="desc">Tạo khóa học mới (cần quyền SYSTEM_ADMIN)</div>
-    </div>
-
-    <h2>🎖️ Positions (Chức vụ)</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/positions</span>
-      <div class="desc">Lấy danh sách chức vụ được chuẩn hóa</div>
-    </div>
-
-    <h2>🏛️ Divisions (Ban)</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/divisions</span>
-      <div class="desc">Lấy danh sách các ban hoạt động</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/divisions</span>
-      <div class="desc">Tạo ban mới (cần quyền SYSTEM_ADMIN)</div>
-    </div>
-
-    <h2>📊 Dynamic Statistics</h2>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/dynamic-stats</span>
-      <div class="desc">Lấy danh sách thống kê động</div>
-    </div>
-    <div class="endpoint">
-      <span class="method post">POST</span>
-      <span class="path">/api/dynamic-stats</span>
-      <div class="desc">Tạo thống kê động mới (cần quyền SYSTEM_ADMIN)</div>
-    </div>
-    <div class="endpoint">
-      <span class="method get">GET</span>
-      <span class="path">/api/enhanced-stats</span>
-      <div class="desc">Lấy thống kê nâng cao theo khóa học và chức vụ</div>
-    </div>
-
-    <a href="/api-docs.json" class="json-link">📄 View OpenAPI JSON Spec</a>
-  </div>
-</body>
-</html>`;
-    res.send(html);
+  // Landing page redirect
+  app.get('/docs', (req, res) => {
+    res.redirect('/api-docs');
   });
 }
