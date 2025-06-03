@@ -281,14 +281,14 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ban phụ trách</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString() || ""}>
+                      <Select onValueChange={(value) => field.onChange(value === "0" ? undefined : parseInt(value))} value={field.value?.toString() || "0"}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Chọn ban phụ trách" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Không có</SelectItem>
+                          <SelectItem value="0">Không có</SelectItem>
                           {(divisions as any[]).map((division: any) => (
                             <SelectItem key={division.id} value={division.id.toString()}>
                               {division.name}
