@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -955,6 +955,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+
+  /**
+   * @swagger
+   * /api/academic-years:
+   *   get:
+   *     summary: Lấy danh sách khóa học
+   *     description: Lấy danh sách khóa học (từ tháng 11 đến tháng 11 năm sau)
+   *     tags: [Academic Years]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách khóa học
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                   name:
+   *                     type: string
+   *                   startDate:
+   *                     type: string
+   *                     format: date-time
+   *                   endDate:
+   *                     type: string
+   *                     format: date-time
+   *                   isActive:
+   *                     type: boolean
+   *                   description:
+   *                     type: string
+   */
+  app.get("/api/academic-years", authenticate, async (req, res) => {
+    try {
+      const years = await db.select().from(academicYears).orderBy(desc(academicYears.startDate));
+      res.json(years);
+    } catch (error) {
+      console.error("Error fetching academic years:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách khóa học" });
+    }
+  });
+
+  app.post("/api/academic-years", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const { name, startDate, endDate, description } = req.body;
+      
+      // Deactivate current active year if setting new one as active
+      if (req.body.isActive) {
+        await db.update(academicYears).set({ isActive: false });
+      }
+      
+      const [newYear] = await db
+        .insert(academicYears)
+        .values({ name, startDate, endDate, description, isActive: req.body.isActive || false })
+        .returning();
+      
+      res.status(201).json(newYear);
+    } catch (error) {
+      console.error("Error creating academic year:", error);
+      res.status(500).json({ message: "Lỗi tạo khóa học" });
+    }
+  });
+
+  // Positions API
+  app.get("/api/positions", authenticate, async (req, res) => {
+    try {
+      const positionsList = await db.select().from(positions).orderBy(desc(positions.level));
+      res.json(positionsList);
+    } catch (error) {
+      console.error("Error fetching positions:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách chức vụ" });
+    }
+  });
+
+  // Divisions API
+  app.get("/api/divisions", authenticate, async (req, res) => {
+    try {
+      const divisionsList = await db.select().from(divisions).where(eq(divisions.isActive, true));
+      res.json(divisionsList);
+    } catch (error) {
+      console.error("Error fetching divisions:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách ban" });
+    }
+  });
+
+  app.post("/api/divisions", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const { name, description, color, icon } = req.body;
+      const [newDivision] = await db
+        .insert(divisions)
+        .values({ name, description, color: color || '#3B82F6', icon: icon || 'Users' })
+        .returning();
+      
+      res.status(201).json(newDivision);
+    } catch (error) {
+      console.error("Error creating division:", error);
+      res.status(500).json({ message: "Lỗi tạo ban mới" });
+    }
+  });
+
+  // Dynamic Statistics API
+  app.get("/api/dynamic-stats", authenticate, async (req, res) => {
+    try {
+      const stats = await db.select().from(statistics).where(eq(statistics.isActive, true));
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dynamic statistics:", error);
+      res.status(500).json({ message: "Lỗi lấy thống kê động" });
+    }
+  });
+
+  app.post("/api/dynamic-stats", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+    try {
+      const { category, type, name, description, value, metadata, isPublic } = req.body;
+      const [newStat] = await db
+        .insert(statistics)
+        .values({ 
+          category, 
+          type, 
+          name, 
+          description, 
+          value: String(value), 
+          metadata: metadata || {}, 
+          isPublic: isPublic || false 
+        })
+        .returning();
+      
+      res.status(201).json(newStat);
+    } catch (error) {
+      console.error("Error creating statistic:", error);
+      res.status(500).json({ message: "Lỗi tạo thống kê" });
+    }
+  });
+
+  // Enhanced Stats API with dynamic data
+  app.get("/api/enhanced-stats", authenticate, async (req, res) => {
+    try {
+      // Calculate real-time statistics
+      const totalUsers = await db.select().from(users).where(eq(users.isActive, true));
+      const totalMembers = await db.select().from(members).where(eq(members.isActive, true));
+      const totalAchievements = await db.select().from(achievements).where(eq(achievements.isActive, true));
+      const totalDepartments = await db.select().from(departments);
+      const totalDivisions = await db.select().from(divisions).where(eq(divisions.isActive, true));
+      
+      // Get members by academic year
+      const membersByYear = await db
+        .select({
+          academicYear: academicYears.name,
+          count: members.id
+        })
+        .from(members)
+        .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
+        .where(eq(members.isActive, true));
+
+      // Get members by position
+      const membersByPosition = await db
+        .select({
+          position: positions.displayName,
+          level: positions.level,
+          count: members.id
+        })
+        .from(members)
+        .leftJoin(positions, eq(positions.id, members.positionId))
+        .where(eq(members.isActive, true));
+
+      const enhancedStats = {
+        totalUsers: totalUsers.length,
+        totalMembers: totalMembers.length,
+        totalAchievements: totalAchievements.length,
+        totalDepartments: totalDepartments.length,
+        totalDivisions: totalDivisions.length,
+        membersByYear: membersByYear.reduce((acc, curr) => {
+          const year = curr.academicYear || 'Chưa phân khóa';
+          acc[year] = (acc[year] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        membersByPosition: membersByPosition.reduce((acc, curr) => {
+          const pos = curr.position || 'Chưa có chức vụ';
+          acc[pos] = (acc[pos] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        lastUpdated: new Date().toISOString()
+      };
+
+      res.json(enhancedStats);
+    } catch (error) {
+      console.error("Error fetching enhanced statistics:", error);
+      res.status(500).json({ message: "Lỗi lấy thống kê nâng cao" });
+    }
+  });
 
   // Settings API
   app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req, res) => {

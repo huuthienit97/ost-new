@@ -496,6 +496,54 @@ export function setupSwagger(app: Express) {
       <div class="desc">Lấy danh sách vai trò trong hệ thống</div>
     </div>
 
+    <h2>📚 Academic Years (Khóa học)</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/academic-years</span>
+      <div class="desc">Lấy danh sách khóa học (từ tháng 11 đến tháng 11 năm sau)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/academic-years</span>
+      <div class="desc">Tạo khóa học mới (cần quyền SYSTEM_ADMIN)</div>
+    </div>
+
+    <h2>🎖️ Positions (Chức vụ)</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/positions</span>
+      <div class="desc">Lấy danh sách chức vụ được chuẩn hóa</div>
+    </div>
+
+    <h2>🏛️ Divisions (Ban)</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/divisions</span>
+      <div class="desc">Lấy danh sách các ban hoạt động</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/divisions</span>
+      <div class="desc">Tạo ban mới (cần quyền SYSTEM_ADMIN)</div>
+    </div>
+
+    <h2>📊 Dynamic Statistics</h2>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/dynamic-stats</span>
+      <div class="desc">Lấy danh sách thống kê động</div>
+    </div>
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="path">/api/dynamic-stats</span>
+      <div class="desc">Tạo thống kê động mới (cần quyền SYSTEM_ADMIN)</div>
+    </div>
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="path">/api/enhanced-stats</span>
+      <div class="desc">Lấy thống kê nâng cao theo khóa học và chức vụ</div>
+    </div>
+
     <a href="/api-docs.json" class="json-link">📄 View OpenAPI JSON Spec</a>
   </div>
 </body>
