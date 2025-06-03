@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -451,22 +451,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/public/users", async (req, res) => {
     try {
-      const users = await dbStorage.getUsers();
+      const usersWithPositions = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          email: users.email,
+          avatarUrl: users.avatarUrl,
+          isActive: users.isActive,
+          createdAt: users.createdAt,
+          position: members.position,
+          departmentName: departments.name,
+          memberType: members.memberType,
+        })
+        .from(users)
+        .leftJoin(members, eq(members.userId, users.id))
+        .leftJoin(departments, eq(departments.id, members.departmentId))
+        .where(eq(users.isActive, true));
       
-      // Return public user information without sensitive data
-      const publicUsers = users
-        .filter(user => user.isActive)
-        .map(user => ({
-          id: user.id,
-          username: user.username,
-          fullName: user.fullName,
-          email: user.email,
-          avatarUrl: user.avatarUrl,
-          isActive: user.isActive,
-          createdAt: user.createdAt,
-        }));
-      
-      res.json(publicUsers);
+      res.json(usersWithPositions);
     } catch (error) {
       console.error("Error fetching public users:", error);
       res.status(500).json({ message: "Lỗi lấy danh sách users" });

@@ -45,6 +45,30 @@ export const departments = pgTable("departments", {
   color: text("color").notNull(),
 });
 
+// Positions management table (quản lý chức vụ)
+export const positions = pgTable("positions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // president, vice-president, secretary, head, vice-head, member
+  displayName: text("display_name").notNull(), // Chủ nhiệm, Phó chủ nhiệm, etc.
+  level: integer("level").notNull(), // Higher number = higher position
+  isLeadership: boolean("is_leadership").notNull().default(false), // true for president, vice-president
+  isDepartmentLevel: boolean("is_department_level").notNull().default(false), // true for head, vice-head
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Divisions/sections table (bảng ban)
+export const divisions = pgTable("divisions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").notNull().default("#3B82F6"),
+  icon: text("icon").notNull().default("Users"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   fullName: text("full_name").notNull(),
@@ -53,7 +77,9 @@ export const members = pgTable("members", {
   phone: text("phone"),
   class: text("class").notNull(),
   departmentId: integer("department_id").references(() => departments.id).notNull(),
-  position: text("position").notNull(), // president, vice-president, secretary, head, vice-head, member
+  positionId: integer("position_id").references(() => positions.id).notNull(), // Reference to positions table
+  divisionId: integer("division_id").references(() => divisions.id), // Optional division assignment
+  academicYearId: integer("academic_year_id").references(() => academicYears.id).notNull(), // Which academic year they belong to
   memberType: text("member_type").notNull(), // active, alumni
   joinDate: text("join_date").notNull(),
   notes: text("notes"),
@@ -61,6 +87,18 @@ export const members = pgTable("members", {
   isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by").references(() => users.id),
   updatedBy: integer("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Academic years/terms table (khóa)
+export const academicYears = pgTable("academic_years", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // e.g., "Khóa 2024-2025"
+  startDate: timestamp("start_date").notNull(), // November of current year
+  endDate: timestamp("end_date").notNull(), // November of next year
+  isActive: boolean("is_active").notNull().default(false),
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
