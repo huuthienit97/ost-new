@@ -469,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(users)
         .leftJoin(members, eq(members.userId, users.id))
-        .leftJoin(departments, eq(departments.id, members.departmentId))
+
         .leftJoin(positions, eq(positions.id, members.positionId))
         .leftJoin(divisions, eq(divisions.id, members.divisionId))
         .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
@@ -947,10 +947,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // If updating department, validate it exists
-      if (updateData.departmentId) {
-        const department = await dbStorage.getDepartment(updateData.departmentId);
-        if (!department) {
+      // If updating division, validate it exists
+      if (updateData.divisionId) {
+        const [division] = await db.select().from(divisions).where(eq(divisions.id, updateData.divisionId));
+        if (!division) {
           return res.status(400).json({ message: "Ban không tồn tại" });
         }
       }
