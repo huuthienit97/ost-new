@@ -121,7 +121,7 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
           
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Ban:</span>
-            <span className="text-sm font-medium text-gray-900">{member.department.name}</span>
+            <span className="text-sm font-medium text-gray-900">{member.division?.name || 'Không có'}</span>
           </div>
           
           <div className="flex items-center justify-between">

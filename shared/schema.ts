@@ -354,7 +354,10 @@ export type UserWithRole = User & {
 };
 
 export type MemberWithDepartment = Member & {
-  department: Department;
+  department?: Department;
+  division?: Division;
+  position?: Position;
+  academicYear?: AcademicYear;
   user?: {
     id: number;
     username: string;

@@ -852,10 +852,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Validate division exists
-      const division = await dbStorage.getDivision(memberData.divisionId);
-      if (!division) {
-        return res.status(400).json({ message: "Ban không tồn tại" });
+      // Validate division exists if divisionId is provided
+      if (memberData.divisionId) {
+        const [division] = await db.select().from(divisions).where(eq(divisions.id, memberData.divisionId));
+        if (!division) {
+          return res.status(400).json({ message: "Ban không tồn tại" });
+        }
       }
 
       const newMember = await dbStorage.createMember(memberData);
