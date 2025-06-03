@@ -32,6 +32,18 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
     queryKey: ["/api/departments"],
   });
 
+  const { data: positions = [] } = useQuery({
+    queryKey: ["/api/positions"],
+  });
+
+  const { data: divisions = [] } = useQuery({
+    queryKey: ["/api/divisions"],
+  });
+
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ["/api/academic-years"],
+  });
+
   const form = useForm<CreateMemberData>({
     resolver: zodResolver(createMemberSchema),
     defaultValues: {
@@ -41,7 +53,9 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
       phone: editingMember?.phone || "",
       class: editingMember?.class || "",
       departmentId: editingMember?.departmentId || 0,
-      position: (editingMember?.position as any) || "member",
+      positionId: editingMember?.positionId || 0,
+      divisionId: editingMember?.divisionId || undefined,
+      academicYearId: editingMember?.academicYearId || 0,
       memberType: (editingMember?.memberType as any) || "active",
       joinDate: editingMember?.joinDate || "",
       notes: editingMember?.notes || "",
