@@ -919,7 +919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(result);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create member" });
+      console.error("Error creating member:", error);
+      res.status(500).json({ message: "Failed to create member", error: error.message });
     }
   });
 
