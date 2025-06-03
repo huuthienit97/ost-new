@@ -46,14 +46,8 @@ const options = {
         description: 'Development Server',
       },
       {
-        url: 'https://{domain}',
-        description: 'Production Server',
-        variables: {
-          domain: {
-            default: 'your-production-domain.com',
-            description: 'Production domain'
-          }
-        }
+        url: process.env.NODE_ENV === 'production' ? 'https://your-domain.com' : 'http://localhost:5000',
+        description: 'Production Server'
       },
     ],
     components: {
@@ -310,6 +304,27 @@ const options = {
 const specs = swaggerJsdoc(options);
 
 export function setupSwagger(app: Express) {
+  // Dynamic server detection for production
+  app.use('/api-docs', (req, res, next) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const currentUrl = `${protocol}://${host}`;
+    
+    // Update servers array with current URL
+    specs.servers = [
+      {
+        url: currentUrl,
+        description: 'Current Server'
+      },
+      {
+        url: 'http://localhost:5000',
+        description: 'Development Server'
+      }
+    ];
+    
+    next();
+  });
+
   // Serve swagger docs
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
