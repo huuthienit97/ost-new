@@ -269,6 +269,13 @@ const options = {
             totalDepartments: { type: 'integer', example: 4 },
           },
         },
+        Error: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: 'Thông báo lỗi' },
+            errors: { type: 'array', items: { type: 'object' } },
+          },
+        },
       },
     },
     tags: [

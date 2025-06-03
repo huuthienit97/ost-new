@@ -1057,6 +1057,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @swagger
+   * /api/academic-years:
+   *   post:
+   *     summary: Tạo khóa học mới
+   *     tags: [📅 Academic Years]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [name, startDate, endDate]
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 example: "Khóa 2025-2026"
+   *               startDate:
+   *                 type: string
+   *                 format: date
+   *                 example: "2025-11-01"
+   *               endDate:
+   *                 type: string
+   *                 format: date
+   *                 example: "2026-11-01"
+   *               description:
+   *                 type: string
+   *                 example: "Khóa học năm 2025-2026"
+   *               isActive:
+   *                 type: boolean
+   *                 example: false
+   *     responses:
+   *       201:
+   *         description: Khóa học được tạo thành công
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AcademicYear'
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       403:
+   *         $ref: '#/components/responses/Forbidden'
+   */
   app.post("/api/academic-years", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const { name, startDate, endDate, description } = req.body;
