@@ -115,7 +115,7 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Chức vụ:</span>
             <Badge className={`text-xs font-medium ${positionColor}`}>
-              {POSITIONS[member.positionId as keyof typeof POSITIONS]}
+              {positionInfo.displayName}
             </Badge>
           </div>
           

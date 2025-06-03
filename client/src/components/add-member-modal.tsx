@@ -250,11 +250,11 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
 
                 <FormField
                   control={form.control}
-                  name="position"
+                  name="positionId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Chức vụ *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Chọn chức vụ" />
