@@ -734,9 +734,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: members.email,
           phone: members.phone,
           class: members.class,
-          departmentId: members.departmentId,
-          positionId: members.positionId,
           divisionId: members.divisionId,
+          positionId: members.positionId,
           academicYearId: members.academicYearId,
           memberType: members.memberType,
           joinDate: members.joinDate,
@@ -744,21 +743,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: members.userId,
           isActive: members.isActive,
           createdAt: members.createdAt,
-          department: {
-            id: departments.id,
-            name: departments.name,
-            icon: departments.icon,
-            color: departments.color,
+          division: {
+            id: divisions.id,
+            name: divisions.name,
+            color: divisions.color,
+            icon: divisions.icon,
           },
           position: {
             id: positions.id,
             name: positions.name,
             displayName: positions.displayName,
             level: positions.level,
-          },
-          division: {
-            id: divisions.id,
-            name: divisions.name,
           },
           academicYear: {
             id: academicYears.id,
@@ -772,9 +767,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         })
         .from(members)
-        .leftJoin(departments, eq(departments.id, members.departmentId))
-        .leftJoin(positions, eq(positions.id, members.positionId))
         .leftJoin(divisions, eq(divisions.id, members.divisionId))
+        .leftJoin(positions, eq(positions.id, members.positionId))
         .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
         .leftJoin(users, eq(users.id, members.userId))
         .where(eq(members.isActive, true));
@@ -789,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (department && typeof department === 'string') {
         const deptId = parseInt(department);
         if (!isNaN(deptId)) {
-          filteredMembers = filteredMembers.filter(member => member.departmentId === deptId);
+          filteredMembers = filteredMembers.filter(member => member.divisionId === deptId);
         }
       }
       
@@ -806,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           member.fullName.toLowerCase().includes(searchLower) ||
           (member.studentId && member.studentId.toLowerCase().includes(searchLower)) ||
           member.class.toLowerCase().includes(searchLower) ||
-          (member.department?.name && member.department.name.toLowerCase().includes(searchLower))
+          (member.division?.name && member.division.name.toLowerCase().includes(searchLower))
         );
       }
       
@@ -858,9 +852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Validate department exists
-      const department = await dbStorage.getDepartment(memberData.departmentId);
-      if (!department) {
+      // Validate division exists
+      const division = await dbStorage.getDivision(memberData.divisionId);
+      if (!division) {
         return res.status(400).json({ message: "Ban không tồn tại" });
       }
 
@@ -920,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(result);
     } catch (error) {
       console.error("Error creating member:", error);
-      res.status(500).json({ message: "Failed to create member", error: error.message });
+      res.status(500).json({ message: "Failed to create member", error: (error as any).message });
     }
   });
 
