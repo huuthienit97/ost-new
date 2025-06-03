@@ -32,15 +32,15 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
     queryKey: ["/api/departments"],
   });
 
-  const { data: positions = [] } = useQuery({
+  const { data: positions = [] } = useQuery<any[]>({
     queryKey: ["/api/positions"],
   });
 
-  const { data: divisions = [] } = useQuery({
+  const { data: divisions = [] } = useQuery<any[]>({
     queryKey: ["/api/divisions"],
   });
 
-  const { data: academicYears = [] } = useQuery({
+  const { data: academicYears = [] } = useQuery<any[]>({
     queryKey: ["/api/academic-years"],
   });
 
@@ -264,6 +264,59 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                           {positions?.map((position: any) => (
                             <SelectItem key={position.id} value={position.id.toString()}>
                               {position.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="divisionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ban phụ trách</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString() || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn ban phụ trách" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Không có</SelectItem>
+                          {(divisions as any[]).map((division: any) => (
+                            <SelectItem key={division.id} value={division.id.toString()}>
+                              {division.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="academicYearId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Khóa học *</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn khóa học" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(academicYears as any[]).map((year: any) => (
+                            <SelectItem key={year.id} value={year.id.toString()}>
+                              {year.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
