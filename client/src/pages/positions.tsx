@@ -3,8 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Users, UserCheck, User, Shield, Star } from "lucide-react";
 
+// Position type
+type Position = {
+  id: number;
+  name: string;
+  displayName: string;
+  level: number;
+  description?: string;
+  color: string;
+  isActive: boolean;
+  isLeadership?: boolean;
+  isDepartmentLevel?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export default function Positions() {
-  const { data: positions, isLoading } = useQuery({
+  const { data: positions, isLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions"],
   });
 
@@ -55,7 +70,7 @@ export default function Positions() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {positions?.map((position: any) => (
+        {positions?.map((position) => (
           <Card key={position.id} className="relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
@@ -95,7 +110,7 @@ export default function Positions() {
         ))}
       </div>
 
-      {positions?.length === 0 && (
+      {positions && positions.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có chức vụ nào</h3>

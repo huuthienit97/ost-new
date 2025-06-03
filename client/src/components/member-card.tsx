@@ -21,7 +21,21 @@ interface MemberCardProps {
 export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false, canResetPassword = false }: MemberCardProps) {
   const initials = getInitials(member.fullName);
   const gradientClass = getAvatarGradient(index);
-  const positionColor = getPositionColor(member.position);
+  // Get position info from positionId 
+  const getPositionInfo = (positionId: number) => {
+    const positionMap: Record<number, { name: string; displayName: string; color: string }> = {
+      1: { name: "president", displayName: "Chủ nhiệm", color: "bg-purple-100 text-purple-800" },
+      2: { name: "vice-president", displayName: "Phó chủ nhiệm", color: "bg-blue-100 text-blue-800" },
+      3: { name: "secretary", displayName: "Thư ký", color: "bg-amber-100 text-amber-800" },
+      4: { name: "head", displayName: "Trưởng ban", color: "bg-green-100 text-green-800" },
+      5: { name: "vice-head", displayName: "Phó ban", color: "bg-indigo-100 text-indigo-800" },
+      6: { name: "member", displayName: "Thành viên", color: "bg-gray-100 text-gray-800" },
+    };
+    return positionMap[positionId] || positionMap[6]; // Default to member
+  };
+  
+  const positionInfo = getPositionInfo(member.positionId);
+  const positionColor = positionInfo.color;
   const memberTypeColor = getMemberTypeColor(member.memberType);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -101,7 +115,7 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Chức vụ:</span>
             <Badge className={`text-xs font-medium ${positionColor}`}>
-              {POSITIONS[member.position as keyof typeof POSITIONS]}
+              {POSITIONS[member.positionId as keyof typeof POSITIONS]}
             </Badge>
           </div>
           
