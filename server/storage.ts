@@ -1,6 +1,9 @@
 import { 
   members, 
   departments,
+  divisions,
+  positions,
+  academicYears,
   users,
   roles,
   settings,
@@ -12,6 +15,9 @@ import {
   userAchievements,
   type Member, 
   type Department, 
+  type Division,
+  type Position,
+  type AcademicYear,
   type InsertMember, 
   type InsertDepartment, 
   type MemberWithDepartment,
@@ -58,10 +64,14 @@ export interface IStorage {
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
 
-  // Department methods
+  // Department methods (deprecated - keeping for backward compatibility)
   getDepartments(): Promise<Department[]>;
   getDepartment(id: number): Promise<Department | undefined>;
   createDepartment(department: InsertDepartment): Promise<Department>;
+
+  // Division methods
+  getDivisions(): Promise<Division[]>;
+  getDivision(id: number): Promise<Division | undefined>;
 
   // Member methods
   getMembers(): Promise<Member[]>;
@@ -72,6 +82,7 @@ export interface IStorage {
   updateMember(id: number, member: Partial<InsertMember>): Promise<Member | undefined>;
   deleteMember(id: number): Promise<boolean>;
   getMembersByDepartment(departmentId: number): Promise<Member[]>;
+  getMembersByDivision(divisionId: number): Promise<Member[]>;
   getMembersByType(memberType: string): Promise<Member[]>;
   getMembersByPosition(position: string): Promise<Member[]>;
   searchMembers(query: string): Promise<Member[]>;
@@ -234,6 +245,20 @@ export class DatabaseStorage implements IStorage {
       .values(insertDepartment)
       .returning();
     return department;
+  }
+
+  // Division methods
+  async getDivisions(): Promise<Division[]> {
+    return await db.select().from(divisions);
+  }
+
+  async getDivision(id: number): Promise<Division | undefined> {
+    const [division] = await db.select().from(divisions).where(eq(divisions.id, id));
+    return division || undefined;
+  }
+
+  async getMembersByDivision(divisionId: number): Promise<Member[]> {
+    return await db.select().from(members).where(eq(members.divisionId, divisionId));
   }
 
   async getMembers(): Promise<Member[]> {

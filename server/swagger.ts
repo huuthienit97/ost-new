@@ -25,7 +25,7 @@ const options = {
     },
     servers: [
       {
-        url: 'https://clb-sang-tao.onrender.com',
+        url: 'https://api.ost.edu.vn',
         description: 'Production Server',
       },
       {
