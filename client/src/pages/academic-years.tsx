@@ -53,7 +53,7 @@ export default function AcademicYears() {
     },
   });
 
-  const { data: academicYears, isLoading } = useQuery({
+  const { data: academicYears, isLoading } = useQuery<AcademicYear[]>({
     queryKey: ["/api/academic-years"],
   });
 
@@ -229,7 +229,7 @@ export default function AcademicYears() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {academicYears?.map((year: any) => (
+        {academicYears?.map((year) => (
           <Card key={year.id} className="relative">
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -271,7 +271,7 @@ export default function AcademicYears() {
         ))}
       </div>
 
-      {academicYears?.length === 0 && (
+      {academicYears && academicYears.length === 0 && (
         <div className="text-center py-12">
           <Calendar className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có khóa học nào</h3>

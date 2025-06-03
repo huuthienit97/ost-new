@@ -14,6 +14,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, Edit2, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+// Division type
+type Division = {
+  id: number;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const createDivisionSchema = z.object({
   name: z.string().min(1, "Tên ban là bắt buộc"),
   description: z.string().optional(),
@@ -38,7 +50,7 @@ export default function Divisions() {
     },
   });
 
-  const { data: divisions, isLoading } = useQuery({
+  const { data: divisions, isLoading } = useQuery<Division[]>({
     queryKey: ["/api/divisions"],
   });
 
@@ -229,7 +241,7 @@ export default function Divisions() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {divisions?.map((division: any) => (
+        {divisions?.map((division) => (
           <Card key={division.id} className="relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
@@ -270,7 +282,7 @@ export default function Divisions() {
         ))}
       </div>
 
-      {divisions?.length === 0 && (
+      {divisions && divisions.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có ban nào</h3>
