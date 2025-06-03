@@ -28,10 +28,6 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
   const queryClient = useQueryClient();
   const [newUserInfo, setNewUserInfo] = useState<{username: string, password: string} | null>(null);
 
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ["/api/departments"],
-  });
-
   const { data: positions = [] } = useQuery<any[]>({
     queryKey: ["/api/positions"],
   });
@@ -52,9 +48,8 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
       email: editingMember?.email || "",
       phone: editingMember?.phone || "",
       class: editingMember?.class || "",
-      departmentId: editingMember?.departmentId || 0,
+      divisionId: editingMember?.divisionId || 0,
       positionId: editingMember?.positionId || 0,
-      divisionId: editingMember?.divisionId || undefined,
       academicYearId: editingMember?.academicYearId || 0,
       memberType: (editingMember?.memberType as any) || "active",
       joinDate: editingMember?.joinDate || "",
@@ -225,7 +220,7 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="departmentId"
+                  name="divisionId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ban *</FormLabel>
@@ -236,9 +231,9 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id.toString()}>
-                              {dept.name}
+                          {(divisions as any[]).map((division: any) => (
+                            <SelectItem key={division.id} value={division.id.toString()}>
+                              {division.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -275,32 +270,6 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="divisionId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ban phụ trách</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value === "0" ? undefined : parseInt(value))} value={field.value?.toString() || "0"}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Chọn ban phụ trách" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Không có</SelectItem>
-                          {(divisions as any[]).map((division: any) => (
-                            <SelectItem key={division.id} value={division.id.toString()}>
-                              {division.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="academicYearId"

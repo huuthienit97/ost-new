@@ -76,9 +76,8 @@ export const members = pgTable("members", {
   email: text("email"),
   phone: text("phone"),
   class: text("class").notNull(),
-  departmentId: integer("department_id").references(() => departments.id).notNull(),
+  divisionId: integer("division_id").references(() => divisions.id).notNull(), // Main division assignment
   positionId: integer("position_id").references(() => positions.id).notNull(), // Reference to positions table
-  divisionId: integer("division_id").references(() => divisions.id), // Optional division assignment
   academicYearId: integer("academic_year_id").references(() => academicYears.id).notNull(), // Which academic year they belong to
   memberType: text("member_type").notNull(), // active, alumni
   joinDate: text("join_date").notNull(),
@@ -141,9 +140,17 @@ export const departmentsRelations = relations(departments, ({ many }) => ({
 }));
 
 export const membersRelations = relations(members, ({ one }) => ({
-  department: one(departments, {
-    fields: [members.departmentId],
-    references: [departments.id],
+  division: one(divisions, {
+    fields: [members.divisionId],
+    references: [divisions.id],
+  }),
+  position: one(positions, {
+    fields: [members.positionId],
+    references: [positions.id],
+  }),
+  academicYear: one(academicYears, {
+    fields: [members.academicYearId],
+    references: [academicYears.id],
   }),
   user: one(users, {
     fields: [members.userId],
