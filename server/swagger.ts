@@ -279,6 +279,7 @@ const options = {
       },
     },
     tags: [
+      { name: '🟢 Public', description: 'API công khai - không cần xác thực' },
       { name: '🔐 Authentication', description: 'Xác thực và đăng nhập' },
       { name: '👥 Users', description: 'Quản lý người dùng hệ thống (🟡 ADMIN)' },
       { name: '🎓 Members', description: 'Quản lý thành viên CLB' },
@@ -321,7 +322,26 @@ export function setupSwagger(app: Express) {
       filter: true,
       displayRequestDuration: true,
       docExpansion: 'list',
-      tagsSorter: 'alpha',
+      defaultModelsExpandDepth: 2,
+      defaultModelExpandDepth: 2,
+      tagsSorter: (a: string, b: string) => {
+        const order = [
+          '🟢 Public',
+          '🔐 Authentication', 
+          '👥 Users',
+          '🎓 Members',
+          '🏢 Departments',
+          '👑 Positions',
+          '📋 Divisions',
+          '📅 Academic Years',
+          '🏆 Achievements',
+          '🍯 BeePoints',
+          '📊 Statistics',
+          '🔑 API Keys',
+          '🌐 External API'
+        ];
+        return order.indexOf(a) - order.indexOf(b);
+      },
     },
   }));
 
