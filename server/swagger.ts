@@ -25,6 +25,10 @@ const options = {
     },
     servers: [
       {
+        url: 'https://clb-sang-tao.onrender.com',
+        description: 'Production Server',
+      },
+      {
         url: 'http://localhost:5000',
         description: 'Development Server',
       },
@@ -89,6 +93,7 @@ const options = {
     tags: [
       { name: '🟢 Public', description: 'API công khai' },
       { name: '🔐 Authentication', description: 'Xác thực' },
+      { name: '👥 Users', description: 'Quản lý người dùng hệ thống (🟡 ADMIN)' },
       { name: '🎓 Members', description: 'Quản lý thành viên' },
       { name: '🏢 Departments', description: 'Quản lý ban' },
       { name: '👑 Positions', description: 'Quản lý chức vụ (🔴 SUPER_ADMIN)' },
@@ -158,6 +163,27 @@ const options = {
           }
         }
       },
+      '/api/auth/check-init': {
+        get: {
+          summary: 'Kiểm tra hệ thống có cần khởi tạo không',
+          tags: ['🔐 Authentication'],
+          responses: {
+            200: {
+              description: 'Trạng thái khởi tạo hệ thống',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      needsInit: { type: 'boolean', example: false }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       '/api/auth/me': {
         get: {
           summary: 'Lấy thông tin người dùng hiện tại',
@@ -169,6 +195,36 @@ const options = {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/User' }
+                }
+              }
+            },
+            401: {
+              description: 'Chưa đăng nhập',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Error' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/auth/logout': {
+        post: {
+          summary: 'Đăng xuất',
+          tags: ['🔐 Authentication'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Đăng xuất thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string', example: 'Đăng xuất thành công' }
+                    }
+                  }
                 }
               }
             }
@@ -620,6 +676,414 @@ const options = {
           }
         }
       },
+      '/api/achievements': {
+        get: {
+          summary: 'Lấy danh sách thành tích',
+          tags: ['🏆 Achievements'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách thành tích',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        title: { type: 'string' },
+                        description: { type: 'string' },
+                        category: { type: 'string', enum: ['academic', 'creative', 'leadership', 'participation', 'special'] },
+                        level: { type: 'string', enum: ['bronze', 'silver', 'gold', 'special'] },
+                        pointsReward: { type: 'integer' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo thành tích mới (🟡 ADMIN)',
+          tags: ['🏆 Achievements'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['title', 'category', 'level', 'pointsReward'],
+                  properties: {
+                    title: { type: 'string', example: 'Thành viên xuất sắc' },
+                    description: { type: 'string', example: 'Dành cho thành viên có đóng góp tích cực' },
+                    category: { type: 'string', enum: ['academic', 'creative', 'leadership', 'participation', 'special'], example: 'participation' },
+                    level: { type: 'string', enum: ['bronze', 'silver', 'gold', 'special'], example: 'gold' },
+                    badgeIcon: { type: 'string', example: 'Trophy' },
+                    badgeColor: { type: 'string', example: '#FFD700' },
+                    pointsReward: { type: 'integer', example: 100 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Thành tích được tạo thành công'
+            }
+          }
+        }
+      },
+      '/api/achievements/award': {
+        post: {
+          summary: 'Trao thành tích cho người dùng (🟡 ADMIN)',
+          tags: ['🏆 Achievements'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['userId', 'achievementId'],
+                  properties: {
+                    userId: { type: 'integer', example: 2 },
+                    achievementId: { type: 'integer', example: 1 },
+                    notes: { type: 'string', example: 'Hoàn thành xuất sắc dự án tháng 11' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Thành tích được trao thành công (tự động cộng BeePoints)'
+            }
+          }
+        }
+      },
+      '/api/achievements/me': {
+        get: {
+          summary: 'Lấy danh sách thành tích của bản thân',
+          tags: ['🏆 Achievements'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách thành tích của người dùng hiện tại'
+            }
+          }
+        }
+      },
+      '/api/bee-points/me': {
+        get: {
+          summary: 'Lấy điểm BeePoints của bản thân',
+          tags: ['🍯 BeePoints'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Thông tin điểm BeePoints',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer' },
+                      userId: { type: 'integer' },
+                      currentPoints: { type: 'integer' },
+                      totalEarned: { type: 'integer' },
+                      totalSpent: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/bee-points/add': {
+        post: {
+          summary: 'Thêm điểm cho người dùng (🟡 ADMIN)',
+          tags: ['🍯 BeePoints'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['userId', 'amount', 'description'],
+                  properties: {
+                    userId: { type: 'integer', example: 2 },
+                    amount: { type: 'integer', example: 50 },
+                    description: { type: 'string', example: 'Thưởng hoàn thành nhiệm vụ' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Điểm được thêm thành công'
+            }
+          }
+        }
+      },
+      '/api/bee-points/transactions': {
+        get: {
+          summary: 'Lấy lịch sử giao dịch điểm',
+          tags: ['🍯 BeePoints'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Lịch sử giao dịch điểm'
+            }
+          }
+        }
+      },
+      '/api/users': {
+        get: {
+          summary: 'Lấy danh sách người dùng hệ thống (🟡 ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách người dùng hệ thống'
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo người dùng mới (🟡 ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['username', 'email', 'fullName', 'password', 'roleId'],
+                  properties: {
+                    username: { type: 'string', example: 'newuser' },
+                    email: { type: 'string', example: 'newuser@example.com' },
+                    fullName: { type: 'string', example: 'Nguyễn Văn B' },
+                    password: { type: 'string', example: 'password123' },
+                    roleId: { type: 'integer', example: 2 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Người dùng được tạo thành công'
+            }
+          }
+        }
+      },
+      '/api/users/{id}': {
+        put: {
+          summary: 'Cập nhật người dùng (🟡 ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string' },
+                    fullName: { type: 'string' },
+                    roleId: { type: 'integer' },
+                    isActive: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Người dùng được cập nhật'
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa người dùng (🟡 ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Người dùng được xóa'
+            }
+          }
+        }
+      },
+      '/api/users/{id}/change-password': {
+        post: {
+          summary: 'Đổi mật khẩu người dùng (🟡 ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['newPassword'],
+                  properties: {
+                    newPassword: { type: 'string', example: 'newpassword123' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Mật khẩu được đổi thành công'
+            }
+          }
+        }
+      },
+      '/api/admin/api-keys': {
+        get: {
+          summary: 'Lấy danh sách API keys (🟡 ADMIN)',
+          tags: ['🔑 API Keys'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách API keys',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        permissions: { type: 'array', items: { type: 'string' } },
+                        isActive: { type: 'boolean' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        lastUsed: { type: 'string', format: 'date-time', nullable: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo API key mới (🟡 ADMIN)',
+          tags: ['🔑 API Keys'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'permissions'],
+                  properties: {
+                    name: { type: 'string', example: 'Mobile App API' },
+                    permissions: { 
+                      type: 'array', 
+                      items: { type: 'string' }, 
+                      example: ['members:view', 'stats:view', 'achievements:view'] 
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'API key được tạo thành công'
+            }
+          }
+        }
+      },
+      '/api/admin/api-keys/{id}': {
+        put: {
+          summary: 'Cập nhật API key (🟡 ADMIN)',
+          tags: ['🔑 API Keys'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    permissions: { 
+                      type: 'array', 
+                      items: { type: 'string' }, 
+                      example: ['members:view', 'stats:view'] 
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'API key được cập nhật'
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa API key (🟡 ADMIN)',
+          tags: ['🔑 API Keys'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'API key được xóa'
+            }
+          }
+        }
+      },
       '/api/stats': {
         get: {
           summary: 'Lấy thống kê cơ bản',
@@ -627,7 +1091,62 @@ const options = {
           security: [{ bearerAuth: [] }],
           responses: {
             200: {
-              description: 'Thống kê tổng quan'
+              description: 'Thống kê tổng quan',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      totalMembers: { type: 'integer' },
+                      activeMembers: { type: 'integer' },
+                      alumniMembers: { type: 'integer' },
+                      totalDepartments: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/dynamic-stats': {
+        get: {
+          summary: 'Lấy thống kê động',
+          tags: ['📊 Statistics'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Thống kê động',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        title: { type: 'string' },
+                        value: { type: 'string' },
+                        icon: { type: 'string' },
+                        color: { type: 'string' },
+                        isActive: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/external/achievements': {
+        get: {
+          summary: 'Lấy danh sách thành tích cho ứng dụng bên ngoài',
+          tags: ['🌐 External API'],
+          security: [{ ApiKeyAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách thành tích cho ứng dụng bên ngoài'
             }
           }
         }
