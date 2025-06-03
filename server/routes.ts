@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -460,13 +460,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           avatarUrl: users.avatarUrl,
           isActive: users.isActive,
           createdAt: users.createdAt,
-          position: members.position,
+          position: positions.displayName,
+          positionLevel: positions.level,
           departmentName: departments.name,
+          divisionName: divisions.name,
           memberType: members.memberType,
+          academicYear: academicYears.name,
         })
         .from(users)
         .leftJoin(members, eq(members.userId, users.id))
         .leftJoin(departments, eq(departments.id, members.departmentId))
+        .leftJoin(positions, eq(positions.id, members.positionId))
+        .leftJoin(divisions, eq(divisions.id, members.divisionId))
+        .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
         .where(eq(users.isActive, true));
       
       res.json(usersWithPositions);

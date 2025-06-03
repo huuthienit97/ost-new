@@ -513,3 +513,37 @@ export const awardAchievementSchema = z.object({
   achievementId: z.number().min(1, "Thành tích là bắt buộc"),
   notes: z.string().optional(),
 });
+
+// Dynamic statistics table for flexible data tracking
+export const statistics = pgTable("statistics", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(), // members, achievements, points, events, departments
+  type: text("type").notNull(), // count, sum, avg, percentage
+  name: text("name").notNull(), // descriptive name
+  description: text("description"),
+  value: text("value").notNull(), // stored as text to handle different data types
+  metadata: jsonb("metadata").default({}), // additional data like filters, time range, etc.
+  isPublic: boolean("is_public").notNull().default(false), // whether to show in public stats
+  isActive: boolean("is_active").notNull().default(true),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// New table types and schemas
+export type AcademicYear = typeof academicYears.$inferSelect;
+export type InsertAcademicYear = typeof academicYears.$inferInsert;
+
+export type Position = typeof positions.$inferSelect;
+export type InsertPosition = typeof positions.$inferInsert;
+
+export type Division = typeof divisions.$inferSelect;
+export type InsertDivision = typeof divisions.$inferInsert;
+
+export type Statistic = typeof statistics.$inferSelect;
+export type InsertStatistic = typeof statistics.$inferInsert;
+
+export const insertAcademicYearSchema = createInsertSchema(academicYears);
+export const insertPositionSchema = createInsertSchema(positions);
+export const insertDivisionSchema = createInsertSchema(divisions);
+export const insertStatisticSchema = createInsertSchema(statistics);
