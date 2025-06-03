@@ -45,6 +45,16 @@ const options = {
         url: 'http://localhost:5000',
         description: 'Development Server',
       },
+      {
+        url: 'https://{domain}',
+        description: 'Production Server',
+        variables: {
+          domain: {
+            default: 'your-production-domain.com',
+            description: 'Production domain'
+          }
+        }
+      },
     ],
     components: {
       securitySchemes: {
