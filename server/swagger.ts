@@ -144,6 +144,16 @@ const options = {
             }
           },
         },
+        Setting: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            key: { type: 'string' },
+            value: { type: 'string' },
+            description: { type: 'string' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
       },
     },
     tags: [
@@ -490,12 +500,17 @@ const options = {
                 schema: {
                   type: 'object',
                   properties: {
-                    fullName: { type: 'string' },
-                    bio: { type: 'string' },
-                    avatarUrl: { type: 'string' },
-                    facebookUrl: { type: 'string' },
-                    instagramUrl: { type: 'string' },
-                    tiktokUrl: { type: 'string' }
+                    fullName: { type: 'string', example: 'Nguyễn Văn A' },
+                    email: { type: 'string', example: 'user@example.com' },
+                    bio: { type: 'string', example: 'Mô tả bản thân' },
+                    phone: { type: 'string', example: '0987654321' },
+                    avatarUrl: { type: 'string', example: 'https://example.com/avatar.jpg' },
+                    facebookUrl: { type: 'string', example: 'https://facebook.com/username' },
+                    instagramUrl: { type: 'string', example: 'https://instagram.com/username' },
+                    tiktokUrl: { type: 'string', example: 'https://tiktok.com/@username' },
+                    youtubeUrl: { type: 'string', example: 'https://youtube.com/c/username' },
+                    linkedinUrl: { type: 'string', example: 'https://linkedin.com/in/username' },
+                    githubUrl: { type: 'string', example: 'https://github.com/username' }
                   }
                 }
               }
@@ -537,6 +552,202 @@ const options = {
                       message: { type: 'string' },
                       username: { type: 'string' },
                       newPassword: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/settings': {
+        get: {
+          summary: 'Lấy tất cả cấu hình hệ thống (🔴 SUPER_ADMIN)',
+          tags: ['⚙️ Settings'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách cấu hình',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Setting' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo cấu hình mới (🔴 SUPER_ADMIN)',
+          tags: ['⚙️ Settings'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['key', 'value'],
+                  properties: {
+                    key: { type: 'string', example: 'beepoint_total_supply' },
+                    value: { type: 'string', example: '1000000' },
+                    description: { type: 'string', example: 'Tổng cung BeePoint trong hệ thống' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Tạo cấu hình thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Setting' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/settings/{key}': {
+        get: {
+          summary: 'Lấy cấu hình theo key (🔴 SUPER_ADMIN)',
+          tags: ['⚙️ Settings'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'key',
+              required: true,
+              schema: { type: 'string' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Thông tin cấu hình',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Setting' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật cấu hình (🔴 SUPER_ADMIN)',
+          tags: ['⚙️ Settings'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'key',
+              required: true,
+              schema: { type: 'string' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    value: { type: 'string' },
+                    description: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật cấu hình thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Setting' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/beepoint/config': {
+        get: {
+          summary: 'Lấy cấu hình BeePoint (🔵 USER)',
+          tags: ['🏆 BeePoint'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Cấu hình BeePoint',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      totalSupply: { type: 'integer', example: 1000000 },
+                      exchangeRate: { type: 'number', example: 1.0 },
+                      welcomeBonus: { type: 'integer', example: 100 },
+                      activityMultiplier: { type: 'number', example: 1.0 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật cấu hình BeePoint (🔴 SUPER_ADMIN)',
+          tags: ['🏆 BeePoint'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalSupply: { type: 'integer', example: 1000000 },
+                    exchangeRate: { type: 'number', example: 1.0 },
+                    welcomeBonus: { type: 'integer', example: 100 },
+                    activityMultiplier: { type: 'number', example: 1.0 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật cấu hình BeePoint thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/beepoint/init': {
+        post: {
+          summary: 'Khởi tạo cấu hình BeePoint mặc định (🔴 SUPER_ADMIN)',
+          tags: ['🏆 BeePoint'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Khởi tạo cấu hình BeePoint thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' }
                     }
                   }
                 }
