@@ -73,6 +73,23 @@ const options = {
             departmentName: { type: 'string', nullable: true },
           },
         },
+        Role: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string', example: 'admin' },
+            displayName: { type: 'string', example: 'Quản trị viên' },
+            description: { type: 'string', example: 'Quản lý toàn bộ hệ thống' },
+            permissions: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['users:view', 'users:create', 'members:view', 'members:create']
+            },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         Member: {
           type: 'object',
           properties: {
@@ -224,6 +241,156 @@ const options = {
                     type: 'object',
                     properties: {
                       message: { type: 'string', example: 'Đăng xuất thành công' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/admin/roles': {
+        get: {
+          summary: 'Lấy danh sách vai trò (🔴 SUPER_ADMIN)',
+          tags: ['🔒 Roles'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách vai trò',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Role' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo vai trò mới (🔴 SUPER_ADMIN)',
+          tags: ['🔒 Roles'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'displayName', 'permissions'],
+                  properties: {
+                    name: { type: 'string', example: 'content_manager' },
+                    displayName: { type: 'string', example: 'Quản lý nội dung' },
+                    description: { type: 'string', example: 'Quản lý bài viết và nội dung website' },
+                    permissions: { 
+                      type: 'array', 
+                      items: { type: 'string' }, 
+                      example: ['members:view', 'members:create', 'achievements:view'] 
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Vai trò được tạo thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Role' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/admin/roles/{id}': {
+        get: {
+          summary: 'Lấy thông tin vai trò (🔴 SUPER_ADMIN)',
+          tags: ['🔒 Roles'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Thông tin vai trò',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Role' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật vai trò (🔴 SUPER_ADMIN)',
+          tags: ['🔒 Roles'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    displayName: { type: 'string' },
+                    description: { type: 'string' },
+                    permissions: { 
+                      type: 'array', 
+                      items: { type: 'string' } 
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Vai trò được cập nhật',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Role' }
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa vai trò (🔴 SUPER_ADMIN)',
+          tags: ['🔒 Roles'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Vai trò được xóa',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' }
                     }
                   }
                 }
@@ -1226,6 +1393,8 @@ export function setupSwagger(app: Express) {
         const order = [
           '🟢 Public',
           '🔐 Authentication', 
+          '👥 Users',
+          '🔒 Roles',
           '🎓 Members',
           '🏢 Departments',
           '👑 Positions',
