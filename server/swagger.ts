@@ -69,8 +69,43 @@ const options = {
             username: { type: 'string' },
             email: { type: 'string' },
             fullName: { type: 'string' },
-            position: { type: 'string', nullable: true },
-            departmentName: { type: 'string', nullable: true },
+            role: { $ref: '#/components/schemas/Role' },
+            mustChangePassword: { type: 'boolean' },
+            avatarUrl: { type: 'string', nullable: true },
+            bio: { type: 'string', nullable: true },
+            phone: { type: 'string', nullable: true },
+            facebookUrl: { type: 'string', nullable: true },
+            instagramUrl: { type: 'string', nullable: true },
+            tiktokUrl: { type: 'string', nullable: true },
+            youtubeUrl: { type: 'string', nullable: true },
+            linkedinUrl: { type: 'string', nullable: true },
+            githubUrl: { type: 'string', nullable: true },
+            lastLogin: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            member: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer' },
+                studentId: { type: 'string', nullable: true },
+                class: { type: 'string' },
+                divisionId: { type: 'integer' },
+                positionId: { type: 'integer' },
+                academicYearId: { type: 'integer' },
+                memberType: { type: 'string', enum: ['active', 'alumni'] },
+                joinDate: { type: 'string' },
+                notes: { type: 'string', nullable: true }
+              }
+            },
+            beePoints: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                currentPoints: { type: 'integer' },
+                totalEarned: { type: 'integer' },
+                totalSpent: { type: 'integer' }
+              }
+            }
           },
         },
         Role: {
@@ -168,6 +203,7 @@ const options = {
       { name: '📅 Academic Years', description: 'Quản lý khóa học (🔴 SUPER_ADMIN)' },
       { name: '🏆 Achievements', description: 'Hệ thống thành tích' },
       { name: '🍯 BeePoints', description: 'Hệ thống điểm thưởng' },
+      { name: '⚙️ Settings', description: 'Quản lý cấu hình hệ thống (🔴 SUPER_ADMIN)' },
       { name: '📊 Statistics', description: 'Thống kê' },
       { name: '🔑 API Keys', description: 'Quản lý API keys (🟡 ADMIN)' },
       { name: '🌐 External API', description: 'API cho ứng dụng thứ 3' },
