@@ -94,6 +94,7 @@ const options = {
       { name: '🟢 Public', description: 'API công khai' },
       { name: '🔐 Authentication', description: 'Xác thực' },
       { name: '👥 Users', description: 'Quản lý người dùng hệ thống (🟡 ADMIN)' },
+      { name: '🔒 Roles', description: 'Quản lý vai trò và phân quyền (🔴 SUPER_ADMIN)' },
       { name: '🎓 Members', description: 'Quản lý thành viên' },
       { name: '🏢 Departments', description: 'Quản lý ban' },
       { name: '👑 Positions', description: 'Quản lý chức vụ (🔴 SUPER_ADMIN)' },
