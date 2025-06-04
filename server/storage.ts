@@ -89,8 +89,11 @@ export interface IStorage {
 
   // Settings methods
   getSettings(): Promise<Setting[]>;
+  getAllSettings(): Promise<Setting[]>;
   getSetting(key: string): Promise<Setting | undefined>;
   setSetting(key: string, value: string, description?: string): Promise<Setting>;
+  createSetting(key: string, value: string, description?: string): Promise<Setting>;
+  updateSetting(key: string, value: string, description?: string): Promise<Setting>;
   deleteSetting(key: string): Promise<boolean>;
 
   // Upload methods
@@ -462,6 +465,27 @@ export class DatabaseStorage implements IStorage {
         target: settings.key,
         set: { value, description, updatedAt: new Date() }
       })
+      .returning();
+    return setting;
+  }
+
+  async getAllSettings(): Promise<Setting[]> {
+    return await db.select().from(settings).orderBy(settings.key);
+  }
+
+  async createSetting(key: string, value: string, description?: string): Promise<Setting> {
+    const [setting] = await db
+      .insert(settings)
+      .values({ key, value, description, updatedAt: new Date() })
+      .returning();
+    return setting;
+  }
+
+  async updateSetting(key: string, value: string, description?: string): Promise<Setting> {
+    const [setting] = await db
+      .update(settings)
+      .set({ value, description, updatedAt: new Date() })
+      .where(eq(settings.key, key))
       .returning();
     return setting;
   }

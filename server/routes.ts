@@ -574,6 +574,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Người dùng không tồn tại" });
       }
 
+      // Get member information if user is linked to a member
+      let memberInfo = null;
+      try {
+        const members = await dbStorage.getMembers();
+        const member = members.find(m => m.userId === req.user!.id);
+        if (member) {
+          memberInfo = {
+            id: member.id,
+            studentId: member.studentId,
+            class: member.class,
+            divisionId: member.divisionId,
+            positionId: member.positionId,
+            academicYearId: member.academicYearId,
+            memberType: member.memberType,
+            joinDate: member.joinDate,
+            notes: member.notes
+          };
+        }
+      } catch (error) {
+        // Member info is optional, continue without it
+        console.log("No member info found for user:", req.user!.id);
+      }
+
+      // Get BeePoint information
+      let beePointInfo = null;
+      try {
+        const beePoints = await dbStorage.getUserBeePoints(req.user!.id);
+        if (beePoints) {
+          beePointInfo = {
+            currentPoints: beePoints.currentPoints,
+            totalEarned: beePoints.totalEarned,
+            totalSpent: beePoints.totalSpent
+          };
+        }
+      } catch (error) {
+        // BeePoint info is optional, continue without it
+        console.log("No BeePoint info found for user:", req.user!.id);
+      }
+
       // Add no-cache headers to ensure fresh data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
@@ -589,12 +628,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mustChangePassword: userWithRole.mustChangePassword,
           avatarUrl: userWithRole.avatarUrl,
           bio: userWithRole.bio,
+          phone: userWithRole.phone,
           facebookUrl: userWithRole.facebookUrl,
           instagramUrl: userWithRole.instagramUrl,
           tiktokUrl: userWithRole.tiktokUrl,
+          youtubeUrl: userWithRole.youtubeUrl,
+          linkedinUrl: userWithRole.linkedinUrl,
+          githubUrl: userWithRole.githubUrl,
+          lastLogin: userWithRole.lastLogin,
+          createdAt: userWithRole.createdAt,
+          member: memberInfo,
+          beePoints: beePointInfo
         },
       });
     } catch (error) {
+      console.error("Error fetching user profile:", error);
       res.status(500).json({ message: "Lỗi lấy thông tin người dùng" });
     }
   });
@@ -1727,6 +1775,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Lỗi cập nhật thông tin" });
+    }
+  });
+
+  // Settings management routes
+  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const settings = await dbStorage.getAllSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Lỗi lấy cấu hình" });
+    }
+  });
+
+  app.get("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const setting = await dbStorage.getSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Không tìm thấy cấu hình" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching setting:", error);
+      res.status(500).json({ message: "Lỗi lấy cấu hình" });
+    }
+  });
+
+  app.put("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { value, description } = req.body;
+      const setting = await dbStorage.updateSetting(req.params.key, value, description);
+      res.json({ 
+        message: "Cập nhật cấu hình thành công",
+        setting 
+      });
+    } catch (error) {
+      console.error("Error updating setting:", error);
+      res.status(500).json({ message: "Lỗi cập nhật cấu hình" });
+    }
+  });
+
+  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { key, value, description } = req.body;
+      if (!key) {
+        return res.status(400).json({ message: "Thiếu key cấu hình" });
+      }
+      const setting = await dbStorage.createSetting(key, value, description);
+      res.status(201).json(setting);
+    } catch (error) {
+      console.error("Error creating setting:", error);
+      res.status(500).json({ message: "Lỗi tạo cấu hình" });
+    }
+  });
+
+  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      await dbStorage.deleteSetting(req.params.key);
+      res.json({ message: "Xóa cấu hình thành công" });
+    } catch (error) {
+      console.error("Error deleting setting:", error);
+      res.status(500).json({ message: "Lỗi xóa cấu hình" });
+    }
+  });
+
+  // BeePoint configuration endpoints
+  app.get("/api/beepoint/config", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const totalSupply = await dbStorage.getSetting("beepoint_total_supply");
+      const exchangeRate = await dbStorage.getSetting("beepoint_exchange_rate");
+      const welcomeBonus = await dbStorage.getSetting("beepoint_welcome_bonus");
+      const activityMultiplier = await dbStorage.getSetting("beepoint_activity_multiplier");
+
+      res.json({
+        totalSupply: totalSupply?.value ? parseInt(totalSupply.value) : 1000000,
+        exchangeRate: exchangeRate?.value ? parseFloat(exchangeRate.value) : 1.0,
+        welcomeBonus: welcomeBonus?.value ? parseInt(welcomeBonus.value) : 100,
+        activityMultiplier: activityMultiplier?.value ? parseFloat(activityMultiplier.value) : 1.0
+      });
+    } catch (error) {
+      console.error("Error fetching BeePoint config:", error);
+      res.status(500).json({ message: "Lỗi lấy cấu hình BeePoint" });
+    }
+  });
+
+  app.put("/api/beepoint/config", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { totalSupply, exchangeRate, welcomeBonus, activityMultiplier } = req.body;
+
+      if (totalSupply !== undefined) {
+        await dbStorage.updateSetting("beepoint_total_supply", totalSupply.toString(), "Tổng cung BeePoint trong hệ thống");
+      }
+      if (exchangeRate !== undefined) {
+        await dbStorage.updateSetting("beepoint_exchange_rate", exchangeRate.toString(), "Tỷ lệ đổi BeePoint sang phần thưởng");
+      }
+      if (welcomeBonus !== undefined) {
+        await dbStorage.updateSetting("beepoint_welcome_bonus", welcomeBonus.toString(), "BeePoint thưởng cho thành viên mới");
+      }
+      if (activityMultiplier !== undefined) {
+        await dbStorage.updateSetting("beepoint_activity_multiplier", activityMultiplier.toString(), "Hệ số nhân điểm hoạt động");
+      }
+
+      res.json({ message: "Cập nhật cấu hình BeePoint thành công" });
+    } catch (error) {
+      console.error("Error updating BeePoint config:", error);
+      res.status(500).json({ message: "Lỗi cập nhật cấu hình BeePoint" });
+    }
+  });
+
+  // Initialize default BeePoint settings if not exists
+  app.post("/api/beepoint/init", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const defaultSettings = [
+        { key: "beepoint_total_supply", value: "1000000", description: "Tổng cung BeePoint trong hệ thống" },
+        { key: "beepoint_exchange_rate", value: "1.0", description: "Tỷ lệ đổi BeePoint sang phần thưởng (1 BeePoint = X VND)" },
+        { key: "beepoint_welcome_bonus", value: "100", description: "BeePoint thưởng cho thành viên mới" },
+        { key: "beepoint_activity_multiplier", value: "1.0", description: "Hệ số nhân điểm hoạt động" }
+      ];
+
+      for (const setting of defaultSettings) {
+        const existing = await dbStorage.getSetting(setting.key);
+        if (!existing) {
+          await dbStorage.createSetting(setting.key, setting.value, setting.description);
+        }
+      }
+
+      res.json({ message: "Khởi tạo cấu hình BeePoint thành công" });
+    } catch (error) {
+      console.error("Error initializing BeePoint settings:", error);
+      res.status(500).json({ message: "Lỗi khởi tạo cấu hình BeePoint" });
     }
   });
 
