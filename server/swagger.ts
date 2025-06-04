@@ -99,10 +99,49 @@ const options = {
             email: { type: 'string' },
             phone: { type: 'string' },
             class: { type: 'string' },
-            departmentId: { type: 'integer' },
+            divisionId: { type: 'integer' },
             positionId: { type: 'integer' },
+            academicYearId: { type: 'integer' },
             memberType: { type: 'string', enum: ['active', 'alumni'] },
+            joinDate: { type: 'string', format: 'date' },
+            notes: { type: 'string' },
+            userId: { type: 'integer' },
             isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            division: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                color: { type: 'string' },
+                icon: { type: 'string' }
+              }
+            },
+            position: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                displayName: { type: 'string' },
+                level: { type: 'integer' }
+              }
+            },
+            academicYear: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' }
+              }
+            },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                username: { type: 'string' },
+                fullName: { type: 'string' },
+                email: { type: 'string' }
+              }
+            }
           },
         },
       },
@@ -399,6 +438,113 @@ const options = {
           }
         }
       },
+      '/api/auth/change-password': {
+        post: {
+          summary: 'Đổi mật khẩu (🔵 USER)',
+          tags: ['🔐 Authentication'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['currentPassword', 'newPassword'],
+                  properties: {
+                    currentPassword: { type: 'string', example: 'password123' },
+                    newPassword: { type: 'string', example: 'newpassword123', minLength: 6 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Đổi mật khẩu thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Mật khẩu hiện tại không chính xác hoặc mật khẩu mới không hợp lệ'
+            }
+          }
+        }
+      },
+      '/api/auth/profile': {
+        put: {
+          summary: 'Cập nhật thông tin cá nhân (🔵 USER)',
+          tags: ['🔐 Authentication'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    fullName: { type: 'string' },
+                    bio: { type: 'string' },
+                    avatarUrl: { type: 'string' },
+                    facebookUrl: { type: 'string' },
+                    instagramUrl: { type: 'string' },
+                    tiktokUrl: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật thông tin thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/User' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/users/{id}/reset-password': {
+        post: {
+          summary: 'Reset mật khẩu người dùng (🔴 SUPER_ADMIN)',
+          tags: ['👥 Users'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Reset mật khẩu thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      username: { type: 'string' },
+                      newPassword: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       '/api/members': {
         get: {
           summary: 'Lấy danh sách thành viên',
@@ -442,18 +588,20 @@ const options = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['fullName', 'class', 'departmentId', 'positionId', 'academicYearId', 'memberType', 'joinDate'],
+                  required: ['fullName', 'class', 'divisionId', 'positionId', 'academicYearId', 'memberType', 'joinDate'],
                   properties: {
                     fullName: { type: 'string', example: 'Nguyễn Văn A' },
                     studentId: { type: 'string', example: 'HS001' },
                     email: { type: 'string', example: 'student@example.com' },
                     phone: { type: 'string', example: '0987654321' },
                     class: { type: 'string', example: '12A1' },
-                    departmentId: { type: 'integer', example: 1 },
+                    divisionId: { type: 'integer', example: 1 },
                     positionId: { type: 'integer', example: 1 },
                     academicYearId: { type: 'integer', example: 1 },
                     memberType: { type: 'string', enum: ['active', 'alumni'] },
-                    joinDate: { type: 'string', format: 'date', example: '2024-11-01' }
+                    joinDate: { type: 'string', format: 'date', example: '2024-11-01' },
+                    notes: { type: 'string', example: 'Ghi chú về thành viên' },
+                    createUserAccount: { type: 'boolean', example: false }
                   }
                 }
               }
@@ -491,9 +639,18 @@ const options = {
                 schema: {
                   type: 'object',
                   properties: {
-                    fullName: { type: 'string' },
-                    phone: { type: 'string' },
-                    class: { type: 'string' }
+                    fullName: { type: 'string', example: 'Nguyễn Văn A' },
+                    studentId: { type: 'string', example: 'HS001' },
+                    email: { type: 'string', example: 'student@example.com' },
+                    phone: { type: 'string', example: '0987654321' },
+                    class: { type: 'string', example: '12A1' },
+                    divisionId: { type: 'integer', example: 1 },
+                    positionId: { type: 'integer', example: 1 },
+                    academicYearId: { type: 'integer', example: 1 },
+                    memberType: { type: 'string', enum: ['active', 'alumni'] },
+                    joinDate: { type: 'string', format: 'date', example: '2024-11-01' },
+                    notes: { type: 'string', example: 'Ghi chú về thành viên' },
+                    isActive: { type: 'boolean', example: true }
                   }
                 }
               }
