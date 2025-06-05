@@ -75,42 +75,40 @@ export default function HomePage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Members Management - Only for users with member:view permission */}
-          {hasPermission("member:view") && (
-            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/members"}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <span>Quản lý thành viên</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 text-sm">
-                  Xem và quản lý danh sách thành viên câu lạc bộ
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Members Management - Available for all users */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/members"}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                <span>Quản lý thành viên</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Xem và quản lý danh sách thành viên câu lạc bộ
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Admin Panel - Only for authorized users */}
-          {hasPermission("system_admin") && (
-            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/roles"}>
+          {/* Admin Panel - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/admin"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Shield className="h-5 w-5 text-red-600" />
-                  <span>Quản lý vai trò</span>
+                  <span>Quản trị hệ thống</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 text-sm">
-                  Quản lý vai trò và người dùng hệ thống
+                  Quản lý người dùng, vai trò và hệ thống
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Settings - Only for admin and super admin */}
-          {(hasPermission("system_admin") || hasPermission("settings:edit")) && (
+          {/* Settings - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/settings"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -126,8 +124,8 @@ export default function HomePage() {
             </Card>
           )}
 
-          {/* API Keys Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {/* API Keys Management - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/api-keys"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -143,8 +141,8 @@ export default function HomePage() {
             </Card>
           )}
 
-          {/* Academic Years Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {/* Academic Years Management - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/academic-years"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -160,8 +158,8 @@ export default function HomePage() {
             </Card>
           )}
 
-          {/* Divisions Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {/* Divisions Management - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/divisions"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -233,8 +231,8 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* API Documentation */}
-          {hasPermission("system_admin") && (
+          {/* API Documentation - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.open("/api-docs", "_blank")}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
