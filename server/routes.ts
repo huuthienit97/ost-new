@@ -3138,6 +3138,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ADMIN SHOP MANAGEMENT API ENDPOINTS =====
+  
+  // Get all products (including inactive ones for admin)
+  app.get("/api/admin/shop/products", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const products = await dbStorage.getShopProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching admin shop products:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách sản phẩm" });
+    }
+  });
+
+  // Create new product
+  app.post("/api/admin/shop/products", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const product = await dbStorage.createShopProduct(req.body);
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating shop product:", error);
+      res.status(500).json({ message: "Lỗi tạo sản phẩm" });
+    }
+  });
+
+  // Update product
+  app.put("/api/admin/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await dbStorage.updateShopProduct(productId, req.body);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating shop product:", error);
+      res.status(500).json({ message: "Lỗi cập nhật sản phẩm" });
+    }
+  });
+
+  // Delete product
+  app.delete("/api/admin/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const deleted = await dbStorage.deleteShopProduct(productId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+      
+      res.json({ message: "Đã xóa sản phẩm thành công" });
+    } catch (error) {
+      console.error("Error deleting shop product:", error);
+      res.status(500).json({ message: "Lỗi xóa sản phẩm" });
+    }
+  });
+
+  // Get all orders
+  app.get("/api/admin/shop/orders", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const orders = await dbStorage.getShopOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching shop orders:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách đơn hàng" });
+    }
+  });
+
+  // Update order status
+  app.put("/api/admin/shop/orders/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await dbStorage.updateShopOrder(orderId, req.body);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating shop order:", error);
+      res.status(500).json({ message: "Lỗi cập nhật đơn hàng" });
+    }
+  });
+
+  // Get BeePoint circulation
+  app.get("/api/admin/bee-points/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const circulation = await dbStorage.getBeePointCirculation();
+      res.json(circulation);
+    } catch (error) {
+      console.error("Error fetching circulation:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin lưu thông BeePoints" });
+    }
+  });
+
+  // Update BeePoint circulation
+  app.put("/api/admin/bee-points/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const circulation = await dbStorage.updateBeePointCirculation(req.body);
+      res.json(circulation);
+    } catch (error) {
+      console.error("Error updating circulation:", error);
+      res.status(500).json({ message: "Lỗi cập nhật thông tin lưu thông BeePoints" });
+    }
+  });
+
+  // Get all BeePoint transactions
+  app.get("/api/admin/bee-points/transactions", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const transactions = await dbStorage.getUserPointTransactions(userId || 0);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Lỗi lấy lịch sử giao dịch" });
+    }
+  });
+
   // ===== SHOP SYSTEM API ENDPOINTS =====
   
   // Get all shop products
