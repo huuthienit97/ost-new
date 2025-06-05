@@ -2829,9 +2829,9 @@ export function setupSwagger(app: Express) {
     const serverUrl = `${protocol}://${host}`;
     
     // Update server URL dynamically
-    const options = {
+    const swaggerOptions = {
       definition: {
-        ...baseSwaggerSpec,
+        ...options.definition,
         servers: [
           {
             url: serverUrl,
@@ -2841,12 +2841,6 @@ export function setupSwagger(app: Express) {
       },
       apis: []
     };
-    options.definition.servers = [
-      {
-        url: serverUrl,
-        description: 'Current Server',
-      },
-    ];
     next();
   });
 
