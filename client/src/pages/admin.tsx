@@ -30,10 +30,7 @@ function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { roleId: number; isActive: boolean }) => {
-      return await apiRequest(`/api/users/${user.id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("PUT", `/api/users/${user.id}`, data);
     },
     onSuccess: () => {
       toast({
@@ -156,10 +153,7 @@ export default function AdminPage() {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: any) => {
-      return await apiRequest("/api/roles", {
-        method: "POST",
-        body: JSON.stringify(roleData),
-      });
+      return await apiRequest("POST", "/api/roles", roleData);
     },
     onSuccess: () => {
       toast({
@@ -182,10 +176,7 @@ export default function AdminPage() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      return await apiRequest("/api/users", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
+      return await apiRequest("POST", "/api/users", userData);
     },
     onSuccess: () => {
       toast({
