@@ -602,19 +602,462 @@ const options = {
       '/api/shop/products': {
         get: {
           summary: 'Lấy danh sách sản phẩm cửa hàng',
+          description: 'Trả về danh sách tất cả sản phẩm đang hoạt động trong cửa hàng BeePoints',
           tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
           responses: {
             200: {
-              description: 'Danh sách người dùng',
+              description: 'Danh sách sản phẩm',
               content: {
                 'application/json': {
                   schema: {
                     type: 'array',
-                    items: { $ref: '#/components/schemas/User' }
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                        beePointsCost: { type: 'integer' },
+                        imageUrl: { type: 'string', nullable: true },
+                        category: { type: 'string' },
+                        stockQuantity: { type: 'integer', nullable: true },
+                        isActive: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền truy cập' }
+          }
+        },
+        post: {
+          summary: 'Tạo sản phẩm mới',
+          description: 'Tạo sản phẩm mới trong cửa hàng (chỉ Admin)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'description', 'beePointsCost', 'category'],
+                  properties: {
+                    name: { type: 'string', description: 'Tên sản phẩm' },
+                    description: { type: 'string', description: 'Mô tả sản phẩm' },
+                    beePointsCost: { type: 'integer', description: 'Giá BeePoints' },
+                    imageUrl: { type: 'string', description: 'URL hình ảnh' },
+                    category: { type: 'string', enum: ['physical', 'digital', 'experience'], description: 'Loại sản phẩm' },
+                    stockQuantity: { type: 'integer', description: 'Số lượng tồn kho (null = không giới hạn)' }
                   }
                 }
               }
             }
+          },
+          responses: {
+            201: { description: 'Tạo sản phẩm thành công' },
+            400: { description: 'Dữ liệu không hợp lệ' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền tạo sản phẩm' }
+          }
+        }
+      },
+      '/api/shop/products-admin': {
+        get: {
+          summary: 'Lấy tất cả sản phẩm (Admin)',
+          description: 'Trả về danh sách tất cả sản phẩm bao gồm cả sản phẩm không hoạt động (chỉ Admin)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách tất cả sản phẩm',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                        beePointsCost: { type: 'integer' },
+                        imageUrl: { type: 'string', nullable: true },
+                        category: { type: 'string' },
+                        stockQuantity: { type: 'integer', nullable: true },
+                        isActive: { type: 'boolean' },
+                        createdBy: { type: 'integer' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng' }
+          }
+        }
+      },
+      '/api/shop/products/{id}': {
+        get: {
+          summary: 'Lấy thông tin sản phẩm',
+          description: 'Trả về thông tin chi tiết của một sản phẩm',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID sản phẩm'
+            }
+          ],
+          responses: {
+            200: { description: 'Thông tin sản phẩm' },
+            404: { description: 'Không tìm thấy sản phẩm' },
+            401: { description: 'Chưa đăng nhập' }
+          }
+        },
+        put: {
+          summary: 'Cập nhật sản phẩm',
+          description: 'Cập nhật thông tin sản phẩm (chỉ Admin)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID sản phẩm'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                    beePointsCost: { type: 'integer' },
+                    imageUrl: { type: 'string' },
+                    category: { type: 'string' },
+                    stockQuantity: { type: 'integer' },
+                    isActive: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: { description: 'Cập nhật thành công' },
+            404: { description: 'Không tìm thấy sản phẩm' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền chỉnh sửa sản phẩm' }
+          }
+        },
+        delete: {
+          summary: 'Xóa sản phẩm',
+          description: 'Xóa sản phẩm khỏi cửa hàng (chỉ Admin)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID sản phẩm'
+            }
+          ],
+          responses: {
+            204: { description: 'Xóa thành công' },
+            404: { description: 'Không tìm thấy sản phẩm' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền xóa sản phẩm' }
+          }
+        }
+      },
+      '/api/shop/products/{id}/upload-image': {
+        post: {
+          summary: 'Tải ảnh sản phẩm',
+          description: 'Tải lên hình ảnh cho sản phẩm (hỗ trợ jpg, png, gif, webp, heic, heif, avif)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID sản phẩm'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    image: {
+                      type: 'string',
+                      format: 'binary',
+                      description: 'File ảnh (tối đa 10MB, hỗ trợ Android/iOS)'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Tải ảnh thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      imageUrl: { type: 'string' },
+                      fileInfo: {
+                        type: 'object',
+                        properties: {
+                          originalName: { type: 'string' },
+                          mimeType: { type: 'string' },
+                          size: { type: 'integer' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            400: { description: 'Không có file hoặc file không hợp lệ' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng' }
+          }
+        }
+      },
+      '/api/shop/products-with-image': {
+        post: {
+          summary: 'Tạo sản phẩm kèm ảnh',
+          description: 'Tạo sản phẩm mới kèm theo tải ảnh trong một request',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'description', 'beePointsCost', 'category'],
+                  properties: {
+                    name: { type: 'string', description: 'Tên sản phẩm' },
+                    description: { type: 'string', description: 'Mô tả sản phẩm' },
+                    beePointsCost: { type: 'string', description: 'Giá BeePoints (số)' },
+                    category: { type: 'string', description: 'Loại sản phẩm' },
+                    stockQuantity: { type: 'string', description: 'Số lượng tồn kho' },
+                    image: {
+                      type: 'string',
+                      format: 'binary',
+                      description: 'File ảnh sản phẩm'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: { description: 'Tạo sản phẩm thành công' },
+            400: { description: 'Dữ liệu không hợp lệ' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng' }
+          }
+        }
+      },
+      '/api/shop/purchase': {
+        post: {
+          summary: 'Đổi thưởng sản phẩm',
+          description: 'Sử dụng BeePoints để đổi thưởng sản phẩm',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['productId'],
+                  properties: {
+                    productId: { type: 'integer', description: 'ID sản phẩm' },
+                    quantity: { type: 'integer', default: 1, description: 'Số lượng' },
+                    deliveryInfo: { type: 'string', description: 'Thông tin giao hàng' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Đổi thưởng thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      order: { type: 'object' },
+                      remainingBeePoints: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            },
+            400: { description: 'Không đủ BeePoints hoặc hết hàng' },
+            404: { description: 'Sản phẩm không tồn tại' },
+            401: { description: 'Chưa đăng nhập' }
+          }
+        }
+      },
+      '/api/shop/my-orders': {
+        get: {
+          summary: 'Lịch sử đổi thưởng của tôi',
+          description: 'Xem lịch sử các đơn đổi thưởng của người dùng hiện tại',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách đơn hàng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        productId: { type: 'integer' },
+                        quantity: { type: 'integer' },
+                        totalBeePointsCost: { type: 'integer' },
+                        status: { type: 'string', enum: ['pending', 'confirmed', 'delivered', 'cancelled'] },
+                        deliveryInfo: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        product: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            imageUrl: { type: 'string' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập' }
+          }
+        }
+      },
+      '/api/shop/orders': {
+        get: {
+          summary: 'Quản lý tất cả đơn hàng (Admin)',
+          description: 'Xem và quản lý tất cả đơn đổi thưởng trong hệ thống',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách tất cả đơn hàng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        userId: { type: 'integer' },
+                        productId: { type: 'integer' },
+                        quantity: { type: 'integer' },
+                        totalBeePointsCost: { type: 'integer' },
+                        status: { type: 'string' },
+                        notes: { type: 'string' },
+                        deliveryInfo: { type: 'string' },
+                        processedBy: { type: 'integer' },
+                        processedAt: { type: 'string', format: 'date-time' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        user: {
+                          type: 'object',
+                          properties: {
+                            fullName: { type: 'string' },
+                            email: { type: 'string' }
+                          }
+                        },
+                        product: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            imageUrl: { type: 'string' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền xem đơn hàng' }
+          }
+        }
+      },
+      '/api/shop/orders/{id}': {
+        put: {
+          summary: 'Cập nhật trạng thái đơn hàng',
+          description: 'Cập nhật trạng thái xử lý đơn đổi thưởng (chỉ Admin)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID đơn hàng'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: {
+                      type: 'string',
+                      enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
+                      description: 'Trạng thái mới'
+                    },
+                    notes: { type: 'string', description: 'Ghi chú xử lý' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: { description: 'Cập nhật trạng thái thành công' },
+            404: { description: 'Không tìm thấy đơn hàng' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý đơn hàng' }
           }
         }
       },
