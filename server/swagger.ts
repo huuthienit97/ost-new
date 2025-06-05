@@ -189,6 +189,56 @@ const options = {
             updatedAt: { type: 'string', format: 'date-time' }
           }
         },
+        Mission: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            category: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'special', 'project'] },
+            type: { type: 'string', enum: ['one_time', 'repeatable'] },
+            maxParticipants: { type: 'integer', nullable: true },
+            currentParticipants: { type: 'integer' },
+            beePointsReward: { type: 'integer' },
+            requiresPhoto: { type: 'boolean' },
+            startDate: { type: 'string', format: 'date-time', nullable: true },
+            endDate: { type: 'string', format: 'date-time', nullable: true },
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+            status: { type: 'string', enum: ['active', 'paused', 'completed', 'cancelled'] },
+            tags: { type: 'array', items: { type: 'string' } },
+            createdAt: { type: 'string', format: 'date-time' },
+            createdBy: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                fullName: { type: 'string' },
+                username: { type: 'string' }
+              }
+            }
+          }
+        },
+        MissionAssignment: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            missionId: { type: 'integer' },
+            userId: { type: 'integer' },
+            status: { type: 'string', enum: ['assigned', 'in_progress', 'completed', 'submitted', 'rejected'] },
+            assignedDate: { type: 'string', format: 'date-time' },
+            completedDate: { type: 'string', format: 'date-time', nullable: true },
+            submissionNote: { type: 'string', nullable: true },
+            reviewNote: { type: 'string', nullable: true },
+            pointsAwarded: { type: 'integer' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                fullName: { type: 'string' },
+                username: { type: 'string' }
+              }
+            }
+          }
+        },
       },
     },
     tags: [
@@ -203,6 +253,7 @@ const options = {
       { name: '📅 Academic Years', description: 'Quản lý khóa học (🔴 SUPER_ADMIN)' },
       { name: '🏆 Achievements', description: 'Hệ thống thành tích' },
       { name: '🍯 BeePoints', description: 'Hệ thống điểm thưởng' },
+      { name: '🎯 Missions', description: 'Hệ thống nhiệm vụ và thưởng điểm' },
       { name: '⚙️ Settings', description: 'Quản lý cấu hình hệ thống (🔴 SUPER_ADMIN)' },
       { name: '📊 Statistics', description: 'Thống kê' },
       { name: '🔑 API Keys', description: 'Quản lý API keys (🟡 ADMIN)' },

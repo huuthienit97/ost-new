@@ -2597,6 +2597,437 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== MISSION MODULE =====
+  
+  // Get all missions
+  app.get("/api/missions", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, category, type } = req.query;
+      
+      let whereConditions = [eq(missions.isActive, true)];
+
+      if (status) {
+        whereConditions.push(eq(missions.status, status as string));
+      }
+      if (category) {
+        whereConditions.push(eq(missions.category, category as string));
+      }
+      if (type) {
+        whereConditions.push(eq(missions.type, type as string));
+      }
+
+      const query = db.select({
+        id: missions.id,
+        title: missions.title,
+        description: missions.description,
+        category: missions.category,
+        type: missions.type,
+        maxParticipants: missions.maxParticipants,
+        currentParticipants: missions.currentParticipants,
+        beePointsReward: missions.beePointsReward,
+        requiresPhoto: missions.requiresPhoto,
+        startDate: missions.startDate,
+        endDate: missions.endDate,
+        priority: missions.priority,
+        status: missions.status,
+        tags: missions.tags,
+        createdAt: missions.createdAt,
+        createdBy: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username
+        }
+      }).from(missions)
+        .leftJoin(users, eq(missions.createdBy, users.id))
+        .where(and(...whereConditions));
+
+      const missionsList = await query.orderBy(desc(missions.createdAt));
+      res.json(missionsList);
+    } catch (error) {
+      console.error("Error fetching missions:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách nhiệm vụ" });
+    }
+  });
+
+  // Create mission
+  app.post("/api/missions", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validationResult = insertMissionSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Dữ liệu không hợp lệ",
+          errors: validationResult.error.issues
+        });
+      }
+
+      const missionData = validationResult.data;
+      const [mission] = await db.insert(missions).values({
+        ...missionData,
+        createdBy: req.user!.id,
+        startDate: missionData.startDate ? new Date(missionData.startDate) : null,
+        endDate: missionData.endDate ? new Date(missionData.endDate) : null,
+      }).returning();
+
+      res.status(201).json(mission);
+    } catch (error) {
+      console.error("Error creating mission:", error);
+      res.status(500).json({ message: "Lỗi tạo nhiệm vụ" });
+    }
+  });
+
+  // Get mission details
+  app.get("/api/missions/:id", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      
+      const [mission] = await db.select({
+        id: missions.id,
+        title: missions.title,
+        description: missions.description,
+        category: missions.category,
+        type: missions.type,
+        maxParticipants: missions.maxParticipants,
+        currentParticipants: missions.currentParticipants,
+        beePointsReward: missions.beePointsReward,
+        requiresPhoto: missions.requiresPhoto,
+        startDate: missions.startDate,
+        endDate: missions.endDate,
+        priority: missions.priority,
+        status: missions.status,
+        tags: missions.tags,
+        createdAt: missions.createdAt,
+        createdBy: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username
+        }
+      }).from(missions)
+        .leftJoin(users, eq(missions.createdBy, users.id))
+        .where(eq(missions.id, missionId));
+
+      if (!mission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      // Get assignments for this mission
+      const assignments = await db.select({
+        id: missionAssignments.id,
+        status: missionAssignments.status,
+        assignedDate: missionAssignments.assignedDate,
+        completedDate: missionAssignments.completedDate,
+        pointsAwarded: missionAssignments.pointsAwarded,
+        user: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username
+        }
+      }).from(missionAssignments)
+        .leftJoin(users, eq(missionAssignments.userId, users.id))
+        .where(eq(missionAssignments.missionId, missionId));
+
+      res.json({ ...mission, assignments });
+    } catch (error) {
+      console.error("Error fetching mission details:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin nhiệm vụ" });
+    }
+  });
+
+  // Update mission
+  app.put("/api/missions/:id", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const validationResult = insertMissionSchema.partial().safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Dữ liệu không hợp lệ",
+          errors: validationResult.error.issues
+        });
+      }
+
+      const updateData = validationResult.data;
+      const [updatedMission] = await db.update(missions)
+        .set({
+          ...updateData,
+          updatedBy: req.user!.id,
+          updatedAt: new Date(),
+          startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
+          endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
+        })
+        .where(eq(missions.id, missionId))
+        .returning();
+
+      if (!updatedMission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      res.json(updatedMission);
+    } catch (error) {
+      console.error("Error updating mission:", error);
+      res.status(500).json({ message: "Lỗi cập nhật nhiệm vụ" });
+    }
+  });
+
+  // Delete mission
+  app.delete("/api/missions/:id", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      
+      await db.update(missions)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(missions.id, missionId));
+
+      res.json({ message: "Xóa nhiệm vụ thành công" });
+    } catch (error) {
+      console.error("Error deleting mission:", error);
+      res.status(500).json({ message: "Lỗi xóa nhiệm vụ" });
+    }
+  });
+
+  // Assign mission to user
+  app.post("/api/missions/:id/assign", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: "Thiếu ID người dùng" });
+      }
+
+      // Check if mission exists and has available slots
+      const [mission] = await db.select().from(missions).where(eq(missions.id, missionId));
+      if (!mission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      if (mission.maxParticipants && mission.currentParticipants >= mission.maxParticipants) {
+        return res.status(400).json({ message: "Nhiệm vụ đã đầy" });
+      }
+
+      // Check if user already assigned
+      const [existingAssignment] = await db.select()
+        .from(missionAssignments)
+        .where(and(
+          eq(missionAssignments.missionId, missionId),
+          eq(missionAssignments.userId, userId)
+        ));
+
+      if (existingAssignment) {
+        return res.status(400).json({ message: "Người dùng đã được giao nhiệm vụ này" });
+      }
+
+      // Create assignment
+      const [assignment] = await db.insert(missionAssignments).values({
+        missionId,
+        userId,
+        status: 'assigned'
+      }).returning();
+
+      // Update participant count
+      await db.update(missions)
+        .set({ 
+          currentParticipants: sql`${missions.currentParticipants} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(missions.id, missionId));
+
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error assigning mission:", error);
+      res.status(500).json({ message: "Lỗi giao nhiệm vụ" });
+    }
+  });
+
+  // Get user's missions
+  app.get("/api/missions/my", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { status } = req.query;
+
+      let whereConditions = [eq(missionAssignments.userId, userId)];
+
+      if (status) {
+        whereConditions.push(eq(missionAssignments.status, status as string));
+      }
+
+      const query = db.select({
+        assignment: {
+          id: missionAssignments.id,
+          status: missionAssignments.status,
+          assignedDate: missionAssignments.assignedDate,
+          startedDate: missionAssignments.startedDate,
+          completedDate: missionAssignments.completedDate,
+          submissionNote: missionAssignments.submissionNote,
+          reviewNote: missionAssignments.reviewNote,
+          pointsAwarded: missionAssignments.pointsAwarded
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          category: missions.category,
+          type: missions.type,
+          beePointsReward: missions.beePointsReward,
+          requiresPhoto: missions.requiresPhoto,
+          startDate: missions.startDate,
+          endDate: missions.endDate,
+          priority: missions.priority,
+          tags: missions.tags
+        }
+      }).from(missionAssignments)
+        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
+        .where(and(...whereConditions));
+
+      const userMissions = await query.orderBy(desc(missionAssignments.assignedDate));
+      res.json(userMissions);
+    } catch (error) {
+      console.error("Error fetching user missions:", error);
+      res.status(500).json({ message: "Lỗi lấy nhiệm vụ của người dùng" });
+    }
+  });
+
+  // Submit mission (with photo upload)
+  app.post("/api/missions/:id/submit", authenticate, upload.single('photo'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const { submissionNote } = req.body;
+      const userId = req.user!.id;
+
+      // Get assignment
+      const [assignment] = await db.select()
+        .from(missionAssignments)
+        .where(and(
+          eq(missionAssignments.missionId, missionId),
+          eq(missionAssignments.userId, userId)
+        ));
+
+      if (!assignment) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ được giao" });
+      }
+
+      if (assignment.status === 'completed' || assignment.status === 'submitted') {
+        return res.status(400).json({ message: "Nhiệm vụ đã được nộp hoặc hoàn thành" });
+      }
+
+      // Get mission details
+      const [mission] = await db.select().from(missions).where(eq(missions.id, missionId));
+      if (!mission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      let uploadId = null;
+      if (req.file) {
+        // Save upload record
+        const [upload] = await db.insert(uploads).values({
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          path: `/uploads/${req.file.filename}`,
+          uploadedBy: userId
+        }).returning();
+        uploadId = upload.id;
+      } else if (mission.requiresPhoto) {
+        return res.status(400).json({ message: "Nhiệm vụ này yêu cầu tải lên hình ảnh" });
+      }
+
+      // Update assignment
+      const [updatedAssignment] = await db.update(missionAssignments)
+        .set({
+          status: 'submitted',
+          submissionNote: submissionNote || null,
+          updatedAt: new Date()
+        })
+        .where(eq(missionAssignments.id, assignment.id))
+        .returning();
+
+      // Create submission record
+      if (uploadId || submissionNote) {
+        await db.insert(missionSubmissions).values({
+          assignmentId: assignment.id,
+          uploadId,
+          submissionText: submissionNote || null
+        });
+      }
+
+      res.json({ 
+        message: "Nộp nhiệm vụ thành công",
+        assignment: updatedAssignment
+      });
+    } catch (error) {
+      console.error("Error submitting mission:", error);
+      res.status(500).json({ message: "Lỗi nộp nhiệm vụ" });
+    }
+  });
+
+  // Review mission submission
+  app.post("/api/missions/assignments/:id/review", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const { status, reviewNote, pointsAwarded } = req.body;
+
+      if (!['completed', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      }
+
+      const [assignment] = await db.select()
+        .from(missionAssignments)
+        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
+        .where(eq(missionAssignments.id, assignmentId));
+
+      if (!assignment) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      const pointsToAward = status === 'completed' ? 
+        (pointsAwarded || assignment.missions.beePointsReward) : 0;
+
+      // Update assignment
+      const [updatedAssignment] = await db.update(missionAssignments)
+        .set({
+          status,
+          reviewNote: reviewNote || null,
+          pointsAwarded: pointsToAward,
+          reviewedBy: req.user!.id,
+          reviewedAt: new Date(),
+          completedDate: status === 'completed' ? new Date() : null,
+          updatedAt: new Date()
+        })
+        .where(eq(missionAssignments.id, assignmentId))
+        .returning();
+
+      // Award BeePoints if completed
+      if (status === 'completed' && pointsToAward > 0) {
+        // Update user's BeePoints
+        await db.update(beePoints)
+          .set({
+            currentPoints: sql`${beePoints.currentPoints} + ${pointsToAward}`,
+            totalEarned: sql`${beePoints.totalEarned} + ${pointsToAward}`,
+            updatedAt: new Date()
+          })
+          .where(eq(beePoints.userId, assignment.mission_assignments.userId));
+
+        // Create transaction record
+        await db.insert(pointTransactions).values({
+          userId: assignment.mission_assignments.userId,
+          amount: pointsToAward,
+          type: 'mission_completion',
+          description: `Hoàn thành nhiệm vụ: ${assignment.missions.title}`,
+          createdBy: req.user!.id
+        });
+      }
+
+      res.json({
+        message: status === 'completed' ? "Duyệt nhiệm vụ thành công" : "Từ chối nhiệm vụ",
+        assignment: updatedAssignment
+      });
+    } catch (error) {
+      console.error("Error reviewing mission:", error);
+      res.status(500).json({ message: "Lỗi duyệt nhiệm vụ" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
