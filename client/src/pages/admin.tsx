@@ -982,36 +982,28 @@ export default function AdminPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">Nguyễn Văn A</p>
-                          <p className="text-sm text-gray-600">Hoàn thành nhiệm vụ</p>
+                      {beePointStats?.recentTransactions?.length > 0 ? (
+                        beePointStats.recentTransactions.map((transaction: any) => (
+                          <div key={transaction.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div>
+                              <p className="font-medium">{transaction.user?.fullName || 'Người dùng'}</p>
+                              <p className="text-sm text-gray-600">{transaction.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`font-medium ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {transaction.amount > 0 ? '+' : ''}{transaction.amount} BP
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(transaction.createdAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-gray-500 py-4">
+                          Chưa có giao dịch nào
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-green-600">+15 BP</p>
-                          <p className="text-xs text-gray-500">2 giờ trước</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">Trần Thị B</p>
-                          <p className="text-sm text-gray-600">Mua sản phẩm</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-red-600">-50 BP</p>
-                          <p className="text-xs text-gray-500">5 giờ trước</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">Lê Văn C</p>
-                          <p className="text-sm text-gray-600">Tham gia sự kiện</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-green-600">+20 BP</p>
-                          <p className="text-xs text-gray-500">1 ngày trước</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
