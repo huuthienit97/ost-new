@@ -181,7 +181,7 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Nhập email" {...field} />
+                        <Input type="email" placeholder="name@ost.edu.vn" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

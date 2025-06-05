@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Users, UserCheck, GraduationCap, Building2, Bell, LogOut } from "lucide-react";
 import { MemberCard } from "@/components/member-card";
 import { AddMemberModal } from "@/components/add-member-modal";
+import { MemberDetailsModal } from "@/components/member-details-modal";
 import { getInitials, getAvatarGradient } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { MemberWithDepartment, Department, PERMISSIONS } from "@shared/schema";
@@ -33,6 +34,7 @@ export default function MembersPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
   const [deletingMember, setDeletingMember] = useState<MemberWithDepartment | null>(null);
+  const [viewingMember, setViewingMember] = useState<MemberWithDepartment | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
@@ -74,9 +76,7 @@ export default function MembersPage() {
   });
 
   const handleViewMember = (member: MemberWithDepartment) => {
-    // For now, just edit on view
-    setEditingMember(member);
-    setIsModalOpen(true);
+    setViewingMember(member);
   };
 
   const handleEditMember = (member: MemberWithDepartment) => {
@@ -408,6 +408,18 @@ export default function MembersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Member Details Modal */}
+      <MemberDetailsModal
+        open={!!viewingMember}
+        onOpenChange={(open) => !open && setViewingMember(null)}
+        member={viewingMember}
+        onEdit={(member) => {
+          setViewingMember(null);
+          handleEditMember(member);
+        }}
+        canEdit={hasPermission(PERMISSIONS.MEMBER_EDIT)}
+      />
     </div>
   );
 }
