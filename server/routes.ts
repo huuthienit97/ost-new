@@ -2677,9 +2677,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get mission details
-  app.get("/api/missions/:id", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/missions/:id", authenticate, authorize(PERMISSIONS.MISSION_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const missionId = parseInt(req.params.id);
+      
+      if (isNaN(missionId)) {
+        return res.status(400).json({ message: "ID nhiệm vụ không hợp lệ" });
+      }
       
       const [mission] = await db.select({
         id: missions.id,
