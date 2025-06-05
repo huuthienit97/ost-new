@@ -3138,6 +3138,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SHOP SYSTEM API ENDPOINTS =====
+  
+  // Get all shop products
+  app.get("/api/shop/products", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const products = await storage.getShopProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching shop products:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách sản phẩm" });
+    }
+  });
+
+  // Get single shop product
+  app.get("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await storage.getShopProduct(productId);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching shop product:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin sản phẩm" });
+    }
+  });
+
+  // Create shop product (Admin only)
+  app.post("/api/shop/products", authenticate, authorize(PERMISSIONS.SHOP_PRODUCT_CREATE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productData = {
+        ...req.body,
+        createdBy: req.user!.id,
+      };
+
+      const product = await storage.createShopProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Error creating shop product:", error);
+      res.status(500).json({ message: "Lỗi tạo sản phẩm" });
+    }
+  });
+
+  // Update shop product (Admin only)
+  app.put("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_PRODUCT_EDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await storage.updateShopProduct(productId, req.body);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating shop product:", error);
+      res.status(500).json({ message: "Lỗi cập nhật sản phẩm" });
+    }
+  });
+
+  // Delete shop product (Admin only)
+  app.delete("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_PRODUCT_DELETE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const deleted = await storage.deleteShopProduct(productId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting shop product:", error);
+      res.status(500).json({ message: "Lỗi xóa sản phẩm" });
+    }
+  });
+
+  // Purchase product with BeePoints
+  app.post("/api/shop/purchase", authenticate, authorize(PERMISSIONS.SHOP_PURCHASE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { productId, quantity = 1, deliveryInfo } = req.body;
+      
+      // Get product details
+      const product = await storage.getShopProduct(productId);
+      if (!product || !product.isActive) {
+        return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã ngừng bán" });
+      }
+
+      // Check stock
+      if (product.stockQuantity !== null && product.stockQuantity < quantity) {
+        return res.status(400).json({ message: "Không đủ hàng trong kho" });
+      }
+
+      const totalCost = product.beePointsCost * quantity;
+
+      // Check user's BeePoints
+      const userBeePoints = await storage.getUserBeePoints(req.user!.id);
+      if (!userBeePoints || userBeePoints.currentPoints < totalCost) {
+        return res.status(400).json({ message: "Không đủ BeePoints để đổi thưởng" });
+      }
+
+      // Create order
+      const orderData = {
+        userId: req.user!.id,
+        productId,
+        quantity,
+        totalBeePointsCost: totalCost,
+        deliveryInfo,
+        status: "pending",
+      };
+
+      const order = await storage.createShopOrder(orderData);
+
+      // Redeem BeePoints
+      const redemptionSuccess = await storage.redeemBeePoints(req.user!.id, order.id, totalCost);
+      
+      if (!redemptionSuccess) {
+        return res.status(500).json({ message: "Lỗi xử lý giao dịch BeePoints" });
+      }
+
+      // Update product stock
+      if (product.stockQuantity !== null) {
+        await storage.updateShopProduct(productId, {
+          stockQuantity: product.stockQuantity - quantity,
+        });
+      }
+
+      res.status(201).json({
+        message: "Đổi thưởng thành công",
+        order,
+        remainingBeePoints: userBeePoints.currentPoints - totalCost,
+      });
+    } catch (error) {
+      console.error("Error processing purchase:", error);
+      res.status(500).json({ message: "Lỗi xử lý đơn đổi thưởng" });
+    }
+  });
+
+  // Get user's orders
+  app.get("/api/shop/my-orders", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const orders = await storage.getUserShopOrders(req.user!.id);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching user orders:", error);
+      res.status(500).json({ message: "Lỗi lấy lịch sử đổi thưởng" });
+    }
+  });
+
+  // Get all orders (Admin only)
+  app.get("/api/shop/orders", authenticate, authorize(PERMISSIONS.SHOP_ORDER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const orders = await storage.getShopOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching shop orders:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách đơn hàng" });
+    }
+  });
+
+  // Update order status (Admin only)
+  app.put("/api/shop/orders/:id", authenticate, authorize(PERMISSIONS.SHOP_ORDER_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { status, notes } = req.body;
+
+      const updates: any = { status };
+      if (notes) updates.notes = notes;
+      if (status === "confirmed" || status === "delivered") {
+        updates.processedBy = req.user!.id;
+        updates.processedAt = new Date();
+      }
+
+      const order = await storage.updateShopOrder(orderId, updates);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating shop order:", error);
+      res.status(500).json({ message: "Lỗi cập nhật đơn hàng" });
+    }
+  });
+
+  // Get BeePoint circulation info (Admin only)
+  app.get("/api/beepoints/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_CONFIG), async (req: AuthenticatedRequest, res) => {
+    try {
+      const circulation = await storage.getBeePointCirculation();
+      
+      if (!circulation) {
+        // Initialize circulation tracking
+        const newCirculation = await storage.updateBeePointCirculation({
+          totalSupply: 1000000, // Default total supply
+          totalDistributed: 0,
+          totalRedeemed: 0,
+          circulatingSupply: 0,
+        });
+        return res.json(newCirculation);
+      }
+
+      res.json(circulation);
+    } catch (error) {
+      console.error("Error fetching BeePoint circulation:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin lưu hành BeePoints" });
+    }
+  });
+
+  // Update BeePoint circulation (Admin only)
+  app.put("/api/beepoints/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_CONFIG), async (req: AuthenticatedRequest, res) => {
+    try {
+      const circulation = await storage.updateBeePointCirculation(req.body);
+      res.json(circulation);
+    } catch (error) {
+      console.error("Error updating BeePoint circulation:", error);
+      res.status(500).json({ message: "Lỗi cập nhật thông tin lưu hành BeePoints" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
