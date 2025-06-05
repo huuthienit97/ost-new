@@ -3143,7 +3143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all shop products
   app.get("/api/shop/products", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const products = await storage.getShopProducts();
+      const products = await dbStorage.getShopProducts();
       res.json(products);
     } catch (error) {
       console.error("Error fetching shop products:", error);
@@ -3155,7 +3155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const productId = parseInt(req.params.id);
-      const product = await storage.getShopProduct(productId);
+      const product = await dbStorage.getShopProduct(productId);
       
       if (!product) {
         return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
@@ -3176,7 +3176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user!.id,
       };
 
-      const product = await storage.createShopProduct(productData);
+      const product = await dbStorage.createShopProduct(productData);
       res.status(201).json(product);
     } catch (error) {
       console.error("Error creating shop product:", error);
@@ -3188,7 +3188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_PRODUCT_EDIT), async (req: AuthenticatedRequest, res) => {
     try {
       const productId = parseInt(req.params.id);
-      const product = await storage.updateShopProduct(productId, req.body);
+      const product = await dbStorage.updateShopProduct(productId, req.body);
       
       if (!product) {
         return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
@@ -3205,7 +3205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/shop/products/:id", authenticate, authorize(PERMISSIONS.SHOP_PRODUCT_DELETE), async (req: AuthenticatedRequest, res) => {
     try {
       const productId = parseInt(req.params.id);
-      const deleted = await storage.deleteShopProduct(productId);
+      const deleted = await dbStorage.deleteShopProduct(productId);
       
       if (!deleted) {
         return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
@@ -3224,7 +3224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { productId, quantity = 1, deliveryInfo } = req.body;
       
       // Get product details
-      const product = await storage.getShopProduct(productId);
+      const product = await dbStorage.getShopProduct(productId);
       if (!product || !product.isActive) {
         return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã ngừng bán" });
       }
@@ -3237,7 +3237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalCost = product.beePointsCost * quantity;
 
       // Check user's BeePoints
-      const userBeePoints = await storage.getUserBeePoints(req.user!.id);
+      const userBeePoints = await dbStorage.getUserBeePoints(req.user!.id);
       if (!userBeePoints || userBeePoints.currentPoints < totalCost) {
         return res.status(400).json({ message: "Không đủ BeePoints để đổi thưởng" });
       }
@@ -3252,10 +3252,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
       };
 
-      const order = await storage.createShopOrder(orderData);
+      const order = await dbStorage.createShopOrder(orderData);
 
       // Redeem BeePoints
-      const redemptionSuccess = await storage.redeemBeePoints(req.user!.id, order.id, totalCost);
+      const redemptionSuccess = await dbStorage.redeemBeePoints(req.user!.id, order.id, totalCost);
       
       if (!redemptionSuccess) {
         return res.status(500).json({ message: "Lỗi xử lý giao dịch BeePoints" });
@@ -3263,7 +3263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update product stock
       if (product.stockQuantity !== null) {
-        await storage.updateShopProduct(productId, {
+        await dbStorage.updateShopProduct(productId, {
           stockQuantity: product.stockQuantity - quantity,
         });
       }
@@ -3282,7 +3282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's orders
   app.get("/api/shop/my-orders", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const orders = await storage.getUserShopOrders(req.user!.id);
+      const orders = await dbStorage.getUserShopOrders(req.user!.id);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching user orders:", error);
@@ -3293,7 +3293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all orders (Admin only)
   app.get("/api/shop/orders", authenticate, authorize(PERMISSIONS.SHOP_ORDER_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const orders = await storage.getShopOrders();
+      const orders = await dbStorage.getShopOrders();
       res.json(orders);
     } catch (error) {
       console.error("Error fetching shop orders:", error);
@@ -3314,7 +3314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.processedAt = new Date();
       }
 
-      const order = await storage.updateShopOrder(orderId, updates);
+      const order = await dbStorage.updateShopOrder(orderId, updates);
       
       if (!order) {
         return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -3330,11 +3330,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get BeePoint circulation info (Admin only)
   app.get("/api/beepoints/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_CONFIG), async (req: AuthenticatedRequest, res) => {
     try {
-      const circulation = await storage.getBeePointCirculation();
+      const circulation = await dbStorage.getBeePointCirculation();
       
       if (!circulation) {
         // Initialize circulation tracking
-        const newCirculation = await storage.updateBeePointCirculation({
+        const newCirculation = await dbStorage.updateBeePointCirculation({
           totalSupply: 1000000, // Default total supply
           totalDistributed: 0,
           totalRedeemed: 0,
@@ -3353,7 +3353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update BeePoint circulation (Admin only)
   app.put("/api/beepoints/circulation", authenticate, authorize(PERMISSIONS.BEEPOINT_CONFIG), async (req: AuthenticatedRequest, res) => {
     try {
-      const circulation = await storage.updateBeePointCirculation(req.body);
+      const circulation = await dbStorage.updateBeePointCirculation(req.body);
       res.json(circulation);
     } catch (error) {
       console.error("Error updating BeePoint circulation:", error);
