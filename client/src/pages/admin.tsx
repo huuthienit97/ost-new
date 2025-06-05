@@ -140,6 +140,20 @@ export default function AdminPage() {
   const [userPassword, setUserPassword] = useState("");
   const [userRoleId, setUserRoleId] = useState(0);
 
+  // BeePoint configuration state
+  const [beePointSettings, setBeePointSettings] = useState({
+    totalSupply: 1000000,
+    welcomeBonus: 100,
+    exchangeRate: 1.0,
+    activityMultiplier: 1.0
+  });
+  const [transactionForm, setTransactionForm] = useState({
+    userId: "",
+    type: "",
+    amount: "",
+    description: ""
+  });
+
   // Fetch roles
   const { data: roles, isLoading: rolesLoading } = useQuery<Role[]>({
     queryKey: ["/api/roles"],
@@ -163,6 +177,49 @@ export default function AdminPage() {
   // Fetch BeePoint statistics
   const { data: beePointStats } = useQuery({
     queryKey: ["/api/beepoint/stats"],
+  });
+
+  // BeePoint configuration mutation
+  const updateBeePointConfigMutation = useMutation({
+    mutationFn: async (configData: any) => {
+      return await apiRequest("PUT", "/api/beepoint/config", configData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Cập nhật cấu hình BeePoint thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/beepoint/config"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật cấu hình BeePoint",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // BeePoint transaction mutation
+  const createTransactionMutation = useMutation({
+    mutationFn: async (transactionData: any) => {
+      return await apiRequest("POST", "/api/beepoint/transaction", transactionData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo giao dịch BeePoint thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/beepoint/stats"] });
+      setTransactionForm({ userId: "", type: "", amount: "", description: "" });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo giao dịch BeePoint",
+        variant: "destructive",
+      });
+    },
   });
 
   // Create role mutation
@@ -799,18 +856,49 @@ export default function AdminPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label>Điểm thưởng khi đăng ký</Label>
-                      <Input type="number" defaultValue="50" placeholder="50" />
+                      <Label>Tổng cung BeePoint</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue={beePointConfig?.totalSupply || 1000000} 
+                        placeholder="1000000" 
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, totalSupply: parseInt(e.target.value)}))}
+                      />
                     </div>
                     <div>
-                      <Label>Điểm thưởng hoàn thành nhiệm vụ</Label>
-                      <Input type="number" defaultValue="10" placeholder="10" />
+                      <Label>Điểm thưởng chào mừng</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue={beePointConfig?.welcomeBonus || 100} 
+                        placeholder="100" 
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, welcomeBonus: parseInt(e.target.value)}))}
+                      />
                     </div>
                     <div>
-                      <Label>Điểm thưởng tham gia sự kiện</Label>
-                      <Input type="number" defaultValue="20" placeholder="20" />
+                      <Label>Tỷ lệ đổi thưởng</Label>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        defaultValue={beePointConfig?.exchangeRate || 1.0} 
+                        placeholder="1.0" 
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, exchangeRate: parseFloat(e.target.value)}))}
+                      />
                     </div>
-                    <Button>Lưu cài đặt</Button>
+                    <div>
+                      <Label>Hệ số nhân hoạt động</Label>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        defaultValue={beePointConfig?.activityMultiplier || 1.0} 
+                        placeholder="1.0" 
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, activityMultiplier: parseFloat(e.target.value)}))}
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => updateBeePointConfigMutation.mutate(beePointSettings)}
+                      disabled={updateBeePointConfigMutation.isPending}
+                    >
+                      {updateBeePointConfigMutation.isPending ? "Đang lưu..." : "Lưu cài đặt"}
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -823,16 +911,16 @@ export default function AdminPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="text-sm">
-                      <span className="font-medium">Tổng điểm đã phát:</span> 2,450 BeePoint
+                      <span className="font-medium">Tổng điểm đã phát:</span> {beePointStats?.totalIssued?.toLocaleString() || 0} BeePoint
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">Tổng điểm đã tiêu:</span> 890 BeePoint
+                      <span className="font-medium">Tổng điểm đã tiêu:</span> {beePointStats?.totalSpent?.toLocaleString() || 0} BeePoint
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">Người dùng hoạt động:</span> 12 người
+                      <span className="font-medium">Người dùng hoạt động:</span> {beePointStats?.activeUsers || 0} người
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">Giao dịch trong tháng:</span> 45 giao dịch
+                      <span className="font-medium">Giao dịch trong tháng:</span> {beePointStats?.monthlyTransactions || 0} giao dịch
                     </div>
                   </CardContent>
                 </Card>

@@ -1663,18 +1663,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get total points issued (sum of all positive transactions)
       const totalIssuedResult = await db
-        .select({ total: sql<number>`SUM(CASE WHEN ${beePointTransactions.amount} > 0 THEN ${beePointTransactions.amount} ELSE 0 END)` })
-        .from(beePointTransactions);
+        .select({ total: sql<number>`COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0)` })
+        .from(pointTransactions);
       
       // Get total points spent (sum of all negative transactions)
       const totalSpentResult = await db
-        .select({ total: sql<number>`SUM(CASE WHEN ${beePointTransactions.amount} < 0 THEN ABS(${beePointTransactions.amount}) ELSE 0 END)` })
-        .from(beePointTransactions);
+        .select({ total: sql<number>`COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0)` })
+        .from(pointTransactions);
       
       // Get active users (users with BeePoint accounts)
       const activeUsersResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(beePointAccounts);
+        .from(beePoints);
       
       // Get this month's transactions
       const thisMonth = new Date();
@@ -1683,27 +1683,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const monthlyTransactionsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(beePointTransactions)
-        .where(gte(beePointTransactions.createdAt, thisMonth));
+        .from(pointTransactions)
+        .where(gte(pointTransactions.createdAt, thisMonth));
       
       // Get recent transactions (last 10)
       const recentTransactions = await db
         .select({
-          id: beePointTransactions.id,
-          amount: beePointTransactions.amount,
-          description: beePointTransactions.description,
-          type: beePointTransactions.type,
-          createdAt: beePointTransactions.createdAt,
+          id: pointTransactions.id,
+          amount: pointTransactions.amount,
+          description: pointTransactions.description,
+          type: pointTransactions.type,
+          createdAt: pointTransactions.createdAt,
           user: {
             id: users.id,
             fullName: users.fullName,
             username: users.username
           }
         })
-        .from(beePointTransactions)
-        .leftJoin(beePointAccounts, eq(beePointTransactions.accountId, beePointAccounts.id))
-        .leftJoin(users, eq(beePointAccounts.userId, users.id))
-        .orderBy(desc(beePointTransactions.createdAt))
+        .from(pointTransactions)
+        .leftJoin(users, eq(pointTransactions.userId, users.id))
+        .orderBy(desc(pointTransactions.createdAt))
         .limit(10);
 
       res.json({
@@ -1731,8 +1730,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's BeePoint account
       const [account] = await db
         .select()
-        .from(beePointAccounts)
-        .where(eq(beePointAccounts.userId, userId));
+        .from(beePoints)
+        .where(eq(beePoints.userId, userId));
 
       if (!account) {
         return res.status(404).json({ message: "Không tìm thấy tài khoản BeePoint" });
@@ -1745,9 +1744,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create transaction
       const [transaction] = await db
-        .insert(beePointTransactions)
+        .insert(pointTransactions)
         .values({
-          accountId: account.id,
+          userId,
           amount,
           description,
           type,
@@ -1757,12 +1756,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update account balance
       await db
-        .update(beePointAccounts)
+        .update(beePoints)
         .set({ 
           currentPoints: account.currentPoints + amount,
           updatedAt: new Date()
         })
-        .where(eq(beePointAccounts.id, account.id));
+        .where(eq(beePoints.id, account.id));
 
       res.status(201).json(transaction);
     } catch (error) {
