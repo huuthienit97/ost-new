@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: users.email,
         role: {
           displayName: roles.displayName,
-          level: roles.level
+          name: roles.name
         }
       })
       .from(users)
@@ -1626,11 +1626,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const publicDepartments = await db.select({
         id: departments.id,
         name: departments.name,
-        description: departments.description,
-        isActive: departments.isActive
+        icon: departments.icon,
+        color: departments.color
       })
-      .from(departments)
-      .where(eq(departments.isActive, true));
+      .from(departments);
 
       res.json(publicDepartments);
     } catch (error) {
@@ -1649,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAchievementsResult
       ] = await Promise.all([
         db.select({ count: sql<number>`count(*)` }).from(members).where(eq(members.isActive, true)),
-        db.select({ count: sql<number>`count(*)` }).from(departments).where(eq(departments.isActive, true)),
+        db.select({ count: sql<number>`count(*)` }).from(departments),
         db.select({ sum: sql<number>`sum(${pointTransactions.amount})` }).from(pointTransactions).where(eq(pointTransactions.type, 'earned')),
         db.select({ count: sql<number>`count(*)` }).from(achievements).where(eq(achievements.isActive, true))
       ]);
