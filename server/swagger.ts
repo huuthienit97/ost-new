@@ -33,6 +33,286 @@ const options = {
         description: 'Development Server',
       },
     ],
+    paths: {
+      // ===== SHOP & REWARD EXCHANGE API =====
+      '/api/shop/products': {
+        get: {
+          summary: 'Lấy danh sách sản phẩm cửa hàng',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách sản phẩm',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ShopProduct' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo sản phẩm mới (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/InsertShopProduct' }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Sản phẩm được tạo thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ShopProduct' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/products/{id}': {
+        get: {
+          summary: 'Lấy thông tin sản phẩm',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Thông tin sản phẩm',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ShopProduct' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật sản phẩm (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/InsertShopProduct' }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Sản phẩm được cập nhật'
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa sản phẩm (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Sản phẩm được xóa'
+            }
+          }
+        }
+      },
+      '/api/shop/purchase': {
+        post: {
+          summary: 'Đổi thưởng sản phẩm với BeePoints',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['productId', 'quantity'],
+                  properties: {
+                    productId: { type: 'integer', example: 1 },
+                    quantity: { type: 'integer', minimum: 1, example: 1 },
+                    deliveryInfo: { 
+                      type: 'string', 
+                      example: 'Địa chỉ: 123 Đường ABC, Quận 1, TP.HCM\nSĐT: 0901234567' 
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Đổi thưởng thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      order: { $ref: '#/components/schemas/ShopOrder' },
+                      remainingBeePoints: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Lỗi đổi thưởng (không đủ BeePoints, hết hàng, etc.)'
+            }
+          }
+        }
+      },
+      '/api/shop/my-orders': {
+        get: {
+          summary: 'Lấy lịch sử đổi thưởng của tôi',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Lịch sử đổi thưởng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ShopOrder' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/orders': {
+        get: {
+          summary: 'Lấy tất cả đơn đổi thưởng (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách đơn đổi thưởng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ShopOrder' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/orders/{id}': {
+        put: {
+          summary: 'Cập nhật trạng thái đơn đổi thưởng (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { 
+                      type: 'string',
+                      enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
+                      example: 'confirmed'
+                    },
+                    notes: { type: 'string', example: 'Đã xác nhận và chuẩn bị giao hàng' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật trạng thái thành công'
+            }
+          }
+        }
+      },
+      '/api/shop/circulation': {
+        get: {
+          summary: 'Lấy thông tin lưu thông BeePoint (🟡 ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Thông tin lưu thông BeePoint',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BeePointCirculation' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật lưu thông BeePoint (🔴 SUPER_ADMIN)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalSupply: { type: 'integer', example: 1000000 },
+                    distributedPoints: { type: 'integer', example: 50000 },
+                    availablePoints: { type: 'integer', example: 950000 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật lưu thông thành công'
+            }
+          }
+        }
+      }
+    },
     components: {
       securitySchemes: {
         bearerAuth: {
