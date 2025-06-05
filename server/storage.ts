@@ -13,9 +13,6 @@ import {
   apiKeys,
   achievements,
   userAchievements,
-  shopProducts,
-  shopOrders,
-  beePointCirculation,
   type Member, 
   type Department, 
   type Division,
@@ -43,12 +40,7 @@ import {
   type Achievement,
   type InsertAchievement,
   type UserAchievement,
-  type InsertUserAchievement,
-  type ShopProduct,
-  type InsertShopProduct,
-  type ShopOrder,
-  type InsertShopOrder,
-  type BeePointCirculation
+  type InsertUserAchievement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc } from "drizzle-orm";
