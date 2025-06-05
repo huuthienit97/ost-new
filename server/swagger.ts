@@ -598,10 +598,11 @@ const options = {
       { name: '🌐 External API', description: 'API cho ứng dụng thứ 3' },
     ],
     paths: {
-      '/api/public/users': {
+      // ===== SHOP & REWARD EXCHANGE API =====
+      '/api/shop/products': {
         get: {
-          summary: 'Lấy danh sách người dùng với thông tin chức vụ và ban',
-          tags: ['🟢 Public'],
+          summary: 'Lấy danh sách sản phẩm cửa hàng',
+          tags: ['🛒 Shop'],
           responses: {
             200: {
               description: 'Danh sách người dùng',

@@ -34,12 +34,9 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Extended support for mobile image formats
+    // Mobile-friendly image formats (Android/iOS support)
     const allowedImageTypes = /jpeg|jpg|png|gif|webp|heic|heif|avif/;
-    const allowedDocTypes = /pdf|doc|docx|xls|xlsx|ppt|pptx|txt/;
-    const allAllowedTypes = new RegExp(`${allowedImageTypes.source}|${allowedDocTypes.source}`);
-    
-    const extname = allAllowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedImageTypes.test(path.extname(file.originalname).toLowerCase());
     
     // Check MIME types with mobile format support
     const isImage = file.mimetype.startsWith('image/') || 
@@ -3287,6 +3284,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing purchase:", error);
       res.status(500).json({ message: "Lỗi xử lý đơn đổi thưởng" });
+    }
+  });
+
+  // Shop product image upload with mobile support
+  app.post("/api/shop/products/:id/upload-image", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), upload.single('image'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (!req.file) {
+        return res.status(400).json({ message: "Không có file được tải lên" });
+      }
+
+      const imageUrl = `/uploads/${req.file.filename}`;
+      
+      // Update product with new image URL
+      await db.update(shopProducts)
+        .set({ 
+          imageUrl: imageUrl,
+          updatedAt: new Date()
+        })
+        .where(eq(shopProducts.id, productId));
+
+      res.json({ 
+        message: "Tải ảnh thành công",
+        imageUrl: imageUrl,
+        fileInfo: {
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          size: req.file.size
+        }
+      });
+    } catch (error) {
+      console.error("Upload image error:", error);
+      res.status(500).json({ message: "Lỗi khi tải ảnh lên" });
+    }
+  });
+
+  // Create new shop product with image upload
+  app.post("/api/shop/products-with-image", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), upload.single('image'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, beePointsCost, category, stockQuantity } = req.body;
+      
+      let imageUrl = null;
+      if (req.file) {
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+
+      const [newProduct] = await db.insert(shopProducts).values({
+        name,
+        description,
+        beePointsCost: parseInt(beePointsCost),
+        imageUrl,
+        category,
+        stockQuantity: stockQuantity ? parseInt(stockQuantity) : null,
+        createdBy: req.user!.id
+      }).returning();
+
+      res.status(201).json(newProduct);
+    } catch (error) {
+      console.error("Create product with image error:", error);
+      res.status(500).json({ message: "Lỗi khi tạo sản phẩm" });
     }
   });
 
