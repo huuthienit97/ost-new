@@ -93,7 +93,7 @@ export default function HomePage() {
           )}
 
           {/* Admin Panel - Only for authorized users */}
-          {hasPermission("system_admin") && (
+          {hasPermission("admin") && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/roles"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -110,7 +110,7 @@ export default function HomePage() {
           )}
 
           {/* Settings - Only for admin and super admin */}
-          {(hasPermission("system_admin") || hasPermission("settings:edit")) && (
+          {hasPermission("admin") && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/settings"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -127,7 +127,7 @@ export default function HomePage() {
           )}
 
           {/* API Keys Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {hasPermission("admin") && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/api-keys"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -144,7 +144,7 @@ export default function HomePage() {
           )}
 
           {/* Academic Years Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {hasPermission("admin") && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/academic-years"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -161,7 +161,7 @@ export default function HomePage() {
           )}
 
           {/* Divisions Management - Only for system admin */}
-          {hasPermission("system:admin") && (
+          {hasPermission("admin") && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/divisions"}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
