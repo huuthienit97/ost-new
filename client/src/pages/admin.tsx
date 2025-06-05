@@ -155,6 +155,16 @@ export default function AdminPage() {
     queryKey: ["/api/permissions"],
   });
 
+  // Fetch BeePoint configuration
+  const { data: beePointConfig } = useQuery({
+    queryKey: ["/api/beepoint/config"],
+  });
+
+  // Fetch BeePoint statistics
+  const { data: beePointStats } = useQuery({
+    queryKey: ["/api/beepoint/stats"],
+  });
+
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: any) => {

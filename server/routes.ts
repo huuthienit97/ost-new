@@ -6,7 +6,7 @@ import { users, members, beePoints, pointTransactions, achievements, userAchieve
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull, sql, gte } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1655,6 +1655,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting setting:", error);
       res.status(500).json({ message: "Lỗi khi xóa cài đặt" });
+    }
+  });
+
+  // BeePoint statistics API
+  app.get("/api/beepoint/stats", authenticate, authorize([PERMISSIONS.BEEPOINT_VIEW]), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get total points issued (sum of all positive transactions)
+      const totalIssuedResult = await db
+        .select({ total: sql<number>`SUM(CASE WHEN ${beePointTransactions.amount} > 0 THEN ${beePointTransactions.amount} ELSE 0 END)` })
+        .from(beePointTransactions);
+      
+      // Get total points spent (sum of all negative transactions)
+      const totalSpentResult = await db
+        .select({ total: sql<number>`SUM(CASE WHEN ${beePointTransactions.amount} < 0 THEN ABS(${beePointTransactions.amount}) ELSE 0 END)` })
+        .from(beePointTransactions);
+      
+      // Get active users (users with BeePoint accounts)
+      const activeUsersResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(beePointAccounts);
+      
+      // Get this month's transactions
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      thisMonth.setHours(0, 0, 0, 0);
+      
+      const monthlyTransactionsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(beePointTransactions)
+        .where(gte(beePointTransactions.createdAt, thisMonth));
+      
+      // Get recent transactions (last 10)
+      const recentTransactions = await db
+        .select({
+          id: beePointTransactions.id,
+          amount: beePointTransactions.amount,
+          description: beePointTransactions.description,
+          type: beePointTransactions.type,
+          createdAt: beePointTransactions.createdAt,
+          user: {
+            id: users.id,
+            fullName: users.fullName,
+            username: users.username
+          }
+        })
+        .from(beePointTransactions)
+        .leftJoin(beePointAccounts, eq(beePointTransactions.accountId, beePointAccounts.id))
+        .leftJoin(users, eq(beePointAccounts.userId, users.id))
+        .orderBy(desc(beePointTransactions.createdAt))
+        .limit(10);
+
+      res.json({
+        totalIssued: totalIssuedResult[0]?.total || 0,
+        totalSpent: totalSpentResult[0]?.total || 0,
+        activeUsers: activeUsersResult[0]?.count || 0,
+        monthlyTransactions: monthlyTransactionsResult[0]?.count || 0,
+        recentTransactions
+      });
+    } catch (error) {
+      console.error("Error fetching BeePoint stats:", error);
+      res.status(500).json({ message: "Lỗi lấy thống kê BeePoint" });
+    }
+  });
+
+  // Create BeePoint transaction (Admin)
+  app.post("/api/beepoint/transaction", authenticate, authorize([PERMISSIONS.BEEPOINT_MANAGE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, amount, description, type } = req.body;
+      
+      if (!userId || !amount || !description || !type) {
+        return res.status(400).json({ message: "Thiếu thông tin giao dịch" });
+      }
+
+      // Get user's BeePoint account
+      const [account] = await db
+        .select()
+        .from(beePointAccounts)
+        .where(eq(beePointAccounts.userId, userId));
+
+      if (!account) {
+        return res.status(404).json({ message: "Không tìm thấy tài khoản BeePoint" });
+      }
+
+      // Check if user has enough points for negative transactions
+      if (amount < 0 && account.currentPoints < Math.abs(amount)) {
+        return res.status(400).json({ message: "Không đủ BeePoint" });
+      }
+
+      // Create transaction
+      const [transaction] = await db
+        .insert(beePointTransactions)
+        .values({
+          accountId: account.id,
+          amount,
+          description,
+          type,
+          createdBy: req.user!.id
+        })
+        .returning();
+
+      // Update account balance
+      await db
+        .update(beePointAccounts)
+        .set({ 
+          currentPoints: account.currentPoints + amount,
+          updatedAt: new Date()
+        })
+        .where(eq(beePointAccounts.id, account.id));
+
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating BeePoint transaction:", error);
+      res.status(500).json({ message: "Lỗi tạo giao dịch BeePoint" });
     }
   });
 
