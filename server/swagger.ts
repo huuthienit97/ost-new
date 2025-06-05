@@ -2153,6 +2153,148 @@ const options = {
           }
         }
       },
+      '/api/permissions': {
+        get: {
+          summary: 'Lấy danh sách tất cả permissions có sẵn trong hệ thống',
+          tags: ['🔑 Permission Management'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách permissions được nhóm theo category',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer', example: 57 },
+                      permissions: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        example: ['member:view', 'member:create', 'achievement:view']
+                      },
+                      groupedPermissions: {
+                        type: 'object',
+                        example: {
+                          member: ['member:view', 'member:create'],
+                          achievement: ['achievement:view', 'achievement:create']
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/roles/{id}/permissions': {
+        get: {
+          summary: 'Lấy permissions của role cụ thể',
+          tags: ['🔑 Permission Management'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID của role'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Thông tin permissions của role',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      role: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          displayName: { type: 'string' },
+                          permissions: {
+                            type: 'array',
+                            items: { type: 'string' }
+                          }
+                        }
+                      },
+                      availablePermissions: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      permissionsCount: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật permissions cho role',
+          tags: ['🔑 Permission Management'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID của role'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['permissions'],
+                  properties: {
+                    permissions: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: ['member:view', 'member:create', 'achievement:view']
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật permissions thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      role: { $ref: '#/components/schemas/Role' },
+                      changedPermissions: {
+                        type: 'object',
+                        properties: {
+                          added: {
+                            type: 'array',
+                            items: { type: 'string' }
+                          },
+                          removed: {
+                            type: 'array',
+                            items: { type: 'string' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       '/api/auth/profile': {
         put: {
           summary: 'Cập nhật thông tin cá nhân (đã cập nhật hỗ trợ tất cả trường)',

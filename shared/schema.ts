@@ -299,6 +299,46 @@ export const missionSubmissions = pgTable("mission_submissions", {
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
+// Shop system tables
+export const shopProducts = pgTable("shop_products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  beePointsCost: integer("bee_points_cost").notNull(),
+  imageUrl: text("image_url"),
+  category: text("category").notNull(), // "physical", "digital", "experience"
+  stockQuantity: integer("stock_quantity"), // null = unlimited
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const shopOrders = pgTable("shop_orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  productId: integer("product_id").references(() => shopProducts.id).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  totalBeePointsCost: integer("total_bee_points_cost").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "confirmed", "delivered", "cancelled"
+  notes: text("notes"),
+  deliveryInfo: text("delivery_info"),
+  processedBy: integer("processed_by").references(() => users.id),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// BeePoint circulation tracking
+export const beePointCirculation = pgTable("bee_point_circulation", {
+  id: serial("id").primaryKey(),
+  totalSupply: integer("total_supply").notNull().default(0), // Tổng cung BeePoints
+  totalDistributed: integer("total_distributed").notNull().default(0), // Đã phát ra
+  totalRedeemed: integer("total_redeemed").notNull().default(0), // Đã đổi thưởng (về lại hệ thống)
+  circulatingSupply: integer("circulating_supply").notNull().default(0), // Đang lưu hành
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({
   userAchievements: many(userAchievements),
@@ -479,6 +519,28 @@ export type MissionAssignment = typeof missionAssignments.$inferSelect;
 export type InsertMissionSubmission = z.infer<typeof insertMissionSubmissionSchema>;
 export type MissionSubmission = typeof missionSubmissions.$inferSelect;
 
+// Shop system schemas
+export const insertShopProductSchema = createInsertSchema(shopProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShopOrderSchema = createInsertSchema(shopOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Shop system types
+export type InsertShopProduct = z.infer<typeof insertShopProductSchema>;
+export type ShopProduct = typeof shopProducts.$inferSelect;
+
+export type InsertShopOrder = z.infer<typeof insertShopOrderSchema>;
+export type ShopOrder = typeof shopOrders.$inferSelect;
+
+export type BeePointCirculation = typeof beePointCirculation.$inferSelect;
+
 // Extended types
 export type UserWithRole = User & {
   role: Role;
@@ -607,6 +669,17 @@ export const PERMISSIONS = {
   MISSION_ASSIGN: "mission:assign",
   MISSION_SUBMIT: "mission:submit",
   MISSION_REVIEW: "mission:review",
+  
+  // Shop permissions
+  SHOP_VIEW: "shop:view",
+  SHOP_PURCHASE: "shop:purchase",
+  SHOP_MANAGE: "shop:manage",
+  SHOP_PRODUCT_CREATE: "shop:product:create",
+  SHOP_PRODUCT_EDIT: "shop:product:edit",
+  SHOP_PRODUCT_DELETE: "shop:product:delete",
+  SHOP_ORDER_VIEW: "shop:order:view",
+  SHOP_ORDER_MANAGE: "shop:order:manage",
+  
   BEEPOINT_TRANSACTION_VIEW: "beepoint_transaction:view",
   
   // API Key permissions

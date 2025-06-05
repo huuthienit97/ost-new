@@ -673,6 +673,159 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(apiKeys).where(eq(apiKeys.id, id));
     return (result.rowCount ?? 0) > 0;
   }
+
+  // Shop system methods
+  async getShopProducts(): Promise<ShopProduct[]> {
+    return await db.select().from(shopProducts).where(eq(shopProducts.isActive, true));
+  }
+
+  async getShopProduct(id: number): Promise<ShopProduct | undefined> {
+    const [product] = await db.select().from(shopProducts).where(eq(shopProducts.id, id));
+    return product || undefined;
+  }
+
+  async createShopProduct(insertProduct: InsertShopProduct): Promise<ShopProduct> {
+    const [product] = await db
+      .insert(shopProducts)
+      .values(insertProduct)
+      .returning();
+    return product;
+  }
+
+  async updateShopProduct(id: number, updates: Partial<InsertShopProduct>): Promise<ShopProduct | undefined> {
+    const [product] = await db
+      .update(shopProducts)
+      .set(updates)
+      .where(eq(shopProducts.id, id))
+      .returning();
+    return product || undefined;
+  }
+
+  async deleteShopProduct(id: number): Promise<boolean> {
+    const result = await db.delete(shopProducts).where(eq(shopProducts.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Shop order methods
+  async getShopOrders(): Promise<ShopOrder[]> {
+    return await db.select().from(shopOrders);
+  }
+
+  async getShopOrder(id: number): Promise<ShopOrder | undefined> {
+    const [order] = await db.select().from(shopOrders).where(eq(shopOrders.id, id));
+    return order || undefined;
+  }
+
+  async getUserShopOrders(userId: number): Promise<ShopOrder[]> {
+    return await db.select().from(shopOrders).where(eq(shopOrders.userId, userId));
+  }
+
+  async createShopOrder(insertOrder: InsertShopOrder): Promise<ShopOrder> {
+    const [order] = await db
+      .insert(shopOrders)
+      .values(insertOrder)
+      .returning();
+    return order;
+  }
+
+  async updateShopOrder(id: number, updates: Partial<InsertShopOrder>): Promise<ShopOrder | undefined> {
+    const [order] = await db
+      .update(shopOrders)
+      .set(updates)
+      .where(eq(shopOrders.id, id))
+      .returning();
+    return order || undefined;
+  }
+
+  // BeePoint circulation methods
+  async getBeePointCirculation(): Promise<BeePointCirculation | undefined> {
+    const [circulation] = await db.select().from(beePointCirculation).limit(1);
+    return circulation || undefined;
+  }
+
+  async updateBeePointCirculation(updates: Partial<BeePointCirculation>): Promise<BeePointCirculation> {
+    let circulation = await this.getBeePointCirculation();
+    
+    if (!circulation) {
+      // Initialize circulation if it doesn't exist
+      const [newCirculation] = await db
+        .insert(beePointCirculation)
+        .values({
+          totalSupply: updates.totalSupply || 0,
+          totalDistributed: updates.totalDistributed || 0,
+          totalRedeemed: updates.totalRedeemed || 0,
+          circulatingSupply: updates.circulatingSupply || 0,
+        })
+        .returning();
+      return newCirculation;
+    }
+
+    const [updatedCirculation] = await db
+      .update(beePointCirculation)
+      .set({
+        ...updates,
+        lastUpdated: new Date(),
+      })
+      .where(eq(beePointCirculation.id, circulation.id))
+      .returning();
+    
+    return updatedCirculation;
+  }
+
+  // Transaction method for BeePoint redemption
+  async redeemBeePoints(userId: number, orderId: number, pointsToRedeem: number): Promise<boolean> {
+    try {
+      return await db.transaction(async (tx) => {
+        // Get user's current BeePoints
+        const [userBeePoints] = await tx
+          .select()
+          .from(beePoints)
+          .where(eq(beePoints.userId, userId));
+
+        if (!userBeePoints || userBeePoints.currentPoints < pointsToRedeem) {
+          throw new Error("Insufficient BeePoints");
+        }
+
+        // Deduct points from user
+        await tx
+          .update(beePoints)
+          .set({
+            currentPoints: userBeePoints.currentPoints - pointsToRedeem,
+            totalSpent: userBeePoints.totalSpent + pointsToRedeem,
+          })
+          .where(eq(beePoints.userId, userId));
+
+        // Record transaction
+        await tx
+          .insert(pointTransactions)
+          .values({
+            userId,
+            type: "redemption",
+            amount: -pointsToRedeem,
+            description: `Đổi thưởng - Order #${orderId}`,
+            relatedId: orderId,
+          });
+
+        // Update circulation - points return to system
+        const circulation = await this.getBeePointCirculation();
+        if (circulation) {
+          await tx
+            .update(beePointCirculation)
+            .set({
+              totalRedeemed: circulation.totalRedeemed + pointsToRedeem,
+              circulatingSupply: circulation.circulatingSupply - pointsToRedeem,
+              lastUpdated: new Date(),
+            })
+            .where(eq(beePointCirculation.id, circulation.id));
+        }
+
+        return true;
+      });
+    } catch (error) {
+      console.error("Error redeeming BeePoints:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
