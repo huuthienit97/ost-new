@@ -248,36 +248,6 @@ export const apiKeys = pgTable("api_keys", {
   expiresAt: timestamp("expires_at"), // Optional expiry date
 });
 
-// Task management system
-export const tasks = pgTable("tasks", {
-  id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  taskType: varchar("task_type", { length: 50 }).notNull(), // "one_time", "repeatable"
-  category: varchar("category", { length: 100 }).notNull(), // Loại nhiệm vụ: "event", "creative", "admin", "social"
-  maxAssignees: integer("max_assignees").default(1).notNull(), // Số thành viên có thể nhận nhiệm vụ
-  rewardPoints: integer("reward_points").default(0).notNull(), // BeePoint thưởng cho mỗi người hoàn thành
-  isActive: boolean("is_active").default(true).notNull(),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  createdBy: integer("created_by").references(() => users.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const taskAssignments = pgTable("task_assignments", {
-  id: serial("id").primaryKey(),
-  taskId: integer("task_id").references(() => tasks.id, { onDelete: "cascade" }).notNull(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  status: varchar("status", { length: 20 }).default("assigned").notNull(), // "assigned", "in_progress", "completed", "cancelled"
-  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-  submissionNotes: text("submission_notes"), // Ghi chú khi hoàn thành
-  reviewedBy: integer("reviewed_by").references(() => users.id),
-  reviewedAt: timestamp("reviewed_at"),
-  pointsAwarded: integer("points_awarded").default(0),
-});
-
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({
   userAchievements: many(userAchievements),
@@ -303,31 +273,6 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   createdBy: one(users, {
     fields: [apiKeys.createdBy],
     references: [users.id],
-  }),
-}));
-
-// Task relations
-export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  createdBy: one(users, {
-    fields: [tasks.createdBy],
-    references: [users.id],
-  }),
-  assignments: many(taskAssignments),
-}));
-
-export const taskAssignmentsRelations = relations(taskAssignments, ({ one }) => ({
-  task: one(tasks, {
-    fields: [taskAssignments.taskId],
-    references: [tasks.id],
-  }),
-  user: one(users, {
-    fields: [taskAssignments.userId],
-    references: [users.id],
-  }),
-  reviewer: one(users, {
-    fields: [taskAssignments.reviewedBy],
-    references: [users.id],
-    relationName: "taskReviewer",
   }),
 }));
 
@@ -441,23 +386,6 @@ export type UserWithBeePoints = User & {
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
 
-// Task types
-export type Task = typeof tasks.$inferSelect;
-export type InsertTask = typeof tasks.$inferInsert;
-export type TaskAssignment = typeof taskAssignments.$inferSelect;
-export type InsertTaskAssignment = typeof taskAssignments.$inferInsert;
-
-export type TaskWithAssignments = Task & {
-  assignments: (TaskAssignment & { user: User })[];
-  createdBy: User;
-};
-
-export type TaskAssignmentWithTask = TaskAssignment & {
-  task: Task;
-  user: User;
-  reviewer?: User;
-};
-
 // Position hierarchy enum
 export const POSITIONS = {
   president: "Chủ nhiệm",
@@ -471,28 +399,6 @@ export const POSITIONS = {
 export const MEMBER_TYPES = {
   active: "Thành viên hiện tại",
   alumni: "Cựu thành viên",
-} as const;
-
-// Task constants
-export const TASK_TYPES = {
-  ONE_TIME: "one_time",
-  REPEATABLE: "repeatable",
-} as const;
-
-export const TASK_CATEGORIES = {
-  EVENT: "event",
-  CREATIVE: "creative", 
-  ADMIN: "admin",
-  SOCIAL: "social",
-  EDUCATION: "education",
-  TECHNICAL: "technical",
-} as const;
-
-export const TASK_STATUS = {
-  ASSIGNED: "assigned",
-  IN_PROGRESS: "in_progress", 
-  COMPLETED: "completed",
-  CANCELLED: "cancelled",
 } as const;
 
 // Permissions constants
@@ -523,17 +429,7 @@ export const PERMISSIONS = {
   
   // Settings permissions
   SETTINGS_VIEW: "settings:view",
-  SETTINGS_CREATE: "settings:create",
   SETTINGS_EDIT: "settings:edit",
-  SETTINGS_DELETE: "settings:delete",
-  
-  // Task permissions
-  TASK_VIEW: "task:view",
-  TASK_CREATE: "task:create",
-  TASK_EDIT: "task:edit",
-  TASK_DELETE: "task:delete",
-  TASK_ASSIGN: "task:assign",
-  TASK_COMPLETE: "task:complete",
   
   // Upload permissions
   UPLOAD_CREATE: "upload:create",
@@ -582,40 +478,12 @@ export const createMemberSchema = insertMemberSchema.extend({
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   phone: z.string().optional(),
   class: z.string().min(1, "Lớp là bắt buộc"),
-});
-
-// Task validation schemas
-export const insertTaskSchema = createInsertSchema(tasks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const createTaskSchema = insertTaskSchema.extend({
-  title: z.string().min(1, "Tiêu đề nhiệm vụ là bắt buộc"),
-  description: z.string().optional(),
-  taskType: z.enum(["one_time", "repeatable"], {
-    required_error: "Loại nhiệm vụ là bắt buộc",
-  }),
-  category: z.enum(["event", "creative", "admin", "social", "education", "technical"], {
-    required_error: "Danh mục nhiệm vụ là bắt buộc",
-  }),
-  maxAssignees: z.number().min(1, "Số lượng người nhận tối thiểu là 1").default(1),
-  rewardPoints: z.number().min(0, "Điểm thưởng không được âm").default(0),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
-
-export const updateTaskSchema = createTaskSchema.partial().omit({
-  createdBy: true,
-});
-
-export const assignTaskSchema = z.object({
-  userId: z.number().min(1, "ID người dùng là bắt buộc"),
-});
-
-export const completeTaskSchema = z.object({
-  submissionNotes: z.string().optional(),
+  divisionId: z.number().min(1, "Ban là bắt buộc"),
+  positionId: z.number().min(1, "Chức vụ là bắt buộc"),
+  academicYearId: z.number().min(1, "Khóa học là bắt buộc"),
+  memberType: z.enum(["active", "alumni"]),
+  joinDate: z.string().min(1, "Ngày gia nhập là bắt buộc"),
+  createUserAccount: z.boolean().optional(),
 });
 
 // Achievement constants
