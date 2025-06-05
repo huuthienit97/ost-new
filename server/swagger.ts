@@ -684,7 +684,36 @@ const options = {
         },
       },
     },
-    tags: [
+
+    "/api/bee-points/me": {
+      get: {
+        tags: ["BeePoints"],
+        summary: "Get user's current BeePoint balance",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "User's BeePoint balance information",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "integer" },
+                    userId: { type: "integer" },
+                    currentPoints: { type: "integer" },
+                    totalEarned: { type: "integer" },
+                    totalSpent: { type: "integer" },
+                    lastUpdated: { type: "string", format: "date-time" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  tags: [
       { name: '🟢 Public', description: 'API công khai' },
       { name: '🔐 Authentication', description: 'Xác thực' },
       { name: '👥 Users', description: 'Quản lý người dùng hệ thống (🟡 ADMIN)' },
@@ -701,6 +730,9 @@ const options = {
       { name: '📊 Statistics', description: 'Thống kê' },
       { name: '🔑 API Keys', description: 'Quản lý API keys (🟡 ADMIN)' },
       { name: '🌐 External API', description: 'API cho ứng dụng thứ 3' },
+      { name: 'Shop', description: 'Hệ thống đổi thưởng BeePoints' },
+      { name: 'Admin - Shop', description: 'Quản lý sản phẩm và đơn hàng (🟡 ADMIN)' },
+      { name: 'Admin - BeePoints', description: 'Quản lý lưu thông BeePoints (🟡 ADMIN)' },
     ],
     paths: {
       '/api/public/users': {
@@ -2786,7 +2818,7 @@ const options = {
       }
     }
   },
-  apis: [],
+  apis: []
 };
 
 export function setupSwagger(app: Express) {
