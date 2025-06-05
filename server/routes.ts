@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -3140,13 +3140,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SHOP SYSTEM API ENDPOINTS =====
   
-  // Get all shop products
+  // Get all shop products (active only for regular users)
   app.get("/api/shop/products", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const products = await dbStorage.getShopProducts();
       res.json(products);
     } catch (error) {
       console.error("Error fetching shop products:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách sản phẩm" });
+    }
+  });
+
+  // Get all shop products for admin (including inactive)
+  app.get("/api/shop/products-admin", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const products = await db.select().from(shopProducts).orderBy(desc(shopProducts.createdAt));
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching shop products for admin:", error);
       res.status(500).json({ message: "Lỗi lấy danh sách sản phẩm" });
     }
   });
