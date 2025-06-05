@@ -60,10 +60,7 @@ export default function ShopAdmin() {
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: ProductForm) => {
-      return await apiRequest("/api/shop/products", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/shop/products", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -86,10 +83,7 @@ export default function ShopAdmin() {
   // Update product mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ProductForm }) => {
-      return await apiRequest(`/api/shop/products/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest(`/api/shop/products/${id}`, "PUT", data);
     },
     onSuccess: () => {
       toast({
@@ -112,9 +106,7 @@ export default function ShopAdmin() {
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/shop/products/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest(`/api/shop/products/${id}`, "DELETE");
     },
     onSuccess: () => {
       toast({
