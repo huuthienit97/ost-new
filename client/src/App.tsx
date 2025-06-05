@@ -20,6 +20,7 @@ import DivisionsPage from "@/pages/divisions";
 import PositionsPage from "@/pages/positions";
 import MissionsPage from "@/pages/missions";
 import ShopPage from "@/pages/shop";
+import ShopAdminPage from "@/pages/shop-admin";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -54,6 +55,7 @@ function Router() {
           <Route path="/achievements" component={AchievementsPage} />
           <Route path="/missions" component={MissionsPage} />
           <Route path="/shop" component={ShopPage} />
+          <Route path="/shop-admin" component={ShopAdminPage} />
           <Route path="/academic-years" component={AcademicYearsPage} />
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
