@@ -2,7 +2,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import type { Express } from 'express';
 
-const options = {
+const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -239,6 +239,50 @@ const options = {
             }
           }
         },
+        Product: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string' },
+            category: { type: 'string' },
+            beePointsCost: { type: 'integer' },
+            stockQuantity: { type: 'integer' },
+            imageUrl: { type: 'string', nullable: true },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            createdBy: { type: 'integer' }
+          }
+        },
+        Order: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            userId: { type: 'integer' },
+            productId: { type: 'integer' },
+            quantity: { type: 'integer' },
+            totalBeePoints: { type: 'integer' },
+            status: { type: 'string', enum: ['pending', 'confirmed', 'delivered', 'cancelled'] },
+            notes: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                fullName: { type: 'string' },
+                username: { type: 'string' }
+              }
+            },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                category: { type: 'string' }
+              }
+            }
+          }
+        }
       },
     },
 
@@ -2808,6 +2852,257 @@ const options = {
                     properties: {
                       message: { type: 'string' },
                       user: { $ref: '#/components/schemas/User' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/products': {
+        get: {
+          summary: 'Lấy danh sách sản phẩm',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          responses: {
+            200: {
+              description: 'Danh sách sản phẩm',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Product' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo sản phẩm mới (Admin)',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name', 'description', 'category', 'beePointsCost', 'stockQuantity'],
+                  properties: {
+                    name: { type: 'string', description: 'Tên sản phẩm' },
+                    description: { type: 'string', description: 'Mô tả sản phẩm' },
+                    category: { type: 'string', description: 'Danh mục' },
+                    beePointsCost: { type: 'integer', description: 'Chi phí BeePoint' },
+                    stockQuantity: { type: 'integer', description: 'Số lượng tồn kho' },
+                    imageUrl: { type: 'string', description: 'URL hình ảnh' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Tạo sản phẩm thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Product' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/products/{id}': {
+        put: {
+          summary: 'Cập nhật sản phẩm (Admin)',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                    category: { type: 'string' },
+                    beePointsCost: { type: 'integer' },
+                    stockQuantity: { type: 'integer' },
+                    imageUrl: { type: 'string' },
+                    isActive: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật sản phẩm thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Product' }
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa sản phẩm (Admin)',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Xóa sản phẩm thành công'
+            }
+          }
+        }
+      },
+      '/api/shop/purchase': {
+        post: {
+          summary: 'Mua sản phẩm bằng BeePoint',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['productId', 'quantity'],
+                  properties: {
+                    productId: { type: 'integer', description: 'ID sản phẩm' },
+                    quantity: { type: 'integer', description: 'Số lượng' },
+                    notes: { type: 'string', description: 'Ghi chú' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Đặt hàng thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Order' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/orders': {
+        get: {
+          summary: 'Lấy đơn hàng của người dùng',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách đơn hàng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Order' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/orders/all': {
+        get: {
+          summary: 'Lấy tất cả đơn hàng (Admin)',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách tất cả đơn hàng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Order' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/shop/orders/{id}/status': {
+        put: {
+          summary: 'Cập nhật trạng thái đơn hàng (Admin)',
+          tags: ['🛍️ Cửa hàng BeePoint'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['status'],
+                  properties: {
+                    status: { 
+                      type: 'string', 
+                      enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
+                      description: 'Trạng thái đơn hàng'
+                    },
+                    notes: { type: 'string', description: 'Ghi chú' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật trạng thái thành công'
+            }
+          }
+        }
+      },
+      '/api/beepoints/circulation': {
+        get: {
+          summary: 'Thống kê lưu thông BeePoint (Admin)',
+          tags: ['💰 BeePoint'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Thống kê lưu thông BeePoint',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      totalSupply: { type: 'integer', description: 'Tổng cung' },
+                      distributedPoints: { type: 'integer', description: 'Điểm đã phân phối' },
+                      redeemedPoints: { type: 'integer', description: 'Điểm đã đổi thưởng' }
                     }
                   }
                 }
