@@ -431,6 +431,30 @@ export const updateUserProfileSchema = z.object({
   githubUrl: z.string().url("URL GitHub không hợp lệ").optional().or(z.literal("")),
 });
 
+// Mission schemas
+export const insertMissionSchema = createInsertSchema(missions).omit({
+  id: true,
+  currentParticipants: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  tags: z.array(z.string()).default([]),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
+export const insertMissionAssignmentSchema = createInsertSchema(missionAssignments).omit({
+  id: true,
+  assignedDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMissionSubmissionSchema = createInsertSchema(missionSubmissions).omit({
+  id: true,
+  submittedAt: true,
+});
+
 // Types
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type Role = typeof roles.$inferSelect;
@@ -445,6 +469,15 @@ export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Member = typeof members.$inferSelect;
 
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
+
+export type InsertMission = z.infer<typeof insertMissionSchema>;
+export type Mission = typeof missions.$inferSelect;
+
+export type InsertMissionAssignment = z.infer<typeof insertMissionAssignmentSchema>;
+export type MissionAssignment = typeof missionAssignments.$inferSelect;
+
+export type InsertMissionSubmission = z.infer<typeof insertMissionSubmissionSchema>;
+export type MissionSubmission = typeof missionSubmissions.$inferSelect;
 
 // Extended types
 export type UserWithRole = User & {
