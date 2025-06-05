@@ -248,6 +248,57 @@ export const apiKeys = pgTable("api_keys", {
   expiresAt: timestamp("expires_at"), // Optional expiry date
 });
 
+// Missions/Tasks table
+export const missions = pgTable("missions", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'daily', 'weekly', 'monthly', 'special', 'project'
+  type: text("type").notNull(), // 'one_time', 'repeatable'
+  maxParticipants: integer("max_participants"), // null = unlimited
+  currentParticipants: integer("current_participants").default(0).notNull(),
+  beePointsReward: integer("bee_points_reward").default(0).notNull(),
+  requiresPhoto: boolean("requires_photo").default(false).notNull(),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  priority: text("priority").default("medium").notNull(), // 'low', 'medium', 'high', 'urgent'
+  status: text("status").default("active").notNull(), // 'active', 'paused', 'completed', 'cancelled'
+  tags: text("tags").array().default([]),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  updatedBy: integer("updated_by").references(() => users.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Mission Assignments table (many-to-many between users and missions)
+export const missionAssignments = pgTable("mission_assignments", {
+  id: serial("id").primaryKey(),
+  missionId: integer("mission_id").references(() => missions.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  status: text("status").default("assigned").notNull(), // 'assigned', 'in_progress', 'completed', 'submitted', 'rejected'
+  assignedDate: timestamp("assigned_date").defaultNow().notNull(),
+  startedDate: timestamp("started_date"),
+  completedDate: timestamp("completed_date"),
+  submissionNote: text("submission_note"),
+  reviewNote: text("review_note"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  pointsAwarded: integer("points_awarded").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Mission Submissions table (for photo uploads and proof)
+export const missionSubmissions = pgTable("mission_submissions", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").references(() => missionAssignments.id, { onDelete: "cascade" }).notNull(),
+  uploadId: integer("upload_id").references(() => uploads.id, { onDelete: "cascade" }),
+  submissionText: text("submission_text"),
+  submissionData: jsonb("submission_data"), // For additional structured data
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+});
+
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({
   userAchievements: many(userAchievements),
@@ -276,6 +327,49 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
+// Mission relations
+export const missionsRelations = relations(missions, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [missions.createdBy],
+    references: [users.id],
+    relationName: "missionCreatedBy",
+  }),
+  updatedBy: one(users, {
+    fields: [missions.updatedBy],
+    references: [users.id],
+    relationName: "missionUpdatedBy",
+  }),
+  assignments: many(missionAssignments),
+}));
+
+export const missionAssignmentsRelations = relations(missionAssignments, ({ one, many }) => ({
+  mission: one(missions, {
+    fields: [missionAssignments.missionId],
+    references: [missions.id],
+  }),
+  user: one(users, {
+    fields: [missionAssignments.userId],
+    references: [users.id],
+  }),
+  reviewedBy: one(users, {
+    fields: [missionAssignments.reviewedBy],
+    references: [users.id],
+    relationName: "assignmentReviewedBy",
+  }),
+  submissions: many(missionSubmissions),
+}));
+
+export const missionSubmissionsRelations = relations(missionSubmissions, ({ one }) => ({
+  assignment: one(missionAssignments, {
+    fields: [missionSubmissions.assignmentId],
+    references: [missionAssignments.id],
+  }),
+  upload: one(uploads, {
+    fields: [missionSubmissions.uploadId],
+    references: [uploads.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, {
     fields: [users.roleId],
@@ -292,6 +386,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   userAchievements: many(userAchievements),
   awardedAchievements: many(userAchievements, { relationName: "achievementAwardedBy" }),
   createdApiKeys: many(apiKeys),
+  createdMissions: many(missions, { relationName: "missionCreatedBy" }),
+  updatedMissions: many(missions, { relationName: "missionUpdatedBy" }),
+  missionAssignments: many(missionAssignments),
+  reviewedAssignments: many(missionAssignments, { relationName: "assignmentReviewedBy" }),
 }));
 
 // Insert schemas
