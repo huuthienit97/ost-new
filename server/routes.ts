@@ -1147,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       403:
    *         $ref: '#/components/responses/Forbidden'
    */
-  app.post("/api/academic-years", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.post("/api/academic-years", authenticate, authorize([PERMISSIONS.ACADEMIC_YEAR_CREATE]), async (req, res) => {
     try {
       const { name, startDate, endDate, description } = req.body;
       
@@ -1174,7 +1174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/academic-years/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.delete("/api/academic-years/:id", authenticate, authorize([PERMISSIONS.ACADEMIC_YEAR_DELETE]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1276,7 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/divisions", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.post("/api/divisions", authenticate, authorize([PERMISSIONS.DIVISION_CREATE]), async (req, res) => {
     try {
       const { name, description, color, icon } = req.body;
       const [newDivision] = await db
@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.put("/api/divisions/:id", authenticate, authorize([PERMISSIONS.DIVISION_EDIT]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { name, description, color, icon } = req.body;
@@ -1309,7 +1309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.delete("/api/divisions/:id", authenticate, authorize([PERMISSIONS.DIVISION_DELETE]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       

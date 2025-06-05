@@ -415,6 +415,25 @@ export const PERMISSIONS = {
   DEPARTMENT_EDIT: "department:edit",
   DEPARTMENT_DELETE: "department:delete",
   
+  // Division permissions
+  DIVISION_VIEW: "division:view",
+  DIVISION_CREATE: "division:create",
+  DIVISION_EDIT: "division:edit",
+  DIVISION_DELETE: "division:delete",
+  
+  // Position permissions
+  POSITION_VIEW: "position:view",
+  POSITION_CREATE: "position:create",
+  POSITION_EDIT: "position:edit",
+  POSITION_DELETE: "position:delete",
+  
+  // Academic Year permissions
+  ACADEMIC_YEAR_VIEW: "academic_year:view",
+  ACADEMIC_YEAR_CREATE: "academic_year:create",
+  ACADEMIC_YEAR_EDIT: "academic_year:edit",
+  ACADEMIC_YEAR_DELETE: "academic_year:delete",
+  ACADEMIC_YEAR_ACTIVATE: "academic_year:activate",
+  
   // User permissions
   USER_VIEW: "user:view",
   USER_CREATE: "user:create",
@@ -442,6 +461,19 @@ export const PERMISSIONS = {
   ACHIEVEMENT_EDIT: "achievement:edit",
   ACHIEVEMENT_DELETE: "achievement:delete",
   ACHIEVEMENT_AWARD: "achievement:award",
+  
+  // BeePoint permissions
+  BEEPOINT_VIEW: "beepoint:view",
+  BEEPOINT_MANAGE: "beepoint:manage",
+  BEEPOINT_AWARD: "beepoint:award",
+  BEEPOINT_CONFIG: "beepoint:config",
+  BEEPOINT_TRANSACTION_VIEW: "beepoint_transaction:view",
+  
+  // API Key permissions
+  API_KEY_VIEW: "api_key:view",
+  API_KEY_CREATE: "api_key:create",
+  API_KEY_EDIT: "api_key:edit",
+  API_KEY_DELETE: "api_key:delete",
   
   // System permissions
   SYSTEM_ADMIN: "system:admin",
