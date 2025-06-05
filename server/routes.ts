@@ -774,7 +774,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const role = await dbStorage.createRole(validationResult.data);
       res.status(201).json(role);
     } catch (error) {
+      console.error("Error creating role:", error);
       res.status(500).json({ message: "Lỗi tạo vai trò" });
+    }
+  });
+
+  app.put("/api/roles/:id", authenticate, authorize(PERMISSIONS.ROLE_EDIT), async (req, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const validationResult = createRoleSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      const updatedRole = await dbStorage.updateRole(roleId, validationResult.data);
+      
+      if (!updatedRole) {
+        return res.status(404).json({ message: "Không tìm thấy vai trò" });
+      }
+      
+      res.json(updatedRole);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      res.status(500).json({ message: "Lỗi cập nhật vai trò" });
+    }
+  });
+
+  app.delete("/api/roles/:id", authenticate, authorize(PERMISSIONS.ROLE_DELETE), async (req, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      
+      // Check if role exists and is not system protected
+      const existingRole = await dbStorage.getRole(roleId);
+      if (!existingRole) {
+        return res.status(404).json({ message: "Không tìm thấy vai trò" });
+      }
+
+      if (existingRole.isSystem) {
+        return res.status(403).json({ message: "Không thể xóa vai trò hệ thống" });
+      }
+
+      // Check if any users are assigned to this role
+      const users = await dbStorage.getUsersWithRoles();
+      const usersWithRole = users.filter(user => user.roleId === roleId);
+      
+      if (usersWithRole.length > 0) {
+        return res.status(400).json({ 
+          message: `Không thể xóa vai trò vì còn ${usersWithRole.length} người dùng đang sử dụng` 
+        });
+      }
+
+      const deleted = await dbStorage.deleteRole(roleId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy vai trò" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      res.status(500).json({ message: "Lỗi xóa vai trò" });
     }
   });
 
