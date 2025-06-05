@@ -616,12 +616,6 @@ export const assignTaskSchema = z.object({
 
 export const completeTaskSchema = z.object({
   submissionNotes: z.string().optional(),
-  divisionId: z.number().min(1, "Ban là bắt buộc"),
-  positionId: z.number().min(1, "Chức vụ là bắt buộc"),
-  academicYearId: z.number().min(1, "Khóa học là bắt buộc"),
-  memberType: z.enum(["active", "alumni"]),
-  joinDate: z.string().min(1, "Ngày gia nhập là bắt buộc"),
-  createUserAccount: z.boolean().optional(),
 });
 
 // Achievement constants
