@@ -150,6 +150,11 @@ export default function AdminPage() {
     queryKey: ["/api/users"],
   });
 
+  // Fetch permissions dynamically from API
+  const { data: permissionsData } = useQuery({
+    queryKey: ["/api/permissions"],
+  });
+
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: any) => {
@@ -196,6 +201,50 @@ export default function AdminPage() {
     },
   });
 
+  // Update role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      return await apiRequest("PUT", `/api/roles/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Cập nhật vai trò thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+      setIsRoleModalOpen(false);
+      resetRoleForm();
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật vai trò",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/roles/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Xóa vai trò thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa vai trò",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetRoleForm = () => {
     setRoleName("");
     setRoleDisplayName("");
@@ -223,13 +272,43 @@ export default function AdminPage() {
       return;
     }
 
-    createRoleMutation.mutate({
+    const roleData = {
       name: roleName,
       displayName: roleDisplayName,
       description: roleDescription,
       permissions: selectedPermissions,
       isSystem: false,
-    });
+    };
+
+    if (editingRole) {
+      updateRoleMutation.mutate({ id: editingRole.id, data: roleData });
+    } else {
+      createRoleMutation.mutate(roleData);
+    }
+  };
+
+  const handleEditRole = (role: Role) => {
+    setRoleName(role.name);
+    setRoleDisplayName(role.displayName);
+    setRoleDescription(role.description || "");
+    setSelectedPermissions(role.permissions);
+    setEditingRole(role);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleDeleteRole = (role: Role) => {
+    if (role.isSystem) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa vai trò hệ thống",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (confirm(`Bạn có chắc chắn muốn xóa vai trò "${role.displayName}"?`)) {
+      deleteRoleMutation.mutate(role.id);
+    }
   };
 
   const handleCreateUser = () => {
@@ -260,7 +339,8 @@ export default function AdminPage() {
     }
   };
 
-  const permissionGroups = {
+  // Use dynamic permission groups from API, fallback to hardcoded if API not available
+  const permissionGroups = permissionsData?.groupedPermissions || {
     "Thành viên": [
       PERMISSIONS.MEMBER_VIEW,
       PERMISSIONS.MEMBER_CREATE,
@@ -336,6 +416,25 @@ export default function AdminPage() {
     "Hệ thống": [
       PERMISSIONS.SYSTEM_ADMIN,
       PERMISSIONS.STATS_VIEW,
+    ],
+    "Nhiệm vụ": [
+      PERMISSIONS.MISSION_VIEW,
+      PERMISSIONS.MISSION_CREATE,
+      PERMISSIONS.MISSION_EDIT,
+      PERMISSIONS.MISSION_DELETE,
+      PERMISSIONS.MISSION_ASSIGN,
+      PERMISSIONS.MISSION_SUBMIT,
+      PERMISSIONS.MISSION_REVIEW,
+    ],
+    "Cửa hàng": [
+      PERMISSIONS.SHOP_VIEW,
+      PERMISSIONS.SHOP_PURCHASE,
+      PERMISSIONS.SHOP_MANAGE,
+      PERMISSIONS.SHOP_PRODUCT_CREATE,
+      PERMISSIONS.SHOP_PRODUCT_EDIT,
+      PERMISSIONS.SHOP_PRODUCT_DELETE,
+      PERMISSIONS.SHOP_ORDER_VIEW,
+      PERMISSIONS.SHOP_ORDER_MANAGE,
     ],
   };
 
@@ -425,6 +524,7 @@ export default function AdminPage() {
           <TabsList>
             <TabsTrigger value="roles">Vai trò</TabsTrigger>
             <TabsTrigger value="users">Người dùng</TabsTrigger>
+            <TabsTrigger value="beepoint">Cấu hình BeePoint</TabsTrigger>
           </TabsList>
 
           <TabsContent value="roles">
@@ -534,6 +634,28 @@ export default function AdminPage() {
                             </Badge>
                           )}
                         </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditRole(role)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Sửa
+                        </Button>
+                        {!role.isSystem && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDeleteRole(role)}
+                            className="flex-1 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Xóa
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
