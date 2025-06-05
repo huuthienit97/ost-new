@@ -48,6 +48,7 @@ function Router() {
         <>
           <Route path="/" component={HomePage} />
           <Route path="/members" component={MembersPage} />
+          <Route path="/admin" component={AdminPage} />
           <Route path="/roles" component={AdminPage} />
           <Route path="/api-keys" component={ApiKeysPage} />
           <Route path="/settings" component={SettingsPage} />
