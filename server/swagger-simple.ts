@@ -664,6 +664,294 @@ const swaggerDefinition = {
           }
         }
       }
+    },
+    '/api/auth/check-init': {
+      get: {
+        summary: 'Check if system needs initialization',
+        tags: ['🟢 Public'],
+        responses: {
+          '200': {
+            description: 'System initialization status',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    needsInit: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/auth/init': {
+      post: {
+        summary: 'Initialize first admin account',
+        tags: ['🟢 Public'],
+        responses: {
+          '200': {
+            description: 'Admin account created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    username: { type: 'string' },
+                    defaultPassword: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/users': {
+      get: {
+        summary: 'Get all users',
+        tags: ['👥 Users'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of users',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/User' }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Create new user',
+        tags: ['👥 Users'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'password', 'email', 'fullName'],
+                properties: {
+                  username: { type: 'string' },
+                  password: { type: 'string' },
+                  email: { type: 'string' },
+                  fullName: { type: 'string' },
+                  roleId: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'User created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/users/{id}': {
+      put: {
+        summary: 'Update user',
+        tags: ['👥 Users'],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  username: { type: 'string' },
+                  email: { type: 'string' },
+                  fullName: { type: 'string' },
+                  roleId: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'User updated successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        summary: 'Delete user',
+        tags: ['👥 Users'],
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' }
+          }
+        ],
+        responses: {
+          '204': {
+            description: 'User deleted successfully'
+          }
+        }
+      }
+    },
+    '/api/roles': {
+      get: {
+        summary: 'Get all roles',
+        tags: ['🔒 Roles'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of roles',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer' },
+                      name: { type: 'string' },
+                      description: { type: 'string' },
+                      permissions: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/statistics': {
+      get: {
+        summary: 'Get system statistics',
+        tags: ['📊 Statistics'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'System statistics',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalMembers: { type: 'integer' },
+                    totalUsers: { type: 'integer' },
+                    totalMissions: { type: 'integer' },
+                    completedMissions: { type: 'integer' },
+                    totalBeePoints: { type: 'integer' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/api-keys': {
+      get: {
+        summary: 'Get all API keys',
+        tags: ['🔑 API Keys'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of API keys',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer' },
+                      name: { type: 'string' },
+                      permissions: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      createdAt: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Create new API key',
+        tags: ['🔑 API Keys'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'permissions'],
+                properties: {
+                  name: { type: 'string' },
+                  permissions: {
+                    type: 'array',
+                    items: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'API key created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    key: { type: 'string' },
+                    permissions: {
+                      type: 'array',
+                      items: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 };

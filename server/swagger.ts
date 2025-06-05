@@ -3126,7 +3126,7 @@ export function setupSwagger(app: Express) {
     // Update server URL dynamically
     const swaggerOptions = {
       definition: {
-        ...swaggerDefinition.definition,
+        ...swaggerOptions.definition,
         servers: [
           {
             url: serverUrl,
@@ -3139,7 +3139,7 @@ export function setupSwagger(app: Express) {
     next();
   });
 
-  const specs = swaggerJsdoc(options);
+  const specs = swaggerJsdoc(swaggerOptions);
 
   // Serve Swagger UI
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
