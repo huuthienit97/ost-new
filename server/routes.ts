@@ -1338,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dynamic-stats", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
+  app.post("/api/dynamic-stats", authenticate, authorize([PERMISSIONS.STATS_VIEW]), async (req, res) => {
     try {
       const { category, type, name, description, value, metadata, isPublic } = req.body;
       const [newStat] = await db
@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bee-points/add", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/bee-points/add", authenticate, authorize([PERMISSIONS.BEEPOINT_AWARD]), async (req: AuthenticatedRequest, res) => {
     try {
       const { userId, amount, type, description } = req.body;
       
@@ -1672,7 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset password endpoint for admin
-  app.post("/api/users/:id/reset-password", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/users/:id/reset-password", authenticate, authorize([PERMISSIONS.USER_EDIT]), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
       const user = await dbStorage.getUser(userId);
@@ -1779,7 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings management routes
-  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const settings = await dbStorage.getAllSettings();
       res.json(settings);
@@ -1789,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/settings/:key", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const setting = await dbStorage.getSetting(req.params.key);
       if (!setting) {
@@ -1802,7 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.put("/api/settings/:key", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req: AuthenticatedRequest, res) => {
     try {
       const { value, description } = req.body;
       const setting = await dbStorage.updateSetting(req.params.key, value, description);
@@ -1816,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req: AuthenticatedRequest, res) => {
     try {
       const { key, value, description } = req.body;
       if (!key) {
@@ -1830,7 +1830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req: AuthenticatedRequest, res) => {
     try {
       await dbStorage.deleteSetting(req.params.key);
       res.json({ message: "Xóa cấu hình thành công" });
@@ -1860,7 +1860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/beepoint/config", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.put("/api/beepoint/config", authenticate, authorize([PERMISSIONS.BEEPOINT_CONFIG]), async (req: AuthenticatedRequest, res) => {
     try {
       const { totalSupply, exchangeRate, welcomeBonus, activityMultiplier } = req.body;
 
