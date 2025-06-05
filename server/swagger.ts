@@ -1061,6 +1061,265 @@ const options = {
           }
         }
       },
+
+      // ===== SHOP CATEGORY MANAGEMENT API =====
+      '/api/shop/categories': {
+        get: {
+          summary: 'Lấy danh sách danh mục sản phẩm',
+          description: 'Trả về danh sách tất cả danh mục sản phẩm đang hoạt động',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách danh mục sản phẩm',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                        icon: { type: 'string' },
+                        sortOrder: { type: 'integer' },
+                        isActive: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập (🔒 shop:view)' },
+            403: { description: 'Không có quyền xem cửa hàng' }
+          }
+        },
+        post: {
+          summary: 'Tạo danh mục sản phẩm mới',
+          description: 'Tạo danh mục sản phẩm mới (🔒 shop:manage)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string', description: 'Tên danh mục' },
+                    description: { type: 'string', description: 'Mô tả danh mục' },
+                    icon: { type: 'string', description: 'Tên icon cho UI' },
+                    sortOrder: { type: 'integer', description: 'Thứ tự sắp xếp' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: { description: 'Tạo danh mục thành công' },
+            400: { description: 'Dữ liệu không hợp lệ' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng (🔒 shop:manage)' }
+          }
+        }
+      },
+      '/api/shop/categories-admin': {
+        get: {
+          summary: 'Lấy tất cả danh mục (Admin)',
+          description: 'Trả về danh sách tất cả danh mục bao gồm cả không hoạt động (🔒 shop:manage)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Danh sách tất cả danh mục',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                        icon: { type: 'string' },
+                        sortOrder: { type: 'integer' },
+                        isActive: { type: 'boolean' },
+                        createdBy: { type: 'integer' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng (🔒 shop:manage)' }
+          }
+        }
+      },
+      '/api/shop/categories/{id}': {
+        put: {
+          summary: 'Cập nhật danh mục sản phẩm',
+          description: 'Cập nhật thông tin danh mục sản phẩm (🔒 shop:manage)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID danh mục'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                    icon: { type: 'string' },
+                    sortOrder: { type: 'integer' },
+                    isActive: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: { description: 'Cập nhật danh mục thành công' },
+            404: { description: 'Không tìm thấy danh mục' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng (🔒 shop:manage)' }
+          }
+        },
+        delete: {
+          summary: 'Xóa danh mục sản phẩm',
+          description: 'Xóa danh mục sản phẩm (không thể xóa nếu có sản phẩm) (🔒 shop:manage)',
+          tags: ['🛒 Shop'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'ID danh mục'
+            }
+          ],
+          responses: {
+            204: { description: 'Xóa danh mục thành công' },
+            400: { description: 'Không thể xóa danh mục có sản phẩm' },
+            404: { description: 'Không tìm thấy danh mục' },
+            401: { description: 'Chưa đăng nhập' },
+            403: { description: 'Không có quyền quản lý cửa hàng (🔒 shop:manage)' }
+          }
+        }
+      },
+
+      // ===== PUBLIC API =====
+      '/api/public/users': {
+        get: {
+          summary: 'Lấy danh sách người dùng công khai',
+          description: 'API công khai để lấy danh sách người dùng cùng thông tin chức vụ và ban',
+          tags: ['🟢 Public'],
+          responses: {
+            200: {
+              description: 'Danh sách người dùng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        fullName: { type: 'string' },
+                        email: { type: 'string' },
+                        role: {
+                          type: 'object',
+                          properties: {
+                            displayName: { type: 'string' },
+                            level: { type: 'string' }
+                          }
+                        },
+                        department: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            description: { type: 'string' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/public/departments': {
+        get: {
+          summary: 'Lấy danh sách ban/phòng công khai',
+          description: 'API công khai để lấy danh sách tất cả ban/phòng',
+          tags: ['🟢 Public'],
+          responses: {
+            200: {
+              description: 'Danh sách ban/phòng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string' },
+                        isActive: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/public/statistics': {
+        get: {
+          summary: 'Thống kê tổng quan công khai',
+          description: 'API công khai để lấy thống kê tổng quan hệ thống',
+          tags: ['🟢 Public'],
+          responses: {
+            200: {
+              description: 'Thống kê hệ thống',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      totalMembers: { type: 'integer', description: 'Tổng số thành viên' },
+                      totalDepartments: { type: 'integer', description: 'Tổng số ban/phòng' },
+                      totalBeePointsDistributed: { type: 'integer', description: 'Tổng BeePoints đã phát' },
+                      totalAchievements: { type: 'integer', description: 'Tổng số thành tích' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
       '/api/auth/login': {
         post: {
           summary: 'Đăng nhập hệ thống',

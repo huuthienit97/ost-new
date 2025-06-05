@@ -569,6 +569,12 @@ export type InsertMissionSubmission = z.infer<typeof insertMissionSubmissionSche
 export type MissionSubmission = typeof missionSubmissions.$inferSelect;
 
 // Shop system schemas
+export const insertShopCategorySchema = createInsertSchema(shopCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertShopProductSchema = createInsertSchema(shopProducts).omit({
   id: true,
   createdAt: true,
@@ -582,6 +588,9 @@ export const insertShopOrderSchema = createInsertSchema(shopOrders).omit({
 });
 
 // Shop system types
+export type InsertShopCategory = z.infer<typeof insertShopCategorySchema>;
+export type ShopCategory = typeof shopCategories.$inferSelect;
+
 export type InsertShopProduct = z.infer<typeof insertShopProductSchema>;
 export type ShopProduct = typeof shopProducts.$inferSelect;
 

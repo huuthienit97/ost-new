@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -1592,6 +1592,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting setting:", error);
       res.status(500).json({ message: "Lỗi khi xóa cài đặt" });
+    }
+  });
+
+  // ===== PUBLIC API ROUTES =====
+  
+  // Public users API
+  app.get("/api/public/users", async (req, res) => {
+    try {
+      const publicUsers = await db.select({
+        id: users.id,
+        fullName: users.fullName,
+        email: users.email,
+        role: {
+          displayName: roles.displayName,
+          level: roles.level
+        }
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.isActive, true));
+
+      res.json(publicUsers);
+    } catch (error) {
+      console.error("Error fetching public users:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách người dùng" });
+    }
+  });
+
+  // Public departments API
+  app.get("/api/public/departments", async (req, res) => {
+    try {
+      const publicDepartments = await db.select({
+        id: departments.id,
+        name: departments.name,
+        description: departments.description,
+        isActive: departments.isActive
+      })
+      .from(departments)
+      .where(eq(departments.isActive, true));
+
+      res.json(publicDepartments);
+    } catch (error) {
+      console.error("Error fetching public departments:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách ban/phòng" });
+    }
+  });
+
+  // Public statistics API
+  app.get("/api/public/statistics", async (req, res) => {
+    try {
+      const [
+        totalMembersResult,
+        totalDepartmentsResult,
+        totalBeePointsResult,
+        totalAchievementsResult
+      ] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(members).where(eq(members.isActive, true)),
+        db.select({ count: sql<number>`count(*)` }).from(departments).where(eq(departments.isActive, true)),
+        db.select({ sum: sql<number>`sum(${pointTransactions.amount})` }).from(pointTransactions).where(eq(pointTransactions.type, 'earned')),
+        db.select({ count: sql<number>`count(*)` }).from(achievements).where(eq(achievements.isActive, true))
+      ]);
+
+      const publicStats = {
+        totalMembers: totalMembersResult[0]?.count || 0,
+        totalDepartments: totalDepartmentsResult[0]?.count || 0,
+        totalBeePointsDistributed: totalBeePointsResult[0]?.sum || 0,
+        totalAchievements: totalAchievementsResult[0]?.count || 0
+      };
+
+      res.json(publicStats);
+    } catch (error) {
+      console.error("Error fetching public statistics:", error);
+      res.status(500).json({ message: "Lỗi lấy thống kê" });
     }
   });
 
