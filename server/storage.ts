@@ -534,12 +534,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserBeePoints(userId: number): Promise<BeePoint> {
+    // Get welcome bonus from dynamic configuration
+    const welcomeBonusSetting = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, 'welcomeBonus'))
+      .limit(1);
+    
+    const welcomeBonus = welcomeBonusSetting[0]?.value ? parseInt(welcomeBonusSetting[0].value) : 100;
+    
     const [beePoint] = await db
       .insert(beePoints)
       .values({
         userId,
-        currentPoints: 50, // Welcome bonus
-        totalEarned: 50,
+        currentPoints: welcomeBonus,
+        totalEarned: welcomeBonus,
         totalSpent: 0,
       })
       .returning();

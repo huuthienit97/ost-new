@@ -179,6 +179,12 @@ export default function AdminPage() {
     queryKey: ["/api/beepoint/stats"],
   });
 
+  // Fetch all users for BeePoint transaction management
+  const { data: allUsers } = useQuery({
+    queryKey: ["/api/users/all"],
+    select: (data: any) => data?.users || []
+  });
+
   // BeePoint configuration mutation
   const updateBeePointConfigMutation = useMutation({
     mutationFn: async (configData: any) => {
