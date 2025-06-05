@@ -11,7 +11,11 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000',
+      url: 'https://api.ost.edu.vn',
+      description: 'Production Server'
+    },
+    {
+      url: 'http://localhost:5000',
       description: 'Development Server'
     }
   ],
