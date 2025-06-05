@@ -733,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/users/:id", authenticate, authorize(PERMISSIONS.USER_EDIT), async (req, res) => {
+  app.put("/api/users/:id", authenticate, authorize("admin"), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { roleId, isActive } = req.body;
@@ -760,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all departments
-  app.get("/api/departments", authenticate, authorize(PERMISSIONS.DEPARTMENT_VIEW), async (req, res) => {
+  app.get("/api/departments", authenticate, authorize("member"), async (req, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all members with department info
-  app.get("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
     try {
       const { type, department, position, search } = req.query;
       
@@ -879,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new member
-  app.post("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_CREATE), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/members", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createMemberSchema.safeParse(req.body);
       
@@ -1493,7 +1493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload API
-  app.get("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_VIEW]), async (req, res) => {
+  app.get("/api/uploads", authenticate, authorize("member"), async (req, res) => {
     try {
       const uploads = await dbStorage.getUploads();
       res.json(uploads);
@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_CREATE]), upload.single('file'), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/uploads", authenticate, authorize("manager"), upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Vui lòng chọn file để upload" });
@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/uploads/:id", authenticate, authorize([PERMISSIONS.UPLOAD_DELETE]), async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/uploads/:id", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const upload = await dbStorage.getUpload(id);
@@ -1703,7 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user account info for member
-  app.get("/api/members/:id/account", authenticate, authorize([PERMISSIONS.MEMBER_VIEW]), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members/:id/account", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
     try {
       const memberId = parseInt(req.params.id);
       const member = await dbStorage.getMember(memberId);
@@ -2150,7 +2150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get users for awarding achievements
-  app.get("/api/members-with-accounts", authenticate, authorize([PERMISSIONS.ACHIEVEMENT_AWARD]), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members-with-accounts", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
     try {
       const usersForAwards = await db
         .select({
