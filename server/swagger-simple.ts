@@ -65,6 +65,82 @@ const swaggerDefinition = {
           type: { type: 'string' },
           description: { type: 'string' },
           createdAt: { type: 'string', format: 'date-time' }
+        },
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            username: { type: 'string' },
+            email: { type: 'string' },
+            fullName: { type: 'string' },
+            roleId: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Member: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            fullName: { type: 'string' },
+            class: { type: 'string' },
+            divisionId: { type: 'integer' },
+            positionId: { type: 'integer' },
+            academicYearId: { type: 'integer' },
+            email: { type: 'string', nullable: true },
+            phone: { type: 'string', nullable: true },
+            memberType: { type: 'string' },
+            joinDate: { type: 'string', format: 'date' },
+            notes: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Division: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Position: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            level: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Mission: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            beePointsReward: { type: 'integer' },
+            maxParticipants: { type: 'integer', nullable: true },
+            currentParticipants: { type: 'integer' },
+            startDate: { type: 'string', format: 'date-time', nullable: true },
+            endDate: { type: 'string', format: 'date-time', nullable: true },
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+            status: { type: 'string', enum: ['active', 'paused', 'completed', 'cancelled'] },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Achievement: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            description: { type: 'string' },
+            beePointsReward: { type: 'integer' },
+            type: { type: 'string' },
+            criteria: { type: 'object' },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
         }
       }
     }
@@ -337,6 +413,251 @@ const swaggerDefinition = {
                     distributedPoints: { type: 'integer' },
                     redeemedPoints: { type: 'integer' }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/auth/login': {
+      post: {
+        summary: 'User login',
+        tags: ['🔐 Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'password'],
+                properties: {
+                  username: { type: 'string' },
+                  password: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Login successful',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    token: { type: 'string' },
+                    user: { $ref: '#/components/schemas/User' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/auth/me': {
+      get: {
+        summary: 'Get current user info',
+        tags: ['🔐 Authentication'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Current user information',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/User' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/members': {
+      get: {
+        summary: 'Get all members',
+        tags: ['👥 Members'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of members',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Member' }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Create new member',
+        tags: ['👥 Members'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['fullName', 'class', 'divisionId', 'positionId', 'academicYearId'],
+                properties: {
+                  fullName: { type: 'string' },
+                  class: { type: 'string' },
+                  divisionId: { type: 'integer' },
+                  positionId: { type: 'integer' },
+                  academicYearId: { type: 'integer' },
+                  email: { type: 'string' },
+                  phone: { type: 'string' },
+                  notes: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Member created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Member' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/divisions': {
+      get: {
+        summary: 'Get all divisions',
+        tags: ['🏢 Organization'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of divisions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Division' }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/positions': {
+      get: {
+        summary: 'Get all positions',
+        tags: ['🏢 Organization'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of positions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Position' }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/missions': {
+      get: {
+        summary: 'Get all missions',
+        tags: ['🎯 Missions'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of missions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Mission' }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Create new mission',
+        tags: ['🎯 Missions'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'description', 'beePointsReward'],
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  beePointsReward: { type: 'integer' },
+                  maxParticipants: { type: 'integer' },
+                  startDate: { type: 'string', format: 'date-time' },
+                  endDate: { type: 'string', format: 'date-time' },
+                  priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Mission created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Mission' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/achievements': {
+      get: {
+        summary: 'Get all achievements',
+        tags: ['🏆 Achievements'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of achievements',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Achievement' }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/beepoints/transactions': {
+      get: {
+        summary: 'Get BeePoint transactions',
+        tags: ['💰 BeePoints'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of BeePoint transactions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/BeePointTransaction' }
                 }
               }
             }
