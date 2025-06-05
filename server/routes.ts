@@ -567,6 +567,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== PERMISSION MANAGEMENT API =====
+  // Get all available permissions in the system
+  app.get("/api/permissions", authenticate, authorize(PERMISSIONS.ROLE_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const allPermissions = Object.values(PERMISSIONS);
+      const permissionGroups: Record<string, string[]> = {};
+      
+      // Group permissions by category
+      allPermissions.forEach(permission => {
+        const [category] = permission.split(':');
+        if (!permissionGroups[category]) {
+          permissionGroups[category] = [];
+        }
+        permissionGroups[category].push(permission);
+      });
+
+      res.json({
+        total: allPermissions.length,
+        permissions: allPermissions,
+        groupedPermissions: permissionGroups
+      });
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách permissions" });
+    }
+  });
+
+  // Get permissions for a specific role
+  app.get("/api/roles/:id/permissions", authenticate, authorize(PERMISSIONS.ROLE_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const role = await dbStorage.getRole(roleId);
+      
+      if (!role) {
+        return res.status(404).json({ message: "Role không tồn tại" });
+      }
+
+      const allPermissions = Object.values(PERMISSIONS);
+      
+      res.json({
+        role: {
+          id: role.id,
+          name: role.name,
+          displayName: role.displayName,
+          permissions: role.permissions
+        },
+        availablePermissions: allPermissions,
+        permissionsCount: role.permissions.length
+      });
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+      res.status(500).json({ message: "Lỗi lấy permissions của role" });
+    }
+  });
+
+  // Update permissions for a specific role
+  app.put("/api/roles/:id/permissions", authenticate, authorize(PERMISSIONS.ROLE_EDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const { permissions } = req.body;
+
+      if (!Array.isArray(permissions)) {
+        return res.status(400).json({ message: "Permissions phải là array" });
+      }
+
+      // Validate all permissions exist
+      const validPermissions = Object.values(PERMISSIONS);
+      const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+      
+      if (invalidPermissions.length > 0) {
+        return res.status(400).json({ 
+          message: "Permissions không hợp lệ", 
+          invalidPermissions 
+        });
+      }
+
+      // Check if role exists and is not system protected
+      const existingRole = await dbStorage.getRole(roleId);
+      if (!existingRole) {
+        return res.status(404).json({ message: "Role không tồn tại" });
+      }
+
+      if (existingRole.isSystem && !req.user!.permissions.includes(PERMISSIONS.SYSTEM_ADMIN)) {
+        return res.status(403).json({ message: "Không thể sửa đổi system role" });
+      }
+
+      const updatedRole = await dbStorage.updateRole(roleId, { permissions });
+      
+      if (!updatedRole) {
+        return res.status(404).json({ message: "Cập nhật thất bại" });
+      }
+
+      res.json({
+        message: "Cập nhật permissions thành công",
+        role: updatedRole,
+        changedPermissions: {
+          added: permissions.filter(p => !existingRole.permissions.includes(p)),
+          removed: existingRole.permissions.filter(p => !permissions.includes(p))
+        }
+      });
+    } catch (error) {
+      console.error("Error updating role permissions:", error);
+      res.status(500).json({ message: "Lỗi cập nhật permissions" });
+    }
+  });
+
   app.get("/api/auth/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userWithRole = await dbStorage.getUserWithRole(req.user!.id);
