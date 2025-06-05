@@ -539,7 +539,7 @@ export default function AdminPage() {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Tạo vai trò mới</DialogTitle>
+                    <DialogTitle>{editingRole ? "Chỉnh sửa vai trò" : "Tạo vai trò mới"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
@@ -770,6 +770,154 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="beepoint">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Cấu hình BeePoint</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Cài đặt điểm thưởng
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Điểm thưởng khi đăng ký</Label>
+                      <Input type="number" defaultValue="50" placeholder="50" />
+                    </div>
+                    <div>
+                      <Label>Điểm thưởng hoàn thành nhiệm vụ</Label>
+                      <Input type="number" defaultValue="10" placeholder="10" />
+                    </div>
+                    <div>
+                      <Label>Điểm thưởng tham gia sự kiện</Label>
+                      <Input type="number" defaultValue="20" placeholder="20" />
+                    </div>
+                    <Button>Lưu cài đặt</Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      Thống kê BeePoint
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-sm">
+                      <span className="font-medium">Tổng điểm đã phát:</span> 2,450 BeePoint
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Tổng điểm đã tiêu:</span> 890 BeePoint
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Người dùng hoạt động:</span> 12 người
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Giao dịch trong tháng:</span> 45 giao dịch
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Quản lý giao dịch
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Người dùng</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn người dùng" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users?.map((user) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Loại giao dịch</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn loại" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="award">Trao thưởng</SelectItem>
+                          <SelectItem value="penalty">Phạt</SelectItem>
+                          <SelectItem value="bonus">Thưởng</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Số điểm</Label>
+                      <Input type="number" placeholder="Nhập số điểm" />
+                    </div>
+                    <div>
+                      <Label>Mô tả</Label>
+                      <Textarea placeholder="Mô tả lý do..." />
+                    </div>
+                    <Button className="w-full">Thực hiện giao dịch</Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Lịch sử giao dịch gần đây
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <div>
+                          <p className="font-medium">Nguyễn Văn A</p>
+                          <p className="text-sm text-gray-600">Hoàn thành nhiệm vụ</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-green-600">+15 BP</p>
+                          <p className="text-xs text-gray-500">2 giờ trước</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <div>
+                          <p className="font-medium">Trần Thị B</p>
+                          <p className="text-sm text-gray-600">Mua sản phẩm</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-red-600">-50 BP</p>
+                          <p className="text-xs text-gray-500">5 giờ trước</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <div>
+                          <p className="font-medium">Lê Văn C</p>
+                          <p className="text-sm text-gray-600">Tham gia sự kiện</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-green-600">+20 BP</p>
+                          <p className="text-xs text-gray-500">1 ngày trước</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
