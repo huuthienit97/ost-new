@@ -648,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Role management routes
-  app.get("/api/roles", authenticate, authorize("member"), async (req, res) => {
+  app.get("/api/roles", authenticate, authorize(PERMISSIONS.ROLE_VIEW), async (req, res) => {
     try {
       const roles = await dbStorage.getRoles();
       res.json(roles);
@@ -657,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/roles", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/roles", authenticate, authorize(PERMISSIONS.ROLE_CREATE), async (req, res) => {
     try {
       const validationResult = createRoleSchema.safeParse(req.body);
       
@@ -676,7 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
-  app.get("/api/users", authenticate, authorize("manager"), async (req, res) => {
+  app.get("/api/users", authenticate, authorize(PERMISSIONS.USER_VIEW), async (req, res) => {
     try {
       const users = await dbStorage.getUsersWithRoles();
       // Remove password hashes from response
@@ -690,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/users", authenticate, authorize(PERMISSIONS.USER_CREATE), async (req, res) => {
     try {
       const validationResult = createUserSchema.safeParse(req.body);
       
@@ -733,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/users/:id", authenticate, authorize("admin"), async (req, res) => {
+  app.put("/api/users/:id", authenticate, authorize(PERMISSIONS.USER_EDIT), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { roleId, isActive } = req.body;
@@ -760,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all departments
-  app.get("/api/departments", authenticate, authorize("member"), async (req, res) => {
+  app.get("/api/departments", authenticate, authorize(PERMISSIONS.DEPARTMENT_VIEW), async (req, res) => {
     try {
       const departments = await dbStorage.getDepartments();
       res.json(departments);
@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all members with department info
-  app.get("/api/members", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const { type, department, position, search } = req.query;
       
@@ -879,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new member
-  app.post("/api/members", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/members", authenticate, authorize(PERMISSIONS.MEMBER_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createMemberSchema.safeParse(req.body);
       
@@ -1147,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       403:
    *         $ref: '#/components/responses/Forbidden'
    */
-  app.post("/api/academic-years", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/academic-years", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const { name, startDate, endDate, description } = req.body;
       
@@ -1174,7 +1174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/academic-years/:id", authenticate, authorize("admin"), async (req, res) => {
+  app.delete("/api/academic-years/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1276,7 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/divisions", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/divisions", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const { name, description, color, icon } = req.body;
       const [newDivision] = await db
@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/divisions/:id", authenticate, authorize("admin"), async (req, res) => {
+  app.put("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { name, description, color, icon } = req.body;
@@ -1309,7 +1309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/divisions/:id", authenticate, authorize("admin"), async (req, res) => {
+  app.delete("/api/divisions/:id", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1338,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dynamic-stats", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/dynamic-stats", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req, res) => {
     try {
       const { category, type, name, description, value, metadata, isPublic } = req.body;
       const [newStat] = await db
@@ -1453,7 +1453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings API
-  app.get("/api/settings", authenticate, authorize("member"), async (req, res) => {
+  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_VIEW]), async (req, res) => {
     try {
       const settings = await dbStorage.getSettings();
       res.json(settings);
@@ -1463,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings", authenticate, authorize("admin"), async (req, res) => {
+  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req, res) => {
     try {
       const { key, value, description } = req.body;
       if (!key || value === undefined) {
@@ -1478,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/settings/:key", authenticate, authorize("admin"), async (req, res) => {
+  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SETTINGS_EDIT]), async (req, res) => {
     try {
       const { key } = req.params;
       const deleted = await dbStorage.deleteSetting(key);
@@ -1493,7 +1493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload API
-  app.get("/api/uploads", authenticate, authorize("member"), async (req, res) => {
+  app.get("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_VIEW]), async (req, res) => {
     try {
       const uploads = await dbStorage.getUploads();
       res.json(uploads);
@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/uploads", authenticate, authorize("manager"), upload.single('file'), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/uploads", authenticate, authorize([PERMISSIONS.UPLOAD_CREATE]), upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Vui lòng chọn file để upload" });
@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/uploads/:id", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/uploads/:id", authenticate, authorize([PERMISSIONS.UPLOAD_DELETE]), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const upload = await dbStorage.getUpload(id);
@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bee-points/add", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/bee-points/add", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const { userId, amount, type, description } = req.body;
       
@@ -1672,7 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset password endpoint for admin
-  app.post("/api/users/:id/reset-password", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/users/:id/reset-password", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
       const user = await dbStorage.getUser(userId);
@@ -1703,7 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user account info for member
-  app.get("/api/members/:id/account", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members/:id/account", authenticate, authorize([PERMISSIONS.MEMBER_VIEW]), async (req: AuthenticatedRequest, res) => {
     try {
       const memberId = parseInt(req.params.id);
       const member = await dbStorage.getMember(memberId);
@@ -1779,7 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings management routes
-  app.get("/api/settings", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const settings = await dbStorage.getAllSettings();
       res.json(settings);
@@ -1789,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/settings/:key", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const setting = await dbStorage.getSetting(req.params.key);
       if (!setting) {
@@ -1802,7 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/settings/:key", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.put("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const { value, description } = req.body;
       const setting = await dbStorage.updateSetting(req.params.key, value, description);
@@ -1816,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/settings", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const { key, value, description } = req.body;
       if (!key) {
@@ -1830,7 +1830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/settings/:key", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/settings/:key", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       await dbStorage.deleteSetting(req.params.key);
       res.json({ message: "Xóa cấu hình thành công" });
@@ -1860,7 +1860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/beepoint/config", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.put("/api/beepoint/config", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const { totalSupply, exchangeRate, welcomeBonus, activityMultiplier } = req.body;
 
@@ -1885,7 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize default BeePoint settings if not exists
-  app.post("/api/beepoint/init", authenticate, authorize("admin"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/beepoint/init", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
     try {
       const defaultSettings = [
         { key: "beepoint_total_supply", value: "1000000", description: "Tổng cung BeePoint trong hệ thống" },
@@ -1961,7 +1961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.get("/api/achievements", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievements).where(eq(achievements.isActive, true));
       res.json(achievementsList);
@@ -1999,7 +1999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post("/api/achievements", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createAchievementSchema.safeParse(req.body);
       
@@ -2056,7 +2056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               $ref: '#/components/schemas/Error'
    */
   // Award achievement to user
-  app.post("/api/achievements/award", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/achievements/award", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_AWARD), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = awardAchievementSchema.safeParse(req.body);
       
@@ -2126,7 +2126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user achievements
-  app.get("/api/users/:userId/achievements", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/users/:userId/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.userId);
       
@@ -2150,7 +2150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get users for awarding achievements
-  app.get("/api/members-with-accounts", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/members-with-accounts", authenticate, authorize([PERMISSIONS.ACHIEVEMENT_AWARD]), async (req: AuthenticatedRequest, res) => {
     try {
       const usersForAwards = await db
         .select({

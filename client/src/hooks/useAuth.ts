@@ -17,20 +17,10 @@ export function useAuth() {
     window.location.reload();
   };
 
-  const hasPermission = (requiredRole: string): boolean => {
+  const hasPermission = (permission: string): boolean => {
     if (!user?.user?.role?.permissions) return false;
-    
-    const userRole = user.user.role.permissions[0]; // Single role system
-    
-    // Role hierarchy: admin > manager > member
-    const roleHierarchy: { [key: string]: string[] } = {
-      'admin': ['admin', 'manager', 'member'],
-      'manager': ['manager', 'member'],
-      'member': ['member']
-    };
-    
-    const allowedRoles = roleHierarchy[userRole] || [];
-    return allowedRoles.includes(requiredRole);
+    return user.user.role.permissions.includes(permission) || 
+           user.user.role.permissions.includes(PERMISSIONS.SYSTEM_ADMIN);
   };
 
   return {

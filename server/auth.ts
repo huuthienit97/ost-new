@@ -90,26 +90,25 @@ export async function authenticate(req: AuthenticatedRequest, res: Response, nex
   }
 }
 
-// Authorization middleware - Simplified 3-role system
-export function authorize(requiredRole: string) {
+// Authorization middleware
+export function authorize(requiredPermissions: string | string[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ message: "Chưa đăng nhập" });
     }
 
+    const permissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
     const userPermissions = req.user.permissions || [];
-    const userRole = userPermissions[0]; // Single role system
 
-    // Role hierarchy: admin > manager > member
-    const roleHierarchy: { [key: string]: string[] } = {
-      'admin': ['admin', 'manager', 'member'],
-      'manager': ['manager', 'member'],
-      'member': ['member']
-    };
+    // Super admin has all permissions
+    if (userPermissions.includes(PERMISSIONS.SYSTEM_ADMIN)) {
+      return next();
+    }
 
-    const allowedRoles = roleHierarchy[userRole] || [];
-    
-    if (!allowedRoles.includes(requiredRole)) {
+    // Check if user has at least one of the required permissions
+    const hasPermission = permissions.some(permission => userPermissions.includes(permission));
+
+    if (!hasPermission) {
       return res.status(403).json({ message: "Không có quyền thực hiện hành động này" });
     }
 
