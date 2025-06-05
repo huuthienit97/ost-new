@@ -519,6 +519,63 @@ const options = {
             }
           }
         },
+        ShopProduct: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Áo thun CLB Sáng tạo' },
+            description: { type: 'string', example: 'Áo thun chất lượng cao với logo CLB' },
+            beePointsCost: { type: 'integer', example: 50 },
+            category: { type: 'string', example: 'fashion' },
+            imageUrl: { type: 'string', example: 'https://example.com/product.jpg' },
+            stockQuantity: { type: 'integer', example: 100 },
+            isActive: { type: 'boolean', example: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        InsertShopProduct: {
+          type: 'object',
+          required: ['name', 'description', 'beePointsCost', 'category'],
+          properties: {
+            name: { type: 'string', example: 'Áo thun CLB Sáng tạo' },
+            description: { type: 'string', example: 'Áo thun chất lượng cao với logo CLB' },
+            beePointsCost: { type: 'integer', example: 50 },
+            category: { type: 'string', example: 'fashion' },
+            imageUrl: { type: 'string', example: 'https://example.com/product.jpg' },
+            stockQuantity: { type: 'integer', example: 100 },
+            isActive: { type: 'boolean', default: true }
+          }
+        },
+        ShopOrder: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            userId: { type: 'integer', example: 2 },
+            productId: { type: 'integer', example: 1 },
+            quantity: { type: 'integer', example: 1 },
+            totalBeePointsCost: { type: 'integer', example: 50 },
+            status: { 
+              type: 'string', 
+              enum: ['pending', 'confirmed', 'delivered', 'cancelled'],
+              example: 'pending'
+            },
+            deliveryInfo: { type: 'string', example: 'Địa chỉ: 123 Đường ABC' },
+            notes: { type: 'string', example: 'Ghi chú admin' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        BeePointCirculation: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            totalSupply: { type: 'integer', example: 1000000 },
+            distributedPoints: { type: 'integer', example: 50000 },
+            availablePoints: { type: 'integer', example: 950000 },
+            lastUpdated: { type: 'string', format: 'date-time' }
+          }
+        },
       },
     },
     tags: [
@@ -533,6 +590,7 @@ const options = {
       { name: '📅 Academic Years', description: 'Quản lý khóa học (🔴 SUPER_ADMIN)' },
       { name: '🏆 Achievements', description: 'Hệ thống thành tích' },
       { name: '🍯 BeePoints', description: 'Hệ thống điểm thưởng' },
+      { name: '🛒 Shop', description: 'Cửa hàng đổi thưởng BeePoints' },
       { name: '🎯 Missions', description: 'Hệ thống nhiệm vụ và thưởng điểm' },
       { name: '⚙️ Settings', description: 'Quản lý cấu hình hệ thống (🔴 SUPER_ADMIN)' },
       { name: '📊 Statistics', description: 'Thống kê' },
@@ -2680,6 +2738,7 @@ export function setupSwagger(app: Express) {
           '📅 Academic Years',
           '🏆 Achievements',
           '🍯 BeePoints',
+          '🛒 Shop',
           '🎯 Missions',
           '📊 Statistics',
           '🔑 API Keys',
