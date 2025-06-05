@@ -30,21 +30,23 @@ function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { roleId: number; isActive: boolean }) => {
-      const response = await apiRequest("PUT", `/api/users/${user.id}`, data);
-      return response.json();
+      return await apiRequest(`/api/users/${user.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Thành công",
-        description: "Quyền hạn người dùng đã được cập nhật",
+        description: "Cập nhật thông tin người dùng thành công",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       onClose();
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Lỗi",
-        description: error.message || "Có lỗi xảy ra khi cập nhật quyền hạn",
+        description: "Không thể cập nhật thông tin người dùng",
         variant: "destructive",
       });
     },
@@ -53,7 +55,7 @@ function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
   const handleSave = () => {
     updateUserMutation.mutate({
       roleId: selectedRoleId,
-      isActive: isActive,
+      isActive,
     });
   };
 
@@ -85,7 +87,7 @@ function UserRoleEditor({ user, roles, onClose }: UserRoleEditorProps) {
       </div>
 
       <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={() => {}}>
+        <Button variant="outline" onClick={onClose}>
           Hủy
         </Button>
         <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
@@ -120,7 +122,7 @@ function UserRoleDialog({ user, roles }: { user: UserWithRole; roles: Role[] }) 
 }
 
 export default function AdminPage() {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -139,59 +141,65 @@ export default function AdminPage() {
   const [userEmail, setUserEmail] = useState("");
   const [userFullName, setUserFullName] = useState("");
   const [userPassword, setUserPassword] = useState("");
-  const [userRoleId, setUserRoleId] = useState<number>(0);
+  const [userRoleId, setUserRoleId] = useState(0);
 
-  const { data: roles = [] } = useQuery<Role[]>({
+  // Fetch roles
+  const { data: roles, isLoading: rolesLoading } = useQuery<Role[]>({
     queryKey: ["/api/roles"],
-    enabled: hasPermission(PERMISSIONS.ROLE_VIEW),
   });
 
-  const { data: users = [] } = useQuery<UserWithRole[]>({
+  // Fetch users with roles
+  const { data: users, isLoading: usersLoading } = useQuery<UserWithRole[]>({
     queryKey: ["/api/users"],
-    enabled: hasPermission(PERMISSIONS.USER_VIEW),
   });
 
+  // Create role mutation
   const createRoleMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/roles", data);
-      return response.json();
+    mutationFn: async (roleData: any) => {
+      return await apiRequest("/api/roles", {
+        method: "POST",
+        body: JSON.stringify(roleData),
+      });
     },
     onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo vai trò thành công",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       setIsRoleModalOpen(false);
       resetRoleForm();
-      toast({
-        title: "Thành công",
-        description: "Vai trò đã được tạo thành công",
-      });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Lỗi",
-        description: error.message || "Có lỗi xảy ra khi tạo vai trò",
+        description: "Không thể tạo vai trò",
         variant: "destructive",
       });
     },
   });
 
+  // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/users", data);
-      return response.json();
+    mutationFn: async (userData: any) => {
+      return await apiRequest("/api/users", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
     },
     onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo người dùng thành công",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsUserModalOpen(false);
       resetUserForm();
-      toast({
-        title: "Thành công",
-        description: "Người dùng đã được tạo thành công",
-      });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Lỗi",
-        description: error.message || "Có lỗi xảy ra khi tạo người dùng",
+        description: "Không thể tạo người dùng",
         variant: "destructive",
       });
     },
@@ -429,104 +437,101 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="roles">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Quản lý vai trò</h2>
-                {hasPermission(PERMISSIONS.ROLE_CREATE) && (
-                  <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={resetRoleForm}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Thêm vai trò
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Tạo vai trò mới</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="role-name">Tên vai trò</Label>
-                          <Input
-                            id="role-name"
-                            value={roleName}
-                            onChange={(e) => setRoleName(e.target.value)}
-                            placeholder="admin, manager, etc."
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="role-display-name">Tên hiển thị</Label>
-                          <Input
-                            id="role-display-name"
-                            value={roleDisplayName}
-                            onChange={(e) => setRoleDisplayName(e.target.value)}
-                            placeholder="Quản trị viên"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="role-description">Mô tả</Label>
-                          <Textarea
-                            id="role-description"
-                            value={roleDescription}
-                            onChange={(e) => setRoleDescription(e.target.value)}
-                            placeholder="Mô tả vai trò..."
-                          />
-                        </div>
-                        <div>
-                          <Label>Quyền hạn</Label>
-                          <div className="space-y-4 mt-2">
-                            {Object.entries(permissionGroups).map(([group, permissions]) => (
-                              <div key={group} className="border rounded-lg p-4">
-                                <h4 className="font-medium mb-2">{group}</h4>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {permissions.map((permission) => (
-                                    <div key={permission} className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id={permission}
-                                        checked={selectedPermissions.includes(permission)}
-                                        onCheckedChange={(checked) => 
-                                          handlePermissionToggle(permission, checked as boolean)
-                                        }
-                                      />
-                                      <Label htmlFor={permission} className="text-sm">
-                                        {getPermissionDisplayName(permission)}
-                                      </Label>
-                                    </div>
-                                  ))}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Quản lý vai trò</h2>
+              <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetRoleForm}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Thêm vai trò
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Tạo vai trò mới</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="role-name">Tên vai trò</Label>
+                      <Input
+                        id="role-name"
+                        value={roleName}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        placeholder="admin, manager, member..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="role-display-name">Tên hiển thị</Label>
+                      <Input
+                        id="role-display-name"
+                        value={roleDisplayName}
+                        onChange={(e) => setRoleDisplayName(e.target.value)}
+                        placeholder="Quản trị viên, Quản lý, Thành viên..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="role-description">Mô tả</Label>
+                      <Textarea
+                        id="role-description"
+                        value={roleDescription}
+                        onChange={(e) => setRoleDescription(e.target.value)}
+                        placeholder="Mô tả vai trò và quyền hạn..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Quyền hạn</Label>
+                      <div className="space-y-4 max-h-60 overflow-y-auto border rounded p-4">
+                        {Object.entries(permissionGroups).map(([groupName, permissions]) => (
+                          <div key={groupName}>
+                            <h4 className="font-medium text-sm mb-2">{groupName}</h4>
+                            <div className="grid grid-cols-2 gap-2 ml-4">
+                              {permissions.map((permission) => (
+                                <div key={permission} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={permission}
+                                    checked={selectedPermissions.includes(permission)}
+                                    onCheckedChange={(checked) => handlePermissionToggle(permission, checked as boolean)}
+                                  />
+                                  <Label htmlFor={permission} className="text-xs">
+                                    {getPermissionDisplayName(permission)}
+                                  </Label>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsRoleModalOpen(false)}>
-                            Hủy
-                          </Button>
-                          <Button onClick={handleCreateRole} disabled={createRoleMutation.isPending}>
-                            {createRoleMutation.isPending ? "Đang tạo..." : "Tạo vai trò"}
-                          </Button>
-                        </div>
+                        ))}
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setIsRoleModalOpen(false)}>
+                        Hủy
+                      </Button>
+                      <Button onClick={handleCreateRole} disabled={createRoleMutation.isPending}>
+                        {createRoleMutation.isPending ? "Đang tạo..." : "Tạo vai trò"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {roles.map((role) => (
-                  <Card key={role.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{role.displayName}</CardTitle>
-                        {role.isSystem && (
-                          <Badge variant="secondary">Hệ thống</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">{role.description}</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Quyền hạn:</p>
-                        <div className="flex flex-wrap gap-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {roles?.map((role) => (
+                <Card key={role.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{role.displayName}</CardTitle>
+                      {role.isSystem && (
+                        <Badge variant="secondary">Hệ thống</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{role.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="text-sm">
+                        <span className="font-medium">Quyền hạn:</span>
+                        <div className="mt-1 flex flex-wrap gap-1">
                           {role.permissions.slice(0, 3).map((permission) => (
                             <Badge key={permission} variant="outline" className="text-xs">
                               {getPermissionDisplayName(permission)}
@@ -539,129 +544,121 @@ export default function AdminPage() {
                           )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
 
           <TabsContent value="users">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Quản lý người dùng</h2>
-                {hasPermission(PERMISSIONS.USER_CREATE) && (
-                  <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={resetUserForm}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Thêm người dùng
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Quản lý người dùng</h2>
+              <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetUserForm}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Thêm người dùng
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Tạo người dùng mới</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="user-name">Tên đăng nhập</Label>
+                      <Input
+                        id="user-name"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="username"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user-email">Email</Label>
+                      <Input
+                        id="user-email"
+                        type="email"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user-full-name">Họ và tên</Label>
+                      <Input
+                        id="user-full-name"
+                        value={userFullName}
+                        onChange={(e) => setUserFullName(e.target.value)}
+                        placeholder="Nguyễn Văn A"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user-password">Mật khẩu</Label>
+                      <Input
+                        id="user-password"
+                        type="password"
+                        value={userPassword}
+                        onChange={(e) => setUserPassword(e.target.value)}
+                        placeholder="Mật khẩu"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user-role">Vai trò</Label>
+                      <Select value={userRoleId.toString()} onValueChange={(value) => setUserRoleId(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn vai trò" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles?.map((role) => (
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              {role.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setIsUserModalOpen(false)}>
+                        Hủy
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Tạo người dùng mới</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="user-name">Tên đăng nhập</Label>
-                          <Input
-                            id="user-name"
-                            value={userName}
-                            onChange={(e) => setUserName(e.target.value)}
-                            placeholder="username"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="user-email">Email</Label>
-                          <Input
-                            id="user-email"
-                            type="email"
-                            value={userEmail}
-                            onChange={(e) => setUserEmail(e.target.value)}
-                            placeholder="user@example.com"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="user-full-name">Họ và tên</Label>
-                          <Input
-                            id="user-full-name"
-                            value={userFullName}
-                            onChange={(e) => setUserFullName(e.target.value)}
-                            placeholder="Nguyễn Văn A"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="user-password">Mật khẩu</Label>
-                          <Input
-                            id="user-password"
-                            type="password"
-                            value={userPassword}
-                            onChange={(e) => setUserPassword(e.target.value)}
-                            placeholder="Mật khẩu"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="user-role">Vai trò</Label>
-                          <Select onValueChange={(value) => setUserRoleId(parseInt(value))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn vai trò" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {roles.map((role) => (
-                                <SelectItem key={role.id} value={role.id.toString()}>
-                                  {role.displayName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsUserModalOpen(false)}>
-                            Hủy
-                          </Button>
-                          <Button onClick={handleCreateUser} disabled={createUserMutation.isPending}>
-                            {createUserMutation.isPending ? "Đang tạo..." : "Tạo người dùng"}
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
+                      <Button onClick={handleCreateUser} disabled={createUserMutation.isPending}>
+                        {createUserMutation.isPending ? "Đang tạo..." : "Tạo người dùng"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {users.map((userItem) => (
-                  <Card key={userItem.id}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">{userItem.fullName}</CardTitle>
-                      <p className="text-sm text-gray-600">@{userItem.username}</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm">
-                            <strong>Email:</strong> {userItem.email}
-                          </p>
-                          <p className="text-sm">
-                            <strong>Vai trò hiện tại:</strong> {userItem.role.displayName}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={userItem.isActive ? "default" : "secondary"}>
-                            {userItem.isActive ? "Hoạt động" : "Bị khóa"}
-                          </Badge>
-                        </div>
-
-                        {hasPermission("user_edit") && (
-                          <UserRoleDialog user={userItem} roles={roles} />
-                        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {users?.map((user) => (
+                <Card key={user.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{user.fullName}</CardTitle>
+                      <Badge variant={user.isActive ? "default" : "secondary"}>
+                        {user.isActive ? "Hoạt động" : "Không hoạt động"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600">@{user.username}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="text-sm">
+                        <span className="font-medium">Email:</span> {user.email}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          )}
+                      <div className="text-sm">
+                        <span className="font-medium">Vai trò:</span> {user.role.displayName}
+                      </div>
+                      <UserRoleDialog user={user} roles={roles || []} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
