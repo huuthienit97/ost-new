@@ -241,6 +241,449 @@ const options = {
         },
       },
     },
+
+    // Shop System Endpoints
+    "/api/shop/products": {
+      get: {
+        tags: ["Shop"],
+        summary: "Get all active shop products",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of active shop products",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      name: { type: "string" },
+                      description: { type: "string" },
+                      beePointsCost: { type: "integer" },
+                      category: { type: "string" },
+                      stockQuantity: { type: "integer", nullable: true },
+                      imageUrl: { type: "string", nullable: true },
+                      isActive: { type: "boolean" },
+                      createdAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/shop/purchase": {
+      post: {
+        tags: ["Shop"],
+        summary: "Purchase product with BeePoints",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["productId", "quantity"],
+                properties: {
+                  productId: { type: "integer" },
+                  quantity: { type: "integer", minimum: 1 },
+                  deliveryInfo: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Purchase successful",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    orderId: { type: "integer" },
+                    remainingBeePoints: { type: "integer" },
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Insufficient BeePoints or invalid request" },
+        },
+      },
+    },
+
+    "/api/shop/my-orders": {
+      get: {
+        tags: ["Shop"],
+        summary: "Get user's order history",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of user's orders",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      productId: { type: "integer" },
+                      quantity: { type: "integer" },
+                      totalBeePointsCost: { type: "integer" },
+                      status: { type: "string", enum: ["pending", "confirmed", "delivered", "cancelled"] },
+                      deliveryInfo: { type: "string", nullable: true },
+                      notes: { type: "string", nullable: true },
+                      createdAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // Admin Shop Management Endpoints
+    "/api/admin/shop/products": {
+      get: {
+        tags: ["Admin - Shop"],
+        summary: "Get all shop products (including inactive)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of all shop products",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      name: { type: "string" },
+                      description: { type: "string" },
+                      beePointsCost: { type: "integer" },
+                      category: { type: "string" },
+                      stockQuantity: { type: "integer", nullable: true },
+                      imageUrl: { type: "string", nullable: true },
+                      isActive: { type: "boolean" },
+                      createdAt: { type: "string", format: "date-time" },
+                      updatedAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Admin - Shop"],
+        summary: "Create new shop product",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "description", "beePointsCost", "category"],
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                  beePointsCost: { type: "integer", minimum: 1 },
+                  category: { type: "string" },
+                  stockQuantity: { type: "integer", nullable: true },
+                  imageUrl: { type: "string", nullable: true },
+                  isActive: { type: "boolean", default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Product created successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "integer" },
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    beePointsCost: { type: "integer" },
+                    category: { type: "string" },
+                    stockQuantity: { type: "integer", nullable: true },
+                    imageUrl: { type: "string", nullable: true },
+                    isActive: { type: "boolean" },
+                    createdAt: { type: "string", format: "date-time" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/admin/shop/products/{id}": {
+      put: {
+        tags: ["Admin - Shop"],
+        summary: "Update shop product",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                  beePointsCost: { type: "integer", minimum: 1 },
+                  category: { type: "string" },
+                  stockQuantity: { type: "integer", nullable: true },
+                  imageUrl: { type: "string", nullable: true },
+                  isActive: { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Product updated successfully" },
+          404: { description: "Product not found" },
+        },
+      },
+      delete: {
+        tags: ["Admin - Shop"],
+        summary: "Delete shop product",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        responses: {
+          200: { description: "Product deleted successfully" },
+          404: { description: "Product not found" },
+        },
+      },
+    },
+
+    "/api/admin/shop/orders": {
+      get: {
+        tags: ["Admin - Shop"],
+        summary: "Get all shop orders",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of all shop orders",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      userId: { type: "integer" },
+                      productId: { type: "integer" },
+                      quantity: { type: "integer" },
+                      totalBeePointsCost: { type: "integer" },
+                      status: { type: "string", enum: ["pending", "confirmed", "delivered", "cancelled"] },
+                      deliveryInfo: { type: "string", nullable: true },
+                      notes: { type: "string", nullable: true },
+                      createdAt: { type: "string", format: "date-time" },
+                      updatedAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/admin/shop/orders/{id}": {
+      put: {
+        tags: ["Admin - Shop"],
+        summary: "Update shop order status",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { type: "string", enum: ["pending", "confirmed", "delivered", "cancelled"] },
+                  notes: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Order updated successfully" },
+          404: { description: "Order not found" },
+        },
+      },
+    },
+
+    "/api/admin/bee-points/circulation": {
+      get: {
+        tags: ["Admin - BeePoints"],
+        summary: "Get BeePoint circulation statistics",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "BeePoint circulation data",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "integer" },
+                    totalSupply: { type: "integer" },
+                    totalDistributed: { type: "integer" },
+                    totalRedeemed: { type: "integer" },
+                    circulatingSupply: { type: "integer" },
+                    lastUpdated: { type: "string", format: "date-time" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        tags: ["Admin - BeePoints"],
+        summary: "Update BeePoint circulation",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  totalSupply: { type: "integer" },
+                  totalDistributed: { type: "integer" },
+                  totalRedeemed: { type: "integer" },
+                  circulatingSupply: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Circulation updated successfully" },
+        },
+      },
+    },
+
+    "/api/admin/bee-points/transactions": {
+      get: {
+        tags: ["Admin - BeePoints"],
+        summary: "Get all BeePoint transactions",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "userId",
+            in: "query",
+            required: false,
+            schema: { type: "integer" },
+            description: "Filter by specific user ID",
+          },
+        ],
+        responses: {
+          200: {
+            description: "List of BeePoint transactions",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      userTargetId: { type: "integer" },
+                      amount: { type: "integer" },
+                      type: { type: "string", enum: ["mission_reward", "achievement_reward", "shop_redemption", "admin_adjustment", "bonus", "penalty"] },
+                      description: { type: "string" },
+                      createdAt: { type: "string", format: "date-time" },
+                      createdBy: { type: "integer", nullable: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/bee-points/my-transactions": {
+      get: {
+        tags: ["BeePoints"],
+        summary: "Get user's BeePoint transaction history",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of user's BeePoint transactions",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      amount: { type: "integer" },
+                      type: { type: "string", enum: ["mission_reward", "achievement_reward", "shop_redemption", "admin_adjustment", "bonus", "penalty"] },
+                      description: { type: "string" },
+                      createdAt: { type: "string", format: "date-time" },
+                      createdBy: { type: "integer", nullable: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     tags: [
       { name: '🟢 Public', description: 'API công khai' },
       { name: '🔐 Authentication', description: 'Xác thực' },
