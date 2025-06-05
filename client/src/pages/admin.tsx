@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -147,6 +147,7 @@ export default function AdminPage() {
     exchangeRate: 1.0,
     activityMultiplier: 1.0
   });
+
   const [transactionForm, setTransactionForm] = useState({
     userId: "",
     type: "",
@@ -170,12 +171,29 @@ export default function AdminPage() {
   });
 
   // Fetch BeePoint configuration
-  const { data: beePointConfig } = useQuery({
+  const { data: beePointConfig } = useQuery<{
+    totalSupply: number;
+    welcomeBonus: number;
+    exchangeRate: number;
+    activityMultiplier: number;
+  }>({
     queryKey: ["/api/beepoint/config"],
   });
 
   // Fetch BeePoint statistics
-  const { data: beePointStats } = useQuery({
+  const { data: beePointStats } = useQuery<{
+    totalIssued: number;
+    totalSpent: number;
+    activeUsers: number;
+    monthlyTransactions: number;
+    recentTransactions: Array<{
+      id: number;
+      amount: number;
+      description: string;
+      createdAt: string;
+      user: { fullName: string };
+    }>;
+  }>({
     queryKey: ["/api/beepoint/stats"],
   });
 
@@ -184,6 +202,18 @@ export default function AdminPage() {
     queryKey: ["/api/users/all"],
     select: (data: any) => data?.users || []
   });
+
+  // Update settings when config data loads
+  useEffect(() => {
+    if (beePointConfig) {
+      setBeePointSettings({
+        totalSupply: beePointConfig.totalSupply || 1000000,
+        welcomeBonus: beePointConfig.welcomeBonus || 100,
+        exchangeRate: beePointConfig.exchangeRate || 1.0,
+        activityMultiplier: beePointConfig.activityMultiplier || 1.0
+      });
+    }
+  }, [beePointConfig]);
 
   // BeePoint configuration mutation
   const updateBeePointConfigMutation = useMutation({
@@ -865,18 +895,18 @@ export default function AdminPage() {
                       <Label>Tổng cung BeePoint</Label>
                       <Input 
                         type="number" 
-                        defaultValue={beePointConfig?.totalSupply || 1000000} 
+                        value={beePointSettings.totalSupply} 
                         placeholder="1000000" 
-                        onChange={(e) => setBeePointSettings(prev => ({...prev, totalSupply: parseInt(e.target.value)}))}
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, totalSupply: parseInt(e.target.value) || 0}))}
                       />
                     </div>
                     <div>
                       <Label>Điểm thưởng chào mừng</Label>
                       <Input 
                         type="number" 
-                        defaultValue={beePointConfig?.welcomeBonus || 100} 
+                        value={beePointSettings.welcomeBonus} 
                         placeholder="100" 
-                        onChange={(e) => setBeePointSettings(prev => ({...prev, welcomeBonus: parseInt(e.target.value)}))}
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, welcomeBonus: parseInt(e.target.value) || 0}))}
                       />
                     </div>
                     <div>
@@ -884,9 +914,9 @@ export default function AdminPage() {
                       <Input 
                         type="number" 
                         step="0.1"
-                        defaultValue={beePointConfig?.exchangeRate || 1.0} 
+                        value={beePointSettings.exchangeRate} 
                         placeholder="1.0" 
-                        onChange={(e) => setBeePointSettings(prev => ({...prev, exchangeRate: parseFloat(e.target.value)}))}
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, exchangeRate: parseFloat(e.target.value) || 0}))}
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Giá trị quy đổi 1 BeePoint = ? VND (ví dụ: 1.0 = 1 BeePoint = 1000 VND)
@@ -897,9 +927,9 @@ export default function AdminPage() {
                       <Input 
                         type="number" 
                         step="0.1"
-                        defaultValue={beePointConfig?.activityMultiplier || 1.0} 
+                        value={beePointSettings.activityMultiplier} 
                         placeholder="1.0" 
-                        onChange={(e) => setBeePointSettings(prev => ({...prev, activityMultiplier: parseFloat(e.target.value)}))}
+                        onChange={(e) => setBeePointSettings(prev => ({...prev, activityMultiplier: parseFloat(e.target.value) || 0}))}
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Hệ số nhân điểm thưởng cho hoạt động (ví dụ: 1.5 = tăng 50% điểm thưởng)
