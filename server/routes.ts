@@ -1595,6 +1595,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ADMIN ROLES API =====
+  
+  // Get all roles (Admin only)
+  app.get("/api/admin/roles", authenticate, authorize([PERMISSIONS.ROLE_VIEW]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const rolesList = await dbStorage.getRoles();
+      res.json(rolesList);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách vai trò" });
+    }
+  });
+
+  // Create new role (Super Admin only)
+  app.post("/api/admin/roles", authenticate, authorize([PERMISSIONS.ROLE_CREATE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = createRoleSchema.parse(req.body);
+      const newRole = await dbStorage.createRole(validatedData);
+      res.status(201).json(newRole);
+    } catch (error) {
+      console.error("Error creating role:", error);
+      res.status(500).json({ message: "Lỗi tạo vai trò mới" });
+    }
+  });
+
+  // Update role (Super Admin only)
+  app.put("/api/admin/roles/:id", authenticate, authorize([PERMISSIONS.ROLE_EDIT]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const validatedData = createRoleSchema.parse(req.body);
+      const updatedRole = await dbStorage.updateRole(roleId, validatedData);
+      
+      if (!updatedRole) {
+        return res.status(404).json({ message: "Không tìm thấy vai trò" });
+      }
+      
+      res.json(updatedRole);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      res.status(500).json({ message: "Lỗi cập nhật vai trò" });
+    }
+  });
+
+  // Delete role (Super Admin only)
+  app.delete("/api/admin/roles/:id", authenticate, authorize([PERMISSIONS.ROLE_DELETE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const deleted = await dbStorage.deleteRole(roleId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Không tìm thấy vai trò" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      res.status(500).json({ message: "Lỗi xóa vai trò" });
+    }
+  });
+
   // ===== PUBLIC API ROUTES =====
   
   // Public users API
@@ -1604,14 +1664,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: users.id,
         fullName: users.fullName,
         email: users.email,
-        role: {
-          displayName: roles.displayName,
-          name: roles.name
-        }
+        roleName: roles.displayName
       })
       .from(users)
       .leftJoin(roles, eq(users.roleId, roles.id))
-      .where(eq(users.isActive, true));
+      .where(eq(users.isActive, true))
+      .limit(50);
 
       res.json(publicUsers);
     } catch (error) {
