@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,41 @@ export function AddMemberModal({ open, onOpenChange, editingMember }: AddMemberM
       createUserAccount: false,
     },
   });
+
+  // Reset form when editing member changes
+  useEffect(() => {
+    if (editingMember) {
+      form.reset({
+        fullName: editingMember.fullName || "",
+        studentId: editingMember.studentId || "",
+        email: editingMember.email || "",
+        phone: editingMember.phone || "",
+        class: editingMember.class || "",
+        divisionId: editingMember.divisionId || 0,
+        positionId: editingMember.positionId || 0,
+        academicYearId: editingMember.academicYearId || 0,
+        memberType: (editingMember.memberType as any) || "active",
+        joinDate: editingMember.joinDate || "",
+        notes: editingMember.notes || "",
+        createUserAccount: false,
+      });
+    } else {
+      form.reset({
+        fullName: "",
+        studentId: "",
+        email: "",
+        phone: "",
+        class: "",
+        divisionId: 0,
+        positionId: 0,
+        academicYearId: 0,
+        memberType: "active",
+        joinDate: "",
+        notes: "",
+        createUserAccount: false,
+      });
+    }
+  }, [editingMember, form]);
 
   const createMemberMutation = useMutation({
     mutationFn: async (data: CreateMemberData) => {
