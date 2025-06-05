@@ -18,6 +18,7 @@ import AchievementsPage from "@/pages/achievements";
 import AcademicYearsPage from "@/pages/academic-years";
 import DivisionsPage from "@/pages/divisions";
 import PositionsPage from "@/pages/positions";
+import MissionsPage from "@/pages/missions";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -50,6 +51,7 @@ function Router() {
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
+          <Route path="/missions" component={MissionsPage} />
           <Route path="/academic-years" component={AcademicYearsPage} />
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
