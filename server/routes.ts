@@ -1961,7 +1961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.get("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/achievements", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
     try {
       const achievementsList = await db.select().from(achievements).where(eq(achievements.isActive, true));
       res.json(achievementsList);
@@ -1999,7 +1999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post("/api/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_CREATE), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/achievements", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = createAchievementSchema.safeParse(req.body);
       
@@ -2056,7 +2056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *               $ref: '#/components/schemas/Error'
    */
   // Award achievement to user
-  app.post("/api/achievements/award", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_AWARD), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/achievements/award", authenticate, authorize("manager"), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = awardAchievementSchema.safeParse(req.body);
       
@@ -2126,7 +2126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user achievements
-  app.get("/api/users/:userId/achievements", authenticate, authorize(PERMISSIONS.ACHIEVEMENT_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/users/:userId/achievements", authenticate, authorize("member"), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.userId);
       
