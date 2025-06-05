@@ -2829,6 +2829,18 @@ export function setupSwagger(app: Express) {
     const serverUrl = `${protocol}://${host}`;
     
     // Update server URL dynamically
+    const options = {
+      definition: {
+        ...baseSwaggerSpec,
+        servers: [
+          {
+            url: serverUrl,
+            description: 'Current Server',
+          },
+        ]
+      },
+      apis: []
+    };
     options.definition.servers = [
       {
         url: serverUrl,
