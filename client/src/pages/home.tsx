@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key, Calendar, Building, Crown } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key, Calendar, Building, Crown, Target } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -186,6 +186,21 @@ export default function HomePage() {
             <CardContent>
               <p className="text-gray-600 text-sm">
                 Xem danh sách chức vụ được chuẩn hóa
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Missions - Available for all users */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/missions"}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Target className="h-5 w-5 text-indigo-600" />
+                <span>Nhiệm vụ</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Tham gia nhiệm vụ và nhận điểm thưởng BeePoints
               </p>
             </CardContent>
           </Card>

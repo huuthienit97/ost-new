@@ -1797,6 +1797,407 @@ const options = {
             }
           }
         }
+      },
+      '/api/missions': {
+        get: {
+          summary: 'Lấy danh sách nhiệm vụ',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'query',
+              name: 'status',
+              schema: { type: 'string', enum: ['active', 'paused', 'completed', 'cancelled'] },
+              description: 'Lọc theo trạng thái'
+            },
+            {
+              in: 'query',
+              name: 'category',
+              schema: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'special', 'project'] },
+              description: 'Lọc theo danh mục'
+            },
+            {
+              in: 'query',
+              name: 'type',
+              schema: { type: 'string', enum: ['one_time', 'repeatable'] },
+              description: 'Lọc theo loại nhiệm vụ'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Danh sách nhiệm vụ',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/Mission' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Tạo nhiệm vụ mới (🟡 ADMIN)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['title', 'category', 'type'],
+                  properties: {
+                    title: { type: 'string', example: 'Tham gia workshop sáng tạo' },
+                    description: { type: 'string', example: 'Tham gia workshop về kỹ năng sáng tạo' },
+                    category: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'special', 'project'] },
+                    type: { type: 'string', enum: ['one_time', 'repeatable'] },
+                    maxParticipants: { type: 'integer', example: 20 },
+                    beePointsReward: { type: 'integer', example: 50 },
+                    requiresPhoto: { type: 'boolean', example: true },
+                    startDate: { type: 'string', format: 'date-time' },
+                    endDate: { type: 'string', format: 'date-time' },
+                    priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+                    tags: { type: 'array', items: { type: 'string' } }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Nhiệm vụ được tạo thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Mission' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/missions/{id}': {
+        get: {
+          summary: 'Lấy chi tiết nhiệm vụ',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Chi tiết nhiệm vụ',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/Mission' },
+                      {
+                        type: 'object',
+                        properties: {
+                          assignments: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/MissionAssignment' }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Cập nhật nhiệm vụ (🟡 ADMIN)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    maxParticipants: { type: 'integer' },
+                    beePointsReward: { type: 'integer' },
+                    requiresPhoto: { type: 'boolean' },
+                    startDate: { type: 'string', format: 'date-time' },
+                    endDate: { type: 'string', format: 'date-time' },
+                    priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+                    status: { type: 'string', enum: ['active', 'paused', 'completed', 'cancelled'] },
+                    tags: { type: 'array', items: { type: 'string' } }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Nhiệm vụ được cập nhật',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Mission' }
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          summary: 'Xóa nhiệm vụ (🟡 ADMIN)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Nhiệm vụ được xóa',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/missions/{id}/assign': {
+        post: {
+          summary: 'Giao nhiệm vụ cho người dùng (🟡 ADMIN)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['userId'],
+                  properties: {
+                    userId: { type: 'integer', example: 2 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Giao nhiệm vụ thành công',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/MissionAssignment' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/missions/my': {
+        get: {
+          summary: 'Lấy nhiệm vụ của tôi',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'query',
+              name: 'status',
+              schema: { type: 'string', enum: ['assigned', 'in_progress', 'completed', 'submitted', 'rejected'] },
+              description: 'Lọc theo trạng thái'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Danh sách nhiệm vụ của người dùng',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        assignment: { $ref: '#/components/schemas/MissionAssignment' },
+                        mission: { $ref: '#/components/schemas/Mission' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/missions/{id}/submit': {
+        post: {
+          summary: 'Nộp nhiệm vụ (có thể kèm hình ảnh)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    photo: { type: 'string', format: 'binary', description: 'Hình ảnh minh chứng (nếu cần)' },
+                    submissionNote: { type: 'string', description: 'Ghi chú khi nộp bài' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Nộp nhiệm vụ thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      assignment: { $ref: '#/components/schemas/MissionAssignment' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/missions/assignments/{id}/review': {
+        post: {
+          summary: 'Duyệt nhiệm vụ (🟡 ADMIN)',
+          tags: ['🎯 Missions'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'integer' }
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['status'],
+                  properties: {
+                    status: { type: 'string', enum: ['completed', 'rejected'] },
+                    reviewNote: { type: 'string', example: 'Hoàn thành tốt' },
+                    pointsAwarded: { type: 'integer', example: 50 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Duyệt nhiệm vụ thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      assignment: { $ref: '#/components/schemas/MissionAssignment' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/auth/profile': {
+        put: {
+          summary: 'Cập nhật thông tin cá nhân (đã cập nhật hỗ trợ tất cả trường)',
+          tags: ['🔐 Authentication'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['fullName', 'email'],
+                  properties: {
+                    fullName: { type: 'string', example: 'Nguyễn Văn A' },
+                    email: { type: 'string', example: 'user@example.com' },
+                    bio: { type: 'string', example: 'Mô tả về bản thân' },
+                    phone: { type: 'string', example: '0987654321' },
+                    facebookUrl: { type: 'string', example: 'https://facebook.com/username' },
+                    instagramUrl: { type: 'string', example: 'https://instagram.com/username' },
+                    tiktokUrl: { type: 'string', example: 'https://tiktok.com/@username' },
+                    youtubeUrl: { type: 'string', example: 'https://youtube.com/channel/xxx' },
+                    linkedinUrl: { type: 'string', example: 'https://linkedin.com/in/username' },
+                    githubUrl: { type: 'string', example: 'https://github.com/username' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cập nhật thông tin thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      user: { $ref: '#/components/schemas/User' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -1857,6 +2258,7 @@ export function setupSwagger(app: Express) {
           '📅 Academic Years',
           '🏆 Achievements',
           '🍯 BeePoints',
+          '🎯 Missions',
           '📊 Statistics',
           '🔑 API Keys',
           '🌐 External API'

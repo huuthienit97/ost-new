@@ -598,6 +598,15 @@ export const PERMISSIONS = {
   BEEPOINT_MANAGE: "beepoint:manage",
   BEEPOINT_AWARD: "beepoint:award",
   BEEPOINT_CONFIG: "beepoint:config",
+  
+  // Mission permissions
+  MISSION_VIEW: "mission:view",
+  MISSION_CREATE: "mission:create",
+  MISSION_EDIT: "mission:edit",
+  MISSION_DELETE: "mission:delete",
+  MISSION_ASSIGN: "mission:assign",
+  MISSION_SUBMIT: "mission:submit",
+  MISSION_REVIEW: "mission:review",
   BEEPOINT_TRANSACTION_VIEW: "beepoint_transaction:view",
   
   // API Key permissions
