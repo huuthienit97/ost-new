@@ -3124,7 +3124,7 @@ export function setupSwagger(app: Express) {
     const serverUrl = `${protocol}://${host}`;
     
     // Update server URL dynamically
-    const swaggerOptions = {
+    const dynamicSwaggerOptions = {
       definition: {
         ...swaggerOptions.definition,
         servers: [
