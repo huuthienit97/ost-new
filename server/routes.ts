@@ -1885,7 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Initialize default BeePoint settings if not exists
-  app.post("/api/beepoint/init", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/beepoint/init", authenticate, authorize([PERMISSIONS.BEEPOINT_CONFIG]), async (req: AuthenticatedRequest, res) => {
     try {
       const defaultSettings = [
         { key: "beepoint_total_supply", value: "1000000", description: "Tổng cung BeePoint trong hệ thống" },

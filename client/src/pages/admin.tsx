@@ -268,11 +268,30 @@ export default function AdminPage() {
       PERMISSIONS.MEMBER_EDIT,
       PERMISSIONS.MEMBER_DELETE,
     ],
-    "Ban": [
+    "Ban/Phòng": [
       PERMISSIONS.DEPARTMENT_VIEW,
       PERMISSIONS.DEPARTMENT_CREATE,
       PERMISSIONS.DEPARTMENT_EDIT,
       PERMISSIONS.DEPARTMENT_DELETE,
+    ],
+    "Phân ban": [
+      PERMISSIONS.DIVISION_VIEW,
+      PERMISSIONS.DIVISION_CREATE,
+      PERMISSIONS.DIVISION_EDIT,
+      PERMISSIONS.DIVISION_DELETE,
+    ],
+    "Chức vụ": [
+      PERMISSIONS.POSITION_VIEW,
+      PERMISSIONS.POSITION_CREATE,
+      PERMISSIONS.POSITION_EDIT,
+      PERMISSIONS.POSITION_DELETE,
+    ],
+    "Khóa học": [
+      PERMISSIONS.ACADEMIC_YEAR_VIEW,
+      PERMISSIONS.ACADEMIC_YEAR_CREATE,
+      PERMISSIONS.ACADEMIC_YEAR_EDIT,
+      PERMISSIONS.ACADEMIC_YEAR_DELETE,
+      PERMISSIONS.ACADEMIC_YEAR_ACTIVATE,
     ],
     "Người dùng": [
       PERMISSIONS.USER_VIEW,
@@ -285,6 +304,35 @@ export default function AdminPage() {
       PERMISSIONS.ROLE_CREATE,
       PERMISSIONS.ROLE_EDIT,
       PERMISSIONS.ROLE_DELETE,
+    ],
+    "BeePoint": [
+      PERMISSIONS.BEEPOINT_VIEW,
+      PERMISSIONS.BEEPOINT_MANAGE,
+      PERMISSIONS.BEEPOINT_AWARD,
+      PERMISSIONS.BEEPOINT_CONFIG,
+      PERMISSIONS.BEEPOINT_TRANSACTION_VIEW,
+    ],
+    "Thành tích": [
+      PERMISSIONS.ACHIEVEMENT_VIEW,
+      PERMISSIONS.ACHIEVEMENT_CREATE,
+      PERMISSIONS.ACHIEVEMENT_EDIT,
+      PERMISSIONS.ACHIEVEMENT_DELETE,
+      PERMISSIONS.ACHIEVEMENT_AWARD,
+    ],
+    "API Keys": [
+      PERMISSIONS.API_KEY_VIEW,
+      PERMISSIONS.API_KEY_CREATE,
+      PERMISSIONS.API_KEY_EDIT,
+      PERMISSIONS.API_KEY_DELETE,
+    ],
+    "Cài đặt": [
+      PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_EDIT,
+    ],
+    "Upload": [
+      PERMISSIONS.UPLOAD_CREATE,
+      PERMISSIONS.UPLOAD_VIEW,
+      PERMISSIONS.UPLOAD_DELETE,
     ],
     "Hệ thống": [
       PERMISSIONS.SYSTEM_ADMIN,
@@ -302,6 +350,19 @@ export default function AdminPage() {
       [PERMISSIONS.DEPARTMENT_CREATE]: "Tạo ban",
       [PERMISSIONS.DEPARTMENT_EDIT]: "Sửa ban",
       [PERMISSIONS.DEPARTMENT_DELETE]: "Xóa ban",
+      [PERMISSIONS.DIVISION_VIEW]: "Xem phân ban",
+      [PERMISSIONS.DIVISION_CREATE]: "Tạo phân ban",
+      [PERMISSIONS.DIVISION_EDIT]: "Sửa phân ban",
+      [PERMISSIONS.DIVISION_DELETE]: "Xóa phân ban",
+      [PERMISSIONS.POSITION_VIEW]: "Xem chức vụ",
+      [PERMISSIONS.POSITION_CREATE]: "Tạo chức vụ",
+      [PERMISSIONS.POSITION_EDIT]: "Sửa chức vụ",
+      [PERMISSIONS.POSITION_DELETE]: "Xóa chức vụ",
+      [PERMISSIONS.ACADEMIC_YEAR_VIEW]: "Xem khóa học",
+      [PERMISSIONS.ACADEMIC_YEAR_CREATE]: "Tạo khóa học",
+      [PERMISSIONS.ACADEMIC_YEAR_EDIT]: "Sửa khóa học",
+      [PERMISSIONS.ACADEMIC_YEAR_DELETE]: "Xóa khóa học",
+      [PERMISSIONS.ACADEMIC_YEAR_ACTIVATE]: "Kích hoạt khóa học",
       [PERMISSIONS.USER_VIEW]: "Xem người dùng",
       [PERMISSIONS.USER_CREATE]: "Tạo người dùng",
       [PERMISSIONS.USER_EDIT]: "Sửa người dùng",
@@ -310,6 +371,25 @@ export default function AdminPage() {
       [PERMISSIONS.ROLE_CREATE]: "Tạo vai trò",
       [PERMISSIONS.ROLE_EDIT]: "Sửa vai trò",
       [PERMISSIONS.ROLE_DELETE]: "Xóa vai trò",
+      [PERMISSIONS.BEEPOINT_VIEW]: "Xem BeePoint",
+      [PERMISSIONS.BEEPOINT_MANAGE]: "Quản lý BeePoint",
+      [PERMISSIONS.BEEPOINT_AWARD]: "Trao thưởng BeePoint",
+      [PERMISSIONS.BEEPOINT_CONFIG]: "Cấu hình BeePoint",
+      [PERMISSIONS.BEEPOINT_TRANSACTION_VIEW]: "Xem giao dịch BeePoint",
+      [PERMISSIONS.ACHIEVEMENT_VIEW]: "Xem thành tích",
+      [PERMISSIONS.ACHIEVEMENT_CREATE]: "Tạo thành tích",
+      [PERMISSIONS.ACHIEVEMENT_EDIT]: "Sửa thành tích",
+      [PERMISSIONS.ACHIEVEMENT_DELETE]: "Xóa thành tích",
+      [PERMISSIONS.ACHIEVEMENT_AWARD]: "Trao thành tích",
+      [PERMISSIONS.API_KEY_VIEW]: "Xem API Keys",
+      [PERMISSIONS.API_KEY_CREATE]: "Tạo API Keys",
+      [PERMISSIONS.API_KEY_EDIT]: "Sửa API Keys",
+      [PERMISSIONS.API_KEY_DELETE]: "Xóa API Keys",
+      [PERMISSIONS.SETTINGS_VIEW]: "Xem cài đặt",
+      [PERMISSIONS.SETTINGS_EDIT]: "Sửa cài đặt",
+      [PERMISSIONS.UPLOAD_CREATE]: "Upload file",
+      [PERMISSIONS.UPLOAD_VIEW]: "Xem file",
+      [PERMISSIONS.UPLOAD_DELETE]: "Xóa file",
       [PERMISSIONS.SYSTEM_ADMIN]: "Quản trị hệ thống",
       [PERMISSIONS.STATS_VIEW]: "Xem thống kê",
     };
@@ -317,7 +397,7 @@ export default function AdminPage() {
   };
 
   // Chỉ Super Admin và Admin mới được truy cập trang này
-  if (!hasPermission("system_admin") && !hasPermission("role_view")) {
+  if (!user || (user.role?.name !== 'admin' && user.role?.name !== 'super_admin')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-96">
@@ -344,16 +424,11 @@ export default function AdminPage() {
 
         <Tabs defaultValue="roles" className="space-y-6">
           <TabsList>
-            {hasPermission(PERMISSIONS.ROLE_VIEW) && (
-              <TabsTrigger value="roles">Vai trò</TabsTrigger>
-            )}
-            {hasPermission(PERMISSIONS.USER_VIEW) && (
-              <TabsTrigger value="users">Người dùng</TabsTrigger>
-            )}
+            <TabsTrigger value="roles">Vai trò</TabsTrigger>
+            <TabsTrigger value="users">Người dùng</TabsTrigger>
           </TabsList>
 
-          {hasPermission(PERMISSIONS.ROLE_VIEW) && (
-            <TabsContent value="roles">
+          <TabsContent value="roles">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Quản lý vai trò</h2>
                 {hasPermission(PERMISSIONS.ROLE_CREATE) && (
@@ -469,10 +544,8 @@ export default function AdminPage() {
                 ))}
               </div>
             </TabsContent>
-          )}
 
-          {hasPermission(PERMISSIONS.USER_VIEW) && (
-            <TabsContent value="users">
+          <TabsContent value="users">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Quản lý người dùng</h2>
                 {hasPermission(PERMISSIONS.USER_CREATE) && (
