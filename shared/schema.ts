@@ -300,13 +300,25 @@ export const missionSubmissions = pgTable("mission_submissions", {
 });
 
 // Shop system tables
+export const shopCategories = pgTable("shop_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  icon: text("icon"), // Icon name for UI
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const shopProducts = pgTable("shop_products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   beePointsCost: integer("bee_points_cost").notNull(),
   imageUrl: text("image_url"),
-  category: text("category").notNull(), // "physical", "digital", "experience"
+  categoryId: integer("category_id").references(() => shopCategories.id).notNull(),
   stockQuantity: integer("stock_quantity"), // null = unlimited
   isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by").references(() => users.id).notNull(),
@@ -338,6 +350,43 @@ export const beePointCirculation = pgTable("bee_point_circulation", {
   circulatingSupply: integer("circulating_supply").notNull().default(0), // Đang lưu hành
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
+
+// Shop relations
+export const shopCategoriesRelations = relations(shopCategories, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [shopCategories.createdBy],
+    references: [users.id],
+  }),
+  products: many(shopProducts),
+}));
+
+export const shopProductsRelations = relations(shopProducts, ({ one, many }) => ({
+  category: one(shopCategories, {
+    fields: [shopProducts.categoryId],
+    references: [shopCategories.id],
+  }),
+  createdBy: one(users, {
+    fields: [shopProducts.createdBy],
+    references: [users.id],
+  }),
+  orders: many(shopOrders),
+}));
+
+export const shopOrdersRelations = relations(shopOrders, ({ one }) => ({
+  user: one(users, {
+    fields: [shopOrders.userId],
+    references: [users.id],
+  }),
+  product: one(shopProducts, {
+    fields: [shopOrders.productId],
+    references: [shopProducts.id],
+  }),
+  processedBy: one(users, {
+    fields: [shopOrders.processedBy],
+    references: [users.id],
+    relationName: "orderProcessedBy",
+  }),
+}));
 
 // Achievement relations
 export const achievementsRelations = relations(achievements, ({ many }) => ({

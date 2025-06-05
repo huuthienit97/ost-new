@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -3335,7 +3335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description,
         beePointsCost: parseInt(beePointsCost),
         imageUrl,
-        category,
+        categoryId: parseInt(category),
         stockQuantity: stockQuantity ? parseInt(stockQuantity) : null,
         createdBy: req.user!.id
       }).returning();
@@ -3344,6 +3344,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Create product with image error:", error);
       res.status(500).json({ message: "Lỗi khi tạo sản phẩm" });
+    }
+  });
+
+  // ===== SHOP CATEGORY MANAGEMENT =====
+  
+  // Get all shop categories
+  app.get("/api/shop/categories", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categories = await db.select().from(shopCategories)
+        .where(eq(shopCategories.isActive, true))
+        .orderBy(shopCategories.sortOrder, shopCategories.name);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching shop categories:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách danh mục" });
+    }
+  });
+
+  // Get all shop categories for admin
+  app.get("/api/shop/categories-admin", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categories = await db.select().from(shopCategories)
+        .orderBy(shopCategories.sortOrder, shopCategories.name);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching shop categories for admin:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách danh mục" });
+    }
+  });
+
+  // Create shop category
+  app.post("/api/shop/categories", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, icon, sortOrder } = req.body;
+      
+      const [newCategory] = await db.insert(shopCategories).values({
+        name,
+        description,
+        icon,
+        sortOrder: sortOrder || 0,
+        createdBy: req.user!.id
+      }).returning();
+
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("Error creating shop category:", error);
+      res.status(500).json({ message: "Lỗi tạo danh mục" });
+    }
+  });
+
+  // Update shop category
+  app.put("/api/shop/categories/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const { name, description, icon, sortOrder, isActive } = req.body;
+      
+      await db.update(shopCategories)
+        .set({
+          name,
+          description,
+          icon,
+          sortOrder,
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(eq(shopCategories.id, categoryId));
+
+      res.json({ message: "Cập nhật danh mục thành công" });
+    } catch (error) {
+      console.error("Error updating shop category:", error);
+      res.status(500).json({ message: "Lỗi cập nhật danh mục" });
+    }
+  });
+
+  // Delete shop category
+  app.delete("/api/shop/categories/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      
+      // Check if category has products
+      const productsInCategory = await db.select().from(shopProducts)
+        .where(eq(shopProducts.categoryId, categoryId))
+        .limit(1);
+      
+      if (productsInCategory.length > 0) {
+        return res.status(400).json({ message: "Không thể xóa danh mục có sản phẩm" });
+      }
+
+      await db.delete(shopCategories)
+        .where(eq(shopCategories.id, categoryId));
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting shop category:", error);
+      res.status(500).json({ message: "Lỗi xóa danh mục" });
     }
   });
 
