@@ -205,6 +205,21 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
+          {/* Shop - Available for all users */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/shop"}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <ShoppingCart className="h-5 w-5 text-green-600" />
+                <span>Cửa hàng</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Đổi thưởng với BeePoints và xem lịch sử đơn hàng
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Achievements - Available for all users */}
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/achievements"}>
             <CardHeader>
