@@ -220,6 +220,23 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
+          {/* Shop Admin - Available for shop managers */}
+          {hasPermission("shop:manage") && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/shop-admin"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Settings className="h-5 w-5 text-orange-600" />
+                  <span>Quản lý cửa hàng</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Quản lý sản phẩm, đơn hàng và hệ thống cửa hàng
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Achievements - Available for all users */}
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/achievements"}>
             <CardHeader>
