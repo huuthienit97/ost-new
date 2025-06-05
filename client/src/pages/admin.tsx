@@ -888,6 +888,9 @@ export default function AdminPage() {
                         placeholder="1.0" 
                         onChange={(e) => setBeePointSettings(prev => ({...prev, exchangeRate: parseFloat(e.target.value)}))}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Giá trị quy đổi 1 BeePoint = ? VND (ví dụ: 1.0 = 1 BeePoint = 1000 VND)
+                      </p>
                     </div>
                     <div>
                       <Label>Hệ số nhân hoạt động</Label>
@@ -898,6 +901,9 @@ export default function AdminPage() {
                         placeholder="1.0" 
                         onChange={(e) => setBeePointSettings(prev => ({...prev, activityMultiplier: parseFloat(e.target.value)}))}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Hệ số nhân điểm thưởng cho hoạt động (ví dụ: 1.5 = tăng 50% điểm thưởng)
+                      </p>
                     </div>
                     <Button 
                       onClick={() => updateBeePointConfigMutation.mutate(beePointSettings)}
@@ -941,14 +947,14 @@ export default function AdminPage() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label>Người dùng</Label>
-                      <Select>
+                      <Select value={transactionForm.userId} onValueChange={(value) => setTransactionForm(prev => ({ ...prev, userId: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn người dùng" />
                         </SelectTrigger>
                         <SelectContent>
                           {users?.map((user) => (
                             <SelectItem key={user.id} value={user.id.toString()}>
-                              {user.fullName}
+                              {user.fullName} ({user.username})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -956,26 +962,57 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <Label>Loại giao dịch</Label>
-                      <Select>
+                      <Select value={transactionForm.type} onValueChange={(value) => setTransactionForm(prev => ({ ...prev, type: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn loại" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="award">Trao thưởng</SelectItem>
+                          <SelectItem value="reward">Trao thưởng</SelectItem>
                           <SelectItem value="penalty">Phạt</SelectItem>
-                          <SelectItem value="bonus">Thưởng</SelectItem>
+                          <SelectItem value="bonus">Thưởng thêm</SelectItem>
+                          <SelectItem value="admin_adjustment">Điều chỉnh</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label>Số điểm</Label>
-                      <Input type="number" placeholder="Nhập số điểm" />
+                      <Input 
+                        type="number" 
+                        placeholder="Nhập số điểm (+ cho thưởng, - cho phạt)"
+                        value={transactionForm.amount}
+                        onChange={(e) => setTransactionForm(prev => ({ ...prev, amount: e.target.value }))}
+                      />
                     </div>
                     <div>
                       <Label>Mô tả</Label>
-                      <Textarea placeholder="Mô tả lý do..." />
+                      <Input 
+                        placeholder="Mô tả lý do giao dịch"
+                        value={transactionForm.description}
+                        onChange={(e) => setTransactionForm(prev => ({ ...prev, description: e.target.value }))}
+                      />
                     </div>
-                    <Button className="w-full">Thực hiện giao dịch</Button>
+                    <Button 
+                      className="w-full"
+                      onClick={() => {
+                        if (!transactionForm.userId || !transactionForm.type || !transactionForm.amount || !transactionForm.description) {
+                          toast({
+                            title: "Lỗi",
+                            description: "Vui lòng điền đầy đủ thông tin",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        createTransactionMutation.mutate({
+                          userId: parseInt(transactionForm.userId),
+                          type: transactionForm.type,
+                          amount: parseFloat(transactionForm.amount),
+                          description: transactionForm.description
+                        });
+                      }}
+                      disabled={createTransactionMutation.isPending}
+                    >
+                      {createTransactionMutation.isPending ? "Đang xử lý..." : "Thực hiện giao dịch"}
+                    </Button>
                   </CardContent>
                 </Card>
 
