@@ -64,9 +64,9 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
     onSuccess: (data) => {
       toast({
         title: "Reset mật khẩu thành công",
-        description: `Tên đăng nhập: ${data.username}\nMật khẩu mới: ${data.newPassword}`,
+        description: `Tên đăng nhập: ${data.username}\nMật khẩu mới: ${data.newPassword}\nUser phải đổi mật khẩu khi đăng nhập lần đầu.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members", member.id, "account"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
     },
     onError: (error: any) => {
       toast({
