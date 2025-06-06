@@ -326,27 +326,26 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(academicYears, eq(members.academicYearId, academicYears.id))
       .leftJoin(users, eq(members.userId, users.id));
     
-    return result
-      .filter(row => row.department !== null)
-      .map(row => ({
+    return result.map(row => ({
         id: row.id,
         fullName: row.fullName,
         studentId: row.studentId,
         email: row.email,
         phone: row.phone,
         class: row.class,
-        departmentId: row.departmentId,
-        position: row.position,
+        divisionId: row.divisionId,
+        positionId: row.positionId,
+        academicYearId: row.academicYearId,
         memberType: row.memberType,
         joinDate: row.joinDate,
         notes: row.notes,
         userId: row.userId,
         isActive: row.isActive,
-        createdBy: row.createdBy,
-        updatedBy: row.updatedBy,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-        department: row.department as Department,
+        division: row.division,
+        position: row.position,
+        academicYear: row.academicYear,
         user: row.user,
       }));
   }
