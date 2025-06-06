@@ -1038,6 +1038,295 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="positions">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Quản lý chức vụ</h2>
+                  <p className="text-gray-600">Quản lý các chức vụ trong tổ chức</p>
+                </div>
+                <Button onClick={() => {
+                  setPositionForm({
+                    name: "",
+                    displayName: "",
+                    level: 1,
+                    isLeadership: false,
+                    isDepartmentLevel: false,
+                    description: ""
+                  });
+                  setEditingPosition(null);
+                  setIsCreatingPosition(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm chức vụ
+                </Button>
+              </div>
+
+              <div className="grid gap-4">
+                {positions?.map((position) => (
+                  <Card key={position.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-medium">{position.displayName}</h3>
+                            <Badge variant="secondary">Level {position.level}</Badge>
+                            {position.isLeadership && <Badge variant="default">Lãnh đạo</Badge>}
+                            {position.isDepartmentLevel && <Badge variant="outline">Cấp ban</Badge>}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">Code: {position.name}</p>
+                          {position.description && (
+                            <p className="text-sm text-gray-500">{position.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setPositionForm(position);
+                              setEditingPosition(position);
+                              setIsCreatingPosition(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc chắn muốn xóa chức vụ "${position.displayName}"?`)) {
+                                deletePositionMutation.mutate(position.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Dialog open={isCreatingPosition} onOpenChange={setIsCreatingPosition}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingPosition ? "Cập nhật chức vụ" : "Thêm chức vụ mới"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Mã chức vụ</Label>
+                      <Input
+                        value={positionForm.name}
+                        onChange={(e) => setPositionForm(prev => ({...prev, name: e.target.value}))}
+                        placeholder="president, vice-president, secretary..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Tên hiển thị</Label>
+                      <Input
+                        value={positionForm.displayName}
+                        onChange={(e) => setPositionForm(prev => ({...prev, displayName: e.target.value}))}
+                        placeholder="Chủ nhiệm, Phó chủ nhiệm..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Cấp độ (Level)</Label>
+                      <Input
+                        type="number"
+                        value={positionForm.level}
+                        onChange={(e) => setPositionForm(prev => ({...prev, level: parseInt(e.target.value) || 1}))}
+                        placeholder="100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Mô tả</Label>
+                      <Textarea
+                        value={positionForm.description}
+                        onChange={(e) => setPositionForm(prev => ({...prev, description: e.target.value}))}
+                        placeholder="Mô tả về chức vụ..."
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isLeadership"
+                          checked={positionForm.isLeadership}
+                          onCheckedChange={(checked) => setPositionForm(prev => ({...prev, isLeadership: !!checked}))}
+                        />
+                        <Label htmlFor="isLeadership">Chức vụ lãnh đạo</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isDepartmentLevel"
+                          checked={positionForm.isDepartmentLevel}
+                          onCheckedChange={(checked) => setPositionForm(prev => ({...prev, isDepartmentLevel: !!checked}))}
+                        />
+                        <Label htmlFor="isDepartmentLevel">Cấp ban</Label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (editingPosition) {
+                            updatePositionMutation.mutate({...positionForm, id: editingPosition.id});
+                          } else {
+                            createPositionMutation.mutate(positionForm);
+                          }
+                          setIsCreatingPosition(false);
+                        }}
+                        disabled={!positionForm.name || !positionForm.displayName}
+                      >
+                        {editingPosition ? "Cập nhật" : "Tạo"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsCreatingPosition(false)}>
+                        Hủy
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="divisions">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Quản lý ban</h2>
+                  <p className="text-gray-600">Quản lý các ban trong tổ chức</p>
+                </div>
+                <Button onClick={() => {
+                  setDivisionForm({
+                    name: "",
+                    description: "",
+                    color: "#3B82F6",
+                    icon: "Users"
+                  });
+                  setEditingDivision(null);
+                  setIsCreatingDivision(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm ban
+                </Button>
+              </div>
+
+              <div className="grid gap-4">
+                {divisions?.map((division) => (
+                  <Card key={division.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: division.color }}
+                            />
+                            <h3 className="font-medium">{division.name}</h3>
+                            <Badge variant="secondary">{division.icon}</Badge>
+                            {division.isActive && <Badge variant="default">Hoạt động</Badge>}
+                          </div>
+                          {division.description && (
+                            <p className="text-sm text-gray-500">{division.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setDivisionForm(division);
+                              setEditingDivision(division);
+                              setIsCreatingDivision(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc chắn muốn xóa ban "${division.name}"?`)) {
+                                deleteDivisionMutation.mutate(division.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Dialog open={isCreatingDivision} onOpenChange={setIsCreatingDivision}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingDivision ? "Cập nhật ban" : "Thêm ban mới"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Tên ban</Label>
+                      <Input
+                        value={divisionForm.name}
+                        onChange={(e) => setDivisionForm(prev => ({...prev, name: e.target.value}))}
+                        placeholder="Ban Sự kiện..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Mô tả</Label>
+                      <Textarea
+                        value={divisionForm.description}
+                        onChange={(e) => setDivisionForm(prev => ({...prev, description: e.target.value}))}
+                        placeholder="Mô tả về ban..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Màu sắc</Label>
+                      <Input
+                        type="color"
+                        value={divisionForm.color}
+                        onChange={(e) => setDivisionForm(prev => ({...prev, color: e.target.value}))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Icon</Label>
+                      <Input
+                        value={divisionForm.icon}
+                        onChange={(e) => setDivisionForm(prev => ({...prev, icon: e.target.value}))}
+                        placeholder="Users, Calendar, Settings..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (editingDivision) {
+                            updateDivisionMutation.mutate({...divisionForm, id: editingDivision.id});
+                          } else {
+                            createDivisionMutation.mutate(divisionForm);
+                          }
+                          setIsCreatingDivision(false);
+                        }}
+                        disabled={!divisionForm.name}
+                      >
+                        {editingDivision ? "Cập nhật" : "Tạo"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsCreatingDivision(false)}>
+                        Hủy
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </TabsContent>
+
           <TabsContent value="beepoint">
             <div className="space-y-6">
               <div className="flex justify-between items-center">
