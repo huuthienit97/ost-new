@@ -140,6 +140,28 @@ export default function AdminPage() {
   const [userPassword, setUserPassword] = useState("");
   const [userRoleId, setUserRoleId] = useState(0);
 
+  // Position management state
+  const [isCreatingPosition, setIsCreatingPosition] = useState(false);
+  const [editingPosition, setEditingPosition] = useState<any>(null);
+  const [positionForm, setPositionForm] = useState({
+    name: "",
+    displayName: "",
+    level: 1,
+    isLeadership: false,
+    isDepartmentLevel: false,
+    description: ""
+  });
+
+  // Division management state
+  const [isCreatingDivision, setIsCreatingDivision] = useState(false);
+  const [editingDivision, setEditingDivision] = useState<any>(null);
+  const [divisionForm, setDivisionForm] = useState({
+    name: "",
+    description: "",
+    color: "#3B82F6",
+    icon: "Users"
+  });
+
   // BeePoint configuration state
   const [beePointSettings, setBeePointSettings] = useState({
     totalSupply: 1000000,
