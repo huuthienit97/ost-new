@@ -984,14 +984,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(divisions, eq(divisions.id, members.divisionId))
         .leftJoin(positions, eq(positions.id, members.positionId))
         .leftJoin(academicYears, eq(academicYears.id, members.academicYearId))
-        .leftJoin(users, eq(users.id, members.userId))
-        .where(eq(members.isActive, true));
+        .leftJoin(users, eq(users.id, members.userId));
       
       let filteredMembers = membersWithDetails;
       
       // Apply filters
       if (type && typeof type === 'string') {
-        filteredMembers = filteredMembers.filter(member => member.memberType === type);
+        if (type === 'active') {
+          filteredMembers = filteredMembers.filter(member => member.isActive === true);
+        } else if (type === 'alumni') {
+          filteredMembers = filteredMembers.filter(member => member.memberType === 'alumni' || member.isActive === false);
+        } else {
+          filteredMembers = filteredMembers.filter(member => member.memberType === type);
+        }
       }
       
       if (department && typeof department === 'string') {
@@ -1082,6 +1087,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user account if requested
       if (memberData.createUserAccount) {
         try {
+          // Validate required data for account creation
+          if (!memberData.fullName || memberData.fullName.trim() === '') {
+            throw new Error("Full name is required for account creation");
+          }
+
           // Generate username from full name
           const username = memberData.fullName
             .toLowerCase()
@@ -1111,6 +1121,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             mustChangePassword: true,
             isActive: true,
           });
+
+          // Update member with userId link
+          await db
+            .update(members)
+            .set({ userId: newUser.id })
+            .where(eq(members.id, newMember.id));
           
           userCredentials = {
             username,
@@ -1119,6 +1135,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error("Error creating user account:", error);
           // Don't fail member creation if user account creation fails
+          return res.status(500).json({ 
+            message: "Failed to create member", 
+            error: `Account creation failed: ${(error as any).message}`
+          });
         }
       }
       
