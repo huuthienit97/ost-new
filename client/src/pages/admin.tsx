@@ -162,6 +162,18 @@ export default function AdminPage() {
     icon: "Users"
   });
 
+  // Notification management state
+  const [isCreatingNotification, setIsCreatingNotification] = useState(false);
+  const [notificationForm, setNotificationForm] = useState({
+    title: "",
+    message: "",
+    type: "info",
+    priority: "normal",
+    targetType: "all",
+    targetIds: [] as string[],
+    scheduledAt: ""
+  });
+
   // BeePoint configuration state
   const [beePointSettings, setBeePointSettings] = useState({
     totalSupply: 1000000,
@@ -258,6 +270,38 @@ export default function AdminPage() {
   const { data: allUsers } = useQuery({
     queryKey: ["/api/users/all"],
     select: (data: any) => data?.users || []
+  });
+
+  // Fetch notifications list
+  const { data: notificationsList } = useQuery<{
+    notifications: Array<{
+      id: number;
+      title: string;
+      message: string;
+      type: string;
+      priority: string;
+      targetType: string;
+      targetIds: string[];
+      scheduledAt: string | null;
+      sentAt: string | null;
+      createdAt: string;
+      sender: {
+        id: number;
+        fullName: string;
+        email: string;
+      };
+      totalRecipients: number;
+      deliveredCount: number;
+      readCount: number;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }>({
+    queryKey: ["/api/notifications"],
   });
 
   // Update settings when config data loads
@@ -458,6 +502,76 @@ export default function AdminPage() {
       toast({
         title: "Lỗi",
         description: "Không thể xóa ban",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Notification mutations
+  const createNotificationMutation = useMutation({
+    mutationFn: async (notificationData: any) => {
+      return await apiRequest("POST", "/api/notifications", notificationData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo thông báo thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      setNotificationForm({
+        title: "",
+        message: "",
+        type: "info",
+        priority: "normal",
+        targetType: "all",
+        targetIds: [],
+        scheduledAt: ""
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo thông báo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendNotificationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("POST", `/api/notifications/${id}/send`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Gửi thông báo thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi thông báo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/notifications/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Xóa thông báo thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa thông báo",
         variant: "destructive",
       });
     },
@@ -721,6 +835,13 @@ export default function AdminPage() {
       PERMISSIONS.SHOP_ORDER_VIEW,
       PERMISSIONS.SHOP_ORDER_MANAGE,
     ],
+    "Thông báo": [
+      PERMISSIONS.NOTIFICATION_VIEW,
+      PERMISSIONS.NOTIFICATION_CREATE,
+      PERMISSIONS.NOTIFICATION_SEND,
+      PERMISSIONS.NOTIFICATION_MANAGE,
+      PERMISSIONS.NOTIFICATION_DELETE,
+    ],
   };
 
   const getPermissionDisplayName = (permission: string) => {
@@ -811,6 +932,7 @@ export default function AdminPage() {
             <TabsTrigger value="users">Người dùng</TabsTrigger>
             <TabsTrigger value="positions">Chức vụ</TabsTrigger>
             <TabsTrigger value="divisions">Ban</TabsTrigger>
+            <TabsTrigger value="notifications">Thông báo</TabsTrigger>
             <TabsTrigger value="beepoint">Cấu hình BeePoint</TabsTrigger>
           </TabsList>
 
