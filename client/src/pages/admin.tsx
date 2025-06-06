@@ -221,11 +221,14 @@ export default function AdminPage() {
       return await apiRequest("PUT", "/api/beepoint/config", configData);
     },
     onSuccess: () => {
+      // Force immediate cache invalidation and refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/beepoint/config"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beepoint/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/beepoint/config"] });
       toast({
         title: "Thành công",
         description: "Cập nhật cấu hình BeePoint thành công",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/beepoint/config"] });
     },
     onError: () => {
       toast({

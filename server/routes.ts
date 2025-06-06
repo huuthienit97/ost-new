@@ -1400,6 +1400,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/positions", authenticate, authorize([PERMISSIONS.POSITION_CREATE]), async (req, res) => {
+    try {
+      const { name, displayName, level, isLeadership, isDepartmentLevel, description } = req.body;
+      const [newPosition] = await db
+        .insert(positions)
+        .values({ 
+          name, 
+          displayName, 
+          level, 
+          isLeadership: isLeadership || false, 
+          isDepartmentLevel: isDepartmentLevel || false,
+          description 
+        })
+        .returning();
+      
+      res.status(201).json(newPosition);
+    } catch (error) {
+      console.error("Error creating position:", error);
+      res.status(500).json({ message: "Lỗi tạo chức vụ mới" });
+    }
+  });
+
+  app.put("/api/positions/:id", authenticate, authorize([PERMISSIONS.POSITION_EDIT]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, displayName, level, isLeadership, isDepartmentLevel, description } = req.body;
+      
+      const [updatedPosition] = await db
+        .update(positions)
+        .set({ name, displayName, level, isLeadership, isDepartmentLevel, description })
+        .where(eq(positions.id, id))
+        .returning();
+      
+      if (!updatedPosition) {
+        return res.status(404).json({ message: "Không tìm thấy chức vụ" });
+      }
+      
+      res.json(updatedPosition);
+    } catch (error) {
+      console.error("Error updating position:", error);
+      res.status(500).json({ message: "Lỗi cập nhật chức vụ" });
+    }
+  });
+
+  app.delete("/api/positions/:id", authenticate, authorize([PERMISSIONS.POSITION_DELETE]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if position has members
+      const membersCount = await db.select({ count: sql`count(*)` }).from(members).where(eq(members.positionId, id));
+      if (parseInt(membersCount[0].count as string) > 0) {
+        return res.status(400).json({ message: "Không thể xóa chức vụ có thành viên" });
+      }
+      
+      await db.delete(positions).where(eq(positions.id, id));
+      res.json({ message: "Đã xóa chức vụ" });
+    } catch (error) {
+      console.error("Error deleting position:", error);
+      res.status(500).json({ message: "Lỗi xóa chức vụ" });
+    }
+  });
+
   /**
    * @swagger
    * /api/divisions:
