@@ -448,6 +448,37 @@ export const missionAssignmentsRelations = relations(missionAssignments, ({ one,
   submissions: many(missionSubmissions),
 }));
 
+// Notifications table for push notifications system
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("info"), // info, success, warning, error, announcement
+  priority: text("priority").notNull().default("normal"), // low, normal, high, urgent
+  targetType: text("target_type").notNull(), // all, role, division, user, custom
+  targetIds: text("target_ids").array().default([]), // IDs based on targetType
+  senderId: integer("sender_id").references(() => users.id).notNull(),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  metadata: jsonb("metadata").default({}), // Additional data like images, links, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Notification status tracking for individual users
+export const notificationStatus = pgTable("notification_status", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id").references(() => notifications.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  status: text("status").notNull().default("pending"), // pending, sent, delivered, read, failed
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  failureReason: text("failure_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const missionSubmissionsRelations = relations(missionSubmissions, ({ one }) => ({
   assignment: one(missionAssignments, {
     fields: [missionSubmissions.assignmentId],
@@ -479,6 +510,28 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   updatedMissions: many(missions, { relationName: "missionUpdatedBy" }),
   missionAssignments: many(missionAssignments),
   reviewedAssignments: many(missionAssignments, { relationName: "assignmentReviewedBy" }),
+  sentNotifications: many(notifications),
+  notificationStatuses: many(notificationStatus),
+}));
+
+// Notification relations
+export const notificationsRelations = relations(notifications, ({ one, many }) => ({
+  sender: one(users, {
+    fields: [notifications.senderId],
+    references: [users.id],
+  }),
+  statuses: many(notificationStatus),
+}));
+
+export const notificationStatusRelations = relations(notificationStatus, ({ one }) => ({
+  notification: one(notifications, {
+    fields: [notificationStatus.notificationId],
+    references: [notifications.id],
+  }),
+  user: one(users, {
+    fields: [notificationStatus.userId],
+    references: [users.id],
+  }),
 }));
 
 // Insert schemas
@@ -598,6 +651,33 @@ export type InsertShopOrder = z.infer<typeof insertShopOrderSchema>;
 export type ShopOrder = typeof shopOrders.$inferSelect;
 
 export type BeePointCirculation = typeof beePointCirculation.$inferSelect;
+
+// Notification system schemas
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationStatusSchema = createInsertSchema(notificationStatus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export type InsertNotificationStatus = z.infer<typeof insertNotificationStatusSchema>;
+export type NotificationStatus = typeof notificationStatus.$inferSelect;
+
+export type NotificationWithStatus = Notification & {
+  sender?: User;
+  statuses?: NotificationStatus[];
+  totalRecipients?: number;
+  deliveredCount?: number;
+  readCount?: number;
+};
 
 // Extended types
 export type UserWithRole = User & {
@@ -745,6 +825,13 @@ export const PERMISSIONS = {
   API_KEY_CREATE: "api_key:create",
   API_KEY_EDIT: "api_key:edit",
   API_KEY_DELETE: "api_key:delete",
+  
+  // Notification permissions
+  NOTIFICATION_VIEW: "notification:view",
+  NOTIFICATION_CREATE: "notification:create",
+  NOTIFICATION_SEND: "notification:send",
+  NOTIFICATION_MANAGE: "notification:manage",
+  NOTIFICATION_DELETE: "notification:delete",
   
   // System permissions
   SYSTEM_ADMIN: "system:admin",
