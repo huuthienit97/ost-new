@@ -1361,6 +1361,268 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="notifications">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Quản lý thông báo</h2>
+                  <p className="text-gray-600">Tạo và gửi thông báo đẩy cho thành viên</p>
+                </div>
+                <Button onClick={() => setIsCreatingNotification(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tạo thông báo
+                </Button>
+              </div>
+
+              <div className="grid gap-4">
+                {notificationsList?.notifications?.map((notification: any) => (
+                  <Card key={notification.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-medium">{notification.title}</h3>
+                            <Badge variant={notification.type === 'urgent' ? 'destructive' : 'secondary'}>
+                              {notification.priority}
+                            </Badge>
+                            <Badge variant={notification.sentAt ? 'default' : 'outline'}>
+                              {notification.sentAt ? 'Đã gửi' : 'Chờ gửi'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                          <div className="text-xs text-gray-500">
+                            <div>Gửi đến: {notification.targetType === 'all' ? 'Tất cả thành viên' : notification.targetType}</div>
+                            <div>Người gửi: {notification.sender?.fullName}</div>
+                            <div>Tạo lúc: {new Date(notification.createdAt).toLocaleString('vi-VN')}</div>
+                            {notification.sentAt && (
+                              <div>Gửi lúc: {new Date(notification.sentAt).toLocaleString('vi-VN')}</div>
+                            )}
+                            <div className="mt-1">
+                              Thống kê: {notification.readCount}/{notification.totalRecipients} đã đọc 
+                              ({notification.totalRecipients > 0 ? Math.round((notification.readCount / notification.totalRecipients) * 100) : 0}%)
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {!notification.sentAt && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => sendNotificationMutation.mutate(notification.id)}
+                              disabled={sendNotificationMutation.isPending}
+                            >
+                              Gửi ngay
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc chắn muốn xóa thông báo "${notification.title}"?`)) {
+                                deleteNotificationMutation.mutate(notification.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Dialog open={isCreatingNotification} onOpenChange={setIsCreatingNotification}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Tạo thông báo mới</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Tiêu đề</Label>
+                      <Input
+                        value={notificationForm.title}
+                        onChange={(e) => setNotificationForm(prev => ({...prev, title: e.target.value}))}
+                        placeholder="Nhập tiêu đề thông báo..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Nội dung</Label>
+                      <Textarea
+                        value={notificationForm.message}
+                        onChange={(e) => setNotificationForm(prev => ({...prev, message: e.target.value}))}
+                        placeholder="Nhập nội dung thông báo..."
+                        rows={4}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Loại thông báo</Label>
+                        <Select 
+                          value={notificationForm.type} 
+                          onValueChange={(value) => setNotificationForm(prev => ({...prev, type: value}))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="info">Thông tin</SelectItem>
+                            <SelectItem value="success">Thành công</SelectItem>
+                            <SelectItem value="warning">Cảnh báo</SelectItem>
+                            <SelectItem value="error">Lỗi</SelectItem>
+                            <SelectItem value="announcement">Thông báo quan trọng</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Mức độ ưu tiên</Label>
+                        <Select 
+                          value={notificationForm.priority} 
+                          onValueChange={(value) => setNotificationForm(prev => ({...prev, priority: value}))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Thấp</SelectItem>
+                            <SelectItem value="normal">Bình thường</SelectItem>
+                            <SelectItem value="high">Cao</SelectItem>
+                            <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Gửi đến</Label>
+                      <Select 
+                        value={notificationForm.targetType} 
+                        onValueChange={(value) => setNotificationForm(prev => ({...prev, targetType: value, targetIds: []}))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả thành viên</SelectItem>
+                          <SelectItem value="role">Theo vai trò</SelectItem>
+                          <SelectItem value="division">Theo ban</SelectItem>
+                          <SelectItem value="user">Người dùng cụ thể</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {notificationForm.targetType === 'role' && (
+                      <div>
+                        <Label>Chọn vai trò</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {roles?.map((role) => (
+                            <div key={role.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`role-${role.id}`}
+                                checked={notificationForm.targetIds.includes(role.id.toString())}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: [...prev.targetIds, role.id.toString()]
+                                    }));
+                                  } else {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: prev.targetIds.filter(id => id !== role.id.toString())
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`role-${role.id}`}>{role.displayName}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {notificationForm.targetType === 'division' && (
+                      <div>
+                        <Label>Chọn ban</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {divisions?.map((division) => (
+                            <div key={division.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`division-${division.id}`}
+                                checked={notificationForm.targetIds.includes(division.id.toString())}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: [...prev.targetIds, division.id.toString()]
+                                    }));
+                                  } else {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: prev.targetIds.filter(id => id !== division.id.toString())
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`division-${division.id}`}>{division.name}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {notificationForm.targetType === 'user' && (
+                      <div>
+                        <Label>Chọn người dùng</Label>
+                        <div className="max-h-40 overflow-y-auto mt-2 space-y-2">
+                          {users?.map((user) => (
+                            <div key={user.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`user-${user.id}`}
+                                checked={notificationForm.targetIds.includes(user.id.toString())}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: [...prev.targetIds, user.id.toString()]
+                                    }));
+                                  } else {
+                                    setNotificationForm(prev => ({
+                                      ...prev, 
+                                      targetIds: prev.targetIds.filter(id => id !== user.id.toString())
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`user-${user.id}`}>{user.fullName} ({user.email})</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Lên lịch gửi (tùy chọn)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={notificationForm.scheduledAt}
+                        onChange={(e) => setNotificationForm(prev => ({...prev, scheduledAt: e.target.value}))}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          createNotificationMutation.mutate(notificationForm);
+                          setIsCreatingNotification(false);
+                        }}
+                        disabled={!notificationForm.title || !notificationForm.message || createNotificationMutation.isPending}
+                      >
+                        {notificationForm.scheduledAt ? "Lên lịch gửi" : "Gửi ngay"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsCreatingNotification(false)}>
+                        Hủy
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </TabsContent>
+
           <TabsContent value="beepoint">
             <div className="space-y-6">
               <div className="flex justify-between items-center">

@@ -2,11 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles } from "@shared/schema";
-import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, PERMISSIONS } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or, isNotNull, sql, gte } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, ne, inArray } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -3888,6 +3888,516 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating BeePoint circulation:", error);
       res.status(500).json({ message: "Lỗi cập nhật thông tin lưu hành BeePoints" });
+    }
+  });
+
+  // Push Notification Management APIs
+
+  /**
+   * @swagger
+   * /api/notifications:
+   *   get:
+   *     summary: Lấy danh sách thông báo
+   *     description: Lấy danh sách các thông báo với thống kê trạng thái
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [pending, sent, scheduled]
+   *     responses:
+   *       200:
+   *         description: Danh sách thông báo
+   */
+  app.get("/api/notifications", authenticate, authorize([PERMISSIONS.NOTIFICATION_VIEW]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      const status = req.query.status as string;
+
+      let whereCondition = eq(notifications.isActive, true);
+      if (status === 'pending') {
+        whereCondition = and(whereCondition, isNull(notifications.sentAt));
+      } else if (status === 'sent') {
+        whereCondition = and(whereCondition, isNotNull(notifications.sentAt));
+      } else if (status === 'scheduled') {
+        whereCondition = and(whereCondition, isNotNull(notifications.scheduledAt), isNull(notifications.sentAt));
+      }
+
+      const notificationsList = await db
+        .select({
+          id: notifications.id,
+          title: notifications.title,
+          message: notifications.message,
+          type: notifications.type,
+          priority: notifications.priority,
+          targetType: notifications.targetType,
+          targetIds: notifications.targetIds,
+          scheduledAt: notifications.scheduledAt,
+          sentAt: notifications.sentAt,
+          createdAt: notifications.createdAt,
+          sender: {
+            id: users.id,
+            fullName: users.fullName,
+            email: users.email,
+          },
+          totalRecipients: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${notificationStatus} 
+            WHERE ${notificationStatus.notificationId} = ${notifications.id}
+          )`,
+          deliveredCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${notificationStatus} 
+            WHERE ${notificationStatus.notificationId} = ${notifications.id} 
+            AND ${notificationStatus.status} IN ('delivered', 'read')
+          )`,
+          readCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${notificationStatus} 
+            WHERE ${notificationStatus.notificationId} = ${notifications.id} 
+            AND ${notificationStatus.status} = 'read'
+          )`,
+        })
+        .from(notifications)
+        .leftJoin(users, eq(users.id, notifications.senderId))
+        .where(whereCondition)
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const total = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(whereCondition);
+
+      res.json({
+        notifications: notificationsList,
+        pagination: {
+          page,
+          limit,
+          total: total[0].count,
+          totalPages: Math.ceil(total[0].count / limit),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications:
+   *   post:
+   *     summary: Tạo thông báo mới
+   *     description: Tạo và gửi thông báo đẩy cho các thành viên
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - title
+   *               - message
+   *               - targetType
+   *             properties:
+   *               title:
+   *                 type: string
+   *               message:
+   *                 type: string
+   *               type:
+   *                 type: string
+   *                 enum: [info, success, warning, error, announcement]
+   *               priority:
+   *                 type: string
+   *                 enum: [low, normal, high, urgent]
+   *               targetType:
+   *                 type: string
+   *                 enum: [all, role, division, user, custom]
+   *               targetIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *               scheduledAt:
+   *                 type: string
+   *                 format: date-time
+   *               metadata:
+   *                 type: object
+   *     responses:
+   *       201:
+   *         description: Thông báo đã được tạo
+   */
+  app.post("/api/notifications", authenticate, authorize([PERMISSIONS.NOTIFICATION_CREATE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        title,
+        message,
+        type = "info",
+        priority = "normal",
+        targetType,
+        targetIds = [],
+        scheduledAt,
+        metadata = {},
+      } = req.body;
+
+      const senderId = req.user!.id;
+
+      // Create notification
+      const [notification] = await db
+        .insert(notifications)
+        .values({
+          title,
+          message,
+          type,
+          priority,
+          targetType,
+          targetIds,
+          senderId,
+          scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+          metadata,
+        })
+        .returning();
+
+      // Determine recipients based on target type
+      let recipients: number[] = [];
+
+      switch (targetType) {
+        case 'all':
+          const allUsers = await db.select({ id: users.id }).from(users).where(eq(users.isActive, true));
+          recipients = allUsers.map(u => u.id);
+          break;
+
+        case 'role':
+          if (targetIds.length > 0) {
+            const roleUsers = await db
+              .select({ id: users.id })
+              .from(users)
+              .where(and(eq(users.isActive, true), inArray(users.roleId, targetIds.map(id => parseInt(id)))));
+            recipients = roleUsers.map(u => u.id);
+          }
+          break;
+
+        case 'division':
+          if (targetIds.length > 0) {
+            const divisionMembers = await db
+              .select({ userId: members.userId })
+              .from(members)
+              .where(and(
+                eq(members.isActive, true),
+                inArray(members.divisionId, targetIds.map(id => parseInt(id))),
+                isNotNull(members.userId)
+              ));
+            recipients = divisionMembers.map(m => m.userId!);
+          }
+          break;
+
+        case 'user':
+          recipients = targetIds.map(id => parseInt(id));
+          break;
+
+        case 'custom':
+          recipients = targetIds.map(id => parseInt(id));
+          break;
+      }
+
+      // Create notification status records for all recipients
+      if (recipients.length > 0) {
+        const statusRecords = recipients.map(userId => ({
+          notificationId: notification.id,
+          userId,
+          status: scheduledAt ? 'pending' : 'sent',
+          deliveredAt: scheduledAt ? null : new Date(),
+        }));
+
+        await db.insert(notificationStatus).values(statusRecords);
+
+        // Mark notification as sent if not scheduled
+        if (!scheduledAt) {
+          await db
+            .update(notifications)
+            .set({ sentAt: new Date() })
+            .where(eq(notifications.id, notification.id));
+        }
+      }
+
+      res.status(201).json({
+        ...notification,
+        recipientCount: recipients.length,
+        message: scheduledAt ? "Thông báo đã được lên lịch" : "Thông báo đã được gửi thành công",
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ message: "Lỗi tạo thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/{id}/send:
+   *   post:
+   *     summary: Gửi thông báo đã lên lịch
+   *     description: Gửi ngay lập tức một thông báo đã được lên lịch
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Thông báo đã được gửi
+   */
+  app.post("/api/notifications/:id/send", authenticate, authorize([PERMISSIONS.NOTIFICATION_SEND]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      const [notification] = await db
+        .select()
+        .from(notifications)
+        .where(and(eq(notifications.id, id), eq(notifications.isActive, true)));
+
+      if (!notification) {
+        return res.status(404).json({ message: "Không tìm thấy thông báo" });
+      }
+
+      if (notification.sentAt) {
+        return res.status(400).json({ message: "Thông báo đã được gửi" });
+      }
+
+      // Update notification status records to sent
+      await db
+        .update(notificationStatus)
+        .set({
+          status: 'sent',
+          deliveredAt: new Date(),
+        })
+        .where(eq(notificationStatus.notificationId, id));
+
+      // Mark notification as sent
+      await db
+        .update(notifications)
+        .set({ sentAt: new Date() })
+        .where(eq(notifications.id, id));
+
+      res.json({ message: "Thông báo đã được gửi thành công" });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ message: "Lỗi gửi thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/{id}:
+   *   delete:
+   *     summary: Xóa thông báo
+   *     description: Xóa mềm một thông báo (đánh dấu là không hoạt động)
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Thông báo đã được xóa
+   */
+  app.delete("/api/notifications/:id", authenticate, authorize([PERMISSIONS.NOTIFICATION_DELETE]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      await db
+        .update(notifications)
+        .set({ isActive: false })
+        .where(eq(notifications.id, id));
+
+      res.json({ message: "Đã xóa thông báo" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Lỗi xóa thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/my:
+   *   get:
+   *     summary: Lấy thông báo của người dùng
+   *     description: Lấy danh sách thông báo dành cho người dùng hiện tại
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: unread
+   *         schema:
+   *           type: boolean
+   *     responses:
+   *       200:
+   *         description: Danh sách thông báo của người dùng
+   */
+  app.get("/api/notifications/my", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const unreadOnly = req.query.unread === 'true';
+
+      let whereCondition = and(
+        eq(notificationStatus.userId, userId),
+        eq(notifications.isActive, true)
+      );
+
+      if (unreadOnly) {
+        whereCondition = and(whereCondition, ne(notificationStatus.status, 'read'));
+      }
+
+      const userNotifications = await db
+        .select({
+          id: notifications.id,
+          title: notifications.title,
+          message: notifications.message,
+          type: notifications.type,
+          priority: notifications.priority,
+          metadata: notifications.metadata,
+          createdAt: notifications.createdAt,
+          status: notificationStatus.status,
+          deliveredAt: notificationStatus.deliveredAt,
+          readAt: notificationStatus.readAt,
+        })
+        .from(notificationStatus)
+        .leftJoin(notifications, eq(notifications.id, notificationStatus.notificationId))
+        .where(whereCondition)
+        .orderBy(desc(notifications.createdAt));
+
+      res.json(userNotifications);
+    } catch (error) {
+      console.error("Error fetching user notifications:", error);
+      res.status(500).json({ message: "Lỗi lấy thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/{id}/read:
+   *   post:
+   *     summary: Đánh dấu thông báo đã đọc
+   *     description: Đánh dấu một thông báo cụ thể là đã đọc
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Thông báo đã được đánh dấu đã đọc
+   */
+  app.post("/api/notifications/:id/read", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      await db
+        .update(notificationStatus)
+        .set({
+          status: 'read',
+          readAt: new Date(),
+        })
+        .where(and(
+          eq(notificationStatus.notificationId, notificationId),
+          eq(notificationStatus.userId, userId)
+        ));
+
+      res.json({ message: "Đã đánh dấu thông báo đã đọc" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Lỗi đánh dấu thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/stats:
+   *   get:
+   *     summary: Thống kê thông báo
+   *     description: Lấy thống kê tổng quan về hệ thống thông báo
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Thống kê thông báo
+   */
+  app.get("/api/notifications/stats", authenticate, authorize([PERMISSIONS.NOTIFICATION_VIEW]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const totalNotifications = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(eq(notifications.isActive, true));
+
+      const sentNotifications = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(eq(notifications.isActive, true), isNotNull(notifications.sentAt)));
+
+      const scheduledNotifications = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.isActive, true),
+          isNotNull(notifications.scheduledAt),
+          isNull(notifications.sentAt)
+        ));
+
+      const totalRecipients = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notificationStatus);
+
+      const readNotifications = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notificationStatus)
+        .where(eq(notificationStatus.status, 'read'));
+
+      res.json({
+        totalNotifications: totalNotifications[0].count,
+        sentNotifications: sentNotifications[0].count,
+        scheduledNotifications: scheduledNotifications[0].count,
+        totalRecipients: totalRecipients[0].count,
+        readNotifications: readNotifications[0].count,
+        readRate: totalRecipients[0].count > 0 
+          ? ((readNotifications[0].count / totalRecipients[0].count) * 100).toFixed(2)
+          : "0.00",
+      });
+    } catch (error) {
+      console.error("Error fetching notification stats:", error);
+      res.status(500).json({ message: "Lỗi lấy thống kê thông báo" });
     }
   });
 
