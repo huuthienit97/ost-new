@@ -285,8 +285,9 @@ export class DatabaseStorage implements IStorage {
         email: members.email,
         phone: members.phone,
         class: members.class,
-        departmentId: members.departmentId,
-        position: members.position,
+        divisionId: members.divisionId,
+        positionId: members.positionId,
+        academicYearId: members.academicYearId,
         memberType: members.memberType,
         joinDate: members.joinDate,
         notes: members.notes,
@@ -296,11 +297,21 @@ export class DatabaseStorage implements IStorage {
         updatedBy: members.updatedBy,
         createdAt: members.createdAt,
         updatedAt: members.updatedAt,
-        department: {
-          id: departments.id,
-          name: departments.name,
-          icon: departments.icon,
-          color: departments.color,
+        division: {
+          id: divisions.id,
+          name: divisions.name,
+          color: divisions.color,
+          icon: divisions.icon,
+        },
+        position: {
+          id: positions.id,
+          name: positions.name,
+          displayName: positions.displayName,
+          level: positions.level,
+        },
+        academicYear: {
+          id: academicYears.id,
+          name: academicYears.name,
         },
         user: {
           id: users.id,
@@ -310,7 +321,9 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(members)
-      .leftJoin(departments, eq(members.departmentId, departments.id))
+      .leftJoin(divisions, eq(members.divisionId, divisions.id))
+      .leftJoin(positions, eq(members.positionId, positions.id))
+      .leftJoin(academicYears, eq(members.academicYearId, academicYears.id))
       .leftJoin(users, eq(members.userId, users.id));
     
     return result
@@ -352,22 +365,31 @@ export class DatabaseStorage implements IStorage {
         email: members.email,
         phone: members.phone,
         class: members.class,
-        departmentId: members.departmentId,
-        position: members.position,
+        divisionId: members.divisionId,
+        positionId: members.positionId,
+        academicYearId: members.academicYearId,
         memberType: members.memberType,
         joinDate: members.joinDate,
         notes: members.notes,
         userId: members.userId,
         isActive: members.isActive,
-        createdBy: members.createdBy,
-        updatedBy: members.updatedBy,
         createdAt: members.createdAt,
         updatedAt: members.updatedAt,
-        department: {
-          id: departments.id,
-          name: departments.name,
-          icon: departments.icon,
-          color: departments.color,
+        division: {
+          id: divisions.id,
+          name: divisions.name,
+          color: divisions.color,
+          icon: divisions.icon,
+        },
+        position: {
+          id: positions.id,
+          name: positions.name,
+          displayName: positions.displayName,
+          level: positions.level,
+        },
+        academicYear: {
+          id: academicYears.id,
+          name: academicYears.name,
         },
         user: {
           id: users.id,
@@ -377,11 +399,13 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(members)
-      .leftJoin(departments, eq(members.departmentId, departments.id))
+      .leftJoin(divisions, eq(members.divisionId, divisions.id))
+      .leftJoin(positions, eq(members.positionId, positions.id))
+      .leftJoin(academicYears, eq(members.academicYearId, academicYears.id))
       .leftJoin(users, eq(members.userId, users.id))
       .where(eq(members.id, id));
     
-    if (result.length === 0 || !result[0].department) return undefined;
+    if (result.length === 0) return undefined;
     
     const row = result[0];
     return {
@@ -391,18 +415,19 @@ export class DatabaseStorage implements IStorage {
       email: row.email,
       phone: row.phone,
       class: row.class,
-      departmentId: row.departmentId,
-      position: row.position,
+      divisionId: row.divisionId,
+      positionId: row.positionId,
+      academicYearId: row.academicYearId,
       memberType: row.memberType,
       joinDate: row.joinDate,
       notes: row.notes,
       userId: row.userId,
       isActive: row.isActive,
-      createdBy: row.createdBy,
-      updatedBy: row.updatedBy,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      department: row.department as Department,
+      division: row.division,
+      position: row.position,
+      academicYear: row.academicYear,
       user: row.user,
     };
   }

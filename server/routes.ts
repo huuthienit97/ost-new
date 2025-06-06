@@ -1080,7 +1080,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newMember = await dbStorage.createMember(memberData);
-      const memberWithDepartment = await dbStorage.getMemberWithDepartment(newMember.id);
+      
+      // Get the full member details with relationships
+      const [memberWithDetails] = await db
+        .select({
+          id: members.id,
+          fullName: members.fullName,
+          studentId: members.studentId,
+          email: members.email,
+          phone: members.phone,
+          class: members.class,
+          divisionId: members.divisionId,
+          positionId: members.positionId,
+          academicYearId: members.academicYearId,
+          memberType: members.memberType,
+          joinDate: members.joinDate,
+          notes: members.notes,
+          userId: members.userId,
+          isActive: members.isActive,
+          createdAt: members.createdAt,
+          updatedAt: members.updatedAt,
+          division: {
+            id: divisions.id,
+            name: divisions.name,
+            color: divisions.color,
+            icon: divisions.icon,
+          },
+          position: {
+            id: positions.id,
+            name: positions.name,
+            displayName: positions.displayName,
+            level: positions.level,
+          },
+          academicYear: {
+            id: academicYears.id,
+            name: academicYears.name,
+          },
+          user: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            email: users.email,
+          },
+        })
+        .from(members)
+        .leftJoin(divisions, eq(members.divisionId, divisions.id))
+        .leftJoin(positions, eq(members.positionId, positions.id))
+        .leftJoin(academicYears, eq(members.academicYearId, academicYears.id))
+        .leftJoin(users, eq(members.userId, users.id))
+        .where(eq(members.id, newMember.id));
       
       let userCredentials = null;
       
