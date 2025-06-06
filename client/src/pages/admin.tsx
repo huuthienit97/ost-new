@@ -1106,7 +1106,14 @@ export default function AdminPage() {
                             size="sm" 
                             variant="outline"
                             onClick={() => {
-                              setPositionForm(position);
+                              setPositionForm({
+                                name: position.name,
+                                displayName: position.displayName,
+                                level: position.level,
+                                isLeadership: position.isLeadership,
+                                isDepartmentLevel: position.isDepartmentLevel,
+                                description: position.description || ""
+                              });
                               setEditingPosition(position);
                               setIsCreatingPosition(true);
                             }}
@@ -1260,7 +1267,12 @@ export default function AdminPage() {
                             size="sm" 
                             variant="outline"
                             onClick={() => {
-                              setDivisionForm(division);
+                              setDivisionForm({
+                                name: division.name,
+                                description: division.description || "",
+                                color: division.color,
+                                icon: division.icon
+                              });
                               setEditingDivision(division);
                               setIsCreatingDivision(true);
                             }}
