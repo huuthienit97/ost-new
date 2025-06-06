@@ -166,8 +166,43 @@ export default function AdminPage() {
   });
 
   // Fetch permissions dynamically from API
-  const { data: permissionsData } = useQuery({
+  const { data: permissionsData } = useQuery<{
+    groupedPermissions: Record<string, Array<{
+      name: string;
+      description: string;
+      category: string;
+    }>>;
+    permissions: Array<{
+      name: string;
+      description: string;
+      category: string;
+    }>;
+  }>({
     queryKey: ["/api/permissions"],
+  });
+
+  // Fetch positions and divisions for admin management
+  const { data: positions } = useQuery<Array<{
+    id: number;
+    name: string;
+    displayName: string;
+    level: number;
+    isLeadership: boolean;
+    isDepartmentLevel: boolean;
+    description?: string;
+  }>>({
+    queryKey: ["/api/positions"],
+  });
+
+  const { data: divisions } = useQuery<Array<{
+    id: number;
+    name: string;
+    description?: string;
+    color: string;
+    icon: string;
+    isActive: boolean;
+  }>>({
+    queryKey: ["/api/divisions"],
   });
 
   // Fetch BeePoint configuration
@@ -279,6 +314,128 @@ export default function AdminPage() {
       toast({
         title: "Lỗi",
         description: "Không thể tạo vai trò",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Position management mutations
+  const createPositionMutation = useMutation({
+    mutationFn: async (positionData: any) => {
+      return await apiRequest("POST", "/api/positions", positionData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo chức vụ thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo chức vụ",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePositionMutation = useMutation({
+    mutationFn: async ({ id, ...positionData }: any) => {
+      return await apiRequest("PUT", `/api/positions/${id}`, positionData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Cập nhật chức vụ thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật chức vụ",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePositionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/positions/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Xóa chức vụ thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa chức vụ",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Division management mutations
+  const createDivisionMutation = useMutation({
+    mutationFn: async (divisionData: any) => {
+      return await apiRequest("POST", "/api/divisions", divisionData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Tạo ban thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/divisions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo ban",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateDivisionMutation = useMutation({
+    mutationFn: async ({ id, ...divisionData }: any) => {
+      return await apiRequest("PUT", `/api/divisions/${id}`, divisionData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Cập nhật ban thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/divisions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật ban",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteDivisionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/divisions/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Xóa ban thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/divisions"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa ban",
         variant: "destructive",
       });
     },
@@ -630,6 +787,8 @@ export default function AdminPage() {
           <TabsList>
             <TabsTrigger value="roles">Vai trò</TabsTrigger>
             <TabsTrigger value="users">Người dùng</TabsTrigger>
+            <TabsTrigger value="positions">Chức vụ</TabsTrigger>
+            <TabsTrigger value="divisions">Ban</TabsTrigger>
             <TabsTrigger value="beepoint">Cấu hình BeePoint</TabsTrigger>
           </TabsList>
 
