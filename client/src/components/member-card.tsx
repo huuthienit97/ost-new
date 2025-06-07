@@ -14,11 +14,12 @@ interface MemberCardProps {
   onView: (member: MemberWithDepartment) => void;
   onEdit: (member: MemberWithDepartment) => void;
   onDelete: (member: MemberWithDepartment) => void;
+  canEdit?: boolean;
   canDelete?: boolean;
   canResetPassword?: boolean;
 }
 
-export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete = false, canResetPassword = false }: MemberCardProps) {
+export function MemberCard({ member, index, onView, onEdit, onDelete, canEdit = false, canDelete = false, canResetPassword = false }: MemberCardProps) {
   const initials = getInitials(member.fullName);
   const gradientClass = getAvatarGradient(index);
   // Get position info from positionId 
@@ -182,15 +183,17 @@ export function MemberCard({ member, index, onView, onEdit, onDelete, canDelete 
             <Eye className="h-4 w-4 mr-1" />
             Xem
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => onEdit(member)}
-            className="flex-1"
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            Sửa
-          </Button>
+          {canEdit && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onEdit(member)}
+              className="flex-1"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Sửa
+            </Button>
+          )}
           {canResetPassword && member.user && (
             <Button
               variant="secondary"

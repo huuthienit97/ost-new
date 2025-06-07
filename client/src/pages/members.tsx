@@ -362,6 +362,7 @@ export default function MembersPage() {
                 onView={handleViewMember}
                 onEdit={handleEditMember}
                 onDelete={handleDeleteMember}
+                canEdit={hasPermission(PERMISSIONS.MEMBER_EDIT)}
                 canDelete={hasPermission(PERMISSIONS.MEMBER_DELETE)}
                 canResetPassword={hasPermission(PERMISSIONS.USER_EDIT)}
               />
