@@ -234,17 +234,30 @@ export default function MissionsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Quản lý Nhiệm vụ</h1>
-          <p className="text-muted-foreground">Tạo và quản lý các nhiệm vụ cho thành viên</p>
+          <h1 className="text-3xl font-bold">Nhiệm vụ</h1>
+          <p className="text-muted-foreground">Xem và tham gia các nhiệm vụ</p>
         </div>
-        {user?.permissions?.includes('mission:create') && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Tạo nhiệm vụ
-              </Button>
-            </DialogTrigger>
+        <div className="flex gap-2">
+          {user?.permissions?.includes('mission:view') && (
+            <Button variant="outline" onClick={() => window.location.href = '/my-missions'}>
+              <Eye className="h-4 w-4 mr-2" />
+              Nhiệm vụ của tôi
+            </Button>
+          )}
+          {user?.permissions?.includes('mission:create') && (
+            <Button variant="outline" onClick={() => window.location.href = '/mission-admin'}>
+              <Target className="h-4 w-4 mr-2" />
+              Quản lý nhiệm vụ
+            </Button>
+          )}
+          {user?.permissions?.includes('mission:create') && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tạo nhiệm vụ
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Tạo nhiệm vụ mới</DialogTitle>
@@ -566,6 +579,128 @@ export default function MissionsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
+        </div>
+
+      {/* Mission Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.isArray(missions) && missions.map((mission: Mission) => (
+          <MissionCard 
+            key={mission.id} 
+            mission={mission} 
+            user={user}
+            onSelfAssign={handleSelfAssign}
+            canSelfAssign={canSelfAssign}
+            getPriorityColor={getPriorityColor}
+            getStatusColor={getStatusColor}
+            isDeadlineNear={isDeadlineNear}
+          />
+        ))}
+      </div>
     </div>
+  );
+}
+
+interface MissionCardProps {
+  mission: Mission;
+  user: any;
+  onSelfAssign: (missionId: number) => void;
+  canSelfAssign: (mission: Mission) => boolean;
+  getPriorityColor: (priority: string) => string;
+  getStatusColor: (status: string) => string;
+  isDeadlineNear: (deadline: string) => boolean;
+}
+
+function MissionCard({ mission, user, onSelfAssign, canSelfAssign, getPriorityColor, getStatusColor, isDeadlineNear }: MissionCardProps) {
+  const isNearDeadline = mission.deadline && isDeadlineNear(mission.deadline);
+  
+  return (
+    <Card className={`h-full ${isNearDeadline ? 'border-red-500 bg-red-50' : ''}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg">{mission.title}</CardTitle>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className={`${getPriorityColor(mission.priority)} text-white`}>
+                {mission.priority === 'urgent' ? 'Khẩn cấp' : 
+                 mission.priority === 'high' ? 'Cao' :
+                 mission.priority === 'medium' ? 'Trung bình' : 'Thấp'}
+              </Badge>
+              <Badge variant="outline" className={`${getStatusColor(mission.status)} text-white`}>
+                {mission.status === 'active' ? 'Đang hoạt động' :
+                 mission.status === 'paused' ? 'Tạm dừng' :
+                 mission.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <CardDescription className="text-sm">
+          {mission.description}
+        </CardDescription>
+        
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Award className="h-4 w-4 text-yellow-500" />
+            <span>{mission.beePointsReward} BeePoints</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-500" />
+            <span>
+              {mission.currentParticipants}
+              {mission.maxParticipants ? `/${mission.maxParticipants}` : ''} người tham gia
+            </span>
+          </div>
+          
+          {mission.requiresPhoto && (
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-purple-500" />
+              <span>Yêu cầu ảnh</span>
+            </div>
+          )}
+          
+          {mission.deadline && (
+            <div className={`flex items-center gap-2 ${isNearDeadline ? 'text-red-600 font-medium' : ''}`}>
+              <Calendar className="h-4 w-4" />
+              <span>
+                Hạn chót: {new Date(mission.deadline).toLocaleDateString('vi-VN')}
+                {isNearDeadline && (
+                  <span className="ml-2 text-red-600 font-bold">
+                    (Sắp hết hạn!)
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        <div className="pt-4 border-t">
+          {canSelfAssign(mission) ? (
+            <Button 
+              onClick={() => onSelfAssign(mission.id)}
+              className="w-full"
+              size="sm"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tự nhận nhiệm vụ
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              size="sm" 
+              disabled
+            >
+              {mission.currentParticipants >= (mission.maxParticipants || Infinity) 
+                ? 'Đã đủ người tham gia' 
+                : 'Đã được giao nhiệm vụ'}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
