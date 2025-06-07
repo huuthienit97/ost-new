@@ -3236,7 +3236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create mission
-  app.post("/api/missions", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/missions", authenticate, authorize(PERMISSIONS.MISSION_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
       const validationResult = insertMissionSchema.safeParse(req.body);
       
@@ -3615,6 +3615,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error reviewing mission:", error);
       res.status(500).json({ message: "Lỗi duyệt nhiệm vụ" });
+    }
+  });
+
+  // Self-assign mission (for members to take on available missions)
+  app.post("/api/missions/:id/self-assign", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      // Check if mission exists and is available
+      const [mission] = await db.select().from(missions).where(eq(missions.id, missionId));
+      if (!mission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      if (mission.status !== 'active') {
+        return res.status(400).json({ message: "Nhiệm vụ không còn hoạt động" });
+      }
+
+      if (mission.maxParticipants && mission.currentParticipants >= mission.maxParticipants) {
+        return res.status(400).json({ message: "Nhiệm vụ đã đầy" });
+      }
+
+      // Check if user already assigned
+      const [existingAssignment] = await db.select()
+        .from(missionAssignments)
+        .where(and(
+          eq(missionAssignments.missionId, missionId),
+          eq(missionAssignments.userId, userId)
+        ));
+
+      if (existingAssignment) {
+        return res.status(400).json({ message: "Bạn đã được giao nhiệm vụ này" });
+      }
+
+      // Create self-assignment
+      const [assignment] = await db.insert(missionAssignments).values({
+        missionId,
+        userId,
+        status: 'assigned'
+      }).returning();
+
+      // Update participant count
+      await db.update(missions)
+        .set({ 
+          currentParticipants: sql`${missions.currentParticipants} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(missions.id, missionId));
+
+      res.status(201).json({ 
+        message: "Tự nhận nhiệm vụ thành công",
+        assignment
+      });
+    } catch (error) {
+      console.error("Error self-assigning mission:", error);
+      res.status(500).json({ message: "Lỗi tự nhận nhiệm vụ" });
+    }
+  });
+
+  // Bulk assign mission to multiple users (admin only)
+  app.post("/api/missions/:id/assign-bulk", authenticate, authorize(PERMISSIONS.BEEPOINT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const missionId = parseInt(req.params.id);
+      const { userIds } = req.body;
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: "Danh sách người dùng không hợp lệ" });
+      }
+
+      // Check if mission exists
+      const [mission] = await db.select().from(missions).where(eq(missions.id, missionId));
+      if (!mission) {
+        return res.status(404).json({ message: "Không tìm thấy nhiệm vụ" });
+      }
+
+      // Check if there are enough slots
+      if (mission.maxParticipants && (mission.currentParticipants + userIds.length) > mission.maxParticipants) {
+        return res.status(400).json({ message: "Không đủ chỗ cho tất cả người dùng được chọn" });
+      }
+
+      const assignments = [];
+      const errors = [];
+
+      for (const userId of userIds) {
+        try {
+          // Check if user already assigned
+          const [existing] = await db.select()
+            .from(missionAssignments)
+            .where(and(
+              eq(missionAssignments.missionId, missionId),
+              eq(missionAssignments.userId, userId)
+            ));
+
+          if (existing) {
+            errors.push(`Người dùng ${userId} đã được giao nhiệm vụ này`);
+            continue;
+          }
+
+          // Create assignment
+          const [assignment] = await db.insert(missionAssignments).values({
+            missionId,
+            userId,
+            status: 'assigned'
+          }).returning();
+
+          assignments.push(assignment);
+        } catch (error) {
+          errors.push(`Lỗi giao nhiệm vụ cho người dùng ${userId}`);
+        }
+      }
+
+      // Update participant count
+      if (assignments.length > 0) {
+        await db.update(missions)
+          .set({ 
+            currentParticipants: sql`${missions.currentParticipants} + ${assignments.length}`,
+            updatedAt: new Date()
+          })
+          .where(eq(missions.id, missionId));
+      }
+
+      res.status(201).json({
+        message: `Giao nhiệm vụ thành công cho ${assignments.length} người dùng`,
+        assignments,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error bulk assigning mission:", error);
+      res.status(500).json({ message: "Lỗi giao nhiệm vụ hàng loạt" });
     }
   });
 

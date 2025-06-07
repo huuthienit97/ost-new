@@ -261,6 +261,7 @@ export const missions = pgTable("missions", {
   requiresPhoto: boolean("requires_photo").default(false).notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  deadline: timestamp("deadline"),
   priority: text("priority").default("medium").notNull(), // 'low', 'medium', 'high', 'urgent'
   status: text("status").default("active").notNull(), // 'active', 'paused', 'completed', 'cancelled'
   tags: text("tags").array().default([]),
