@@ -3214,6 +3214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresPhoto: missions.requiresPhoto,
         startDate: missions.startDate,
         endDate: missions.endDate,
+        deadline: missions.deadline,
         priority: missions.priority,
         status: missions.status,
         tags: missions.tags,
@@ -3462,6 +3463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiresPhoto: missions.requiresPhoto,
           startDate: missions.startDate,
           endDate: missions.endDate,
+          deadline: missions.deadline,
           priority: missions.priority,
           tags: missions.tags
         }
