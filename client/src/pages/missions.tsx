@@ -31,7 +31,11 @@ interface Mission {
   priority: string;
   status: string;
   tags: string[];
-  createdBy: number;
+  createdBy: {
+    id: number;
+    fullName: string;
+    username: string;
+  };
   isActive: boolean;
   createdAt: string;
 }
@@ -44,16 +48,14 @@ interface User {
 }
 
 export default function MissionsPage() {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [activeTab, setActiveTab] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-  
   const [missionForm, setMissionForm] = useState({
     title: "",
     description: "",
@@ -69,14 +71,13 @@ export default function MissionsPage() {
   });
 
   // Fetch missions
-  const { data: missions = [], isLoading: missionsLoading } = useQuery<Mission[]>({
+  const { data: missions = [], isLoading: missionsLoading } = useQuery({
     queryKey: ["/api/missions"],
   });
 
-  // Fetch all users for assignment
-  const { data: allUsers = [] } = useQuery<User[]>({
+  // Fetch users for assignment
+  const { data: users = [] } = useQuery({
     queryKey: ["/api/users/all"],
-    select: (data: any) => data?.users || [],
   });
 
   // Create mission mutation
@@ -106,10 +107,10 @@ export default function MissionsPage() {
     },
   });
 
-  // Assign mission mutation
+  // Bulk assign mission mutation
   const assignMissionMutation = useMutation({
     mutationFn: async ({ missionId, userIds }: { missionId: number; userIds: number[] }) => {
-      return await apiRequest("POST", `/api/missions/${missionId}/assign`, { userIds });
+      return await apiRequest("POST", `/api/missions/${missionId}/assign-bulk`, { userIds });
     },
     onSuccess: () => {
       toast({
@@ -137,14 +138,15 @@ export default function MissionsPage() {
     onSuccess: () => {
       toast({
         title: "Thành công",
-        description: "Đã nhận nhiệm vụ thành công",
+        description: "Tự nhận nhiệm vụ thành công",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/missions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
     },
     onError: (error: any) => {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể nhận nhiệm vụ",
+        description: error.message || "Không thể tự nhận nhiệm vụ",
         variant: "destructive",
       });
     },
@@ -193,6 +195,11 @@ export default function MissionsPage() {
     });
   };
 
+  const canSelfAssign = (mission: Mission) => {
+    return mission.status === 'active' && 
+           (!mission.maxParticipants || mission.currentParticipants < mission.maxParticipants);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent": return "bg-red-500";
@@ -203,343 +210,362 @@ export default function MissionsPage() {
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "daily": return <Calendar className="h-4 w-4" />;
-      case "weekly": return <Calendar className="h-4 w-4" />;
-      case "monthly": return <Calendar className="h-4 w-4" />;
-      case "special": return <Target className="h-4 w-4" />;
-      case "project": return <Users className="h-4 w-4" />;
-      default: return <Target className="h-4 w-4" />;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active": return "bg-green-500";
+      case "paused": return "bg-yellow-500";
+      case "completed": return "bg-blue-500";
+      case "cancelled": return "bg-red-500";
+      default: return "bg-gray-500";
     }
   };
 
-  const isDeadlineApproaching = (deadline?: string) => {
-    if (!deadline) return false;
-    const deadlineDate = new Date(deadline);
-    const now = new Date();
-    const diffHours = (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return diffHours <= 24 && diffHours > 0;
-  };
-
-  const canSelfAssign = (mission: Mission) => {
-    if (!mission.maxParticipants) return true;
-    return mission.currentParticipants < mission.maxParticipants;
-  };
+  if (missionsLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-32">
+          <div className="text-lg">Đang tải...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Quản lý nhiệm vụ</h1>
-            <p className="text-gray-600 mt-1">Tạo, giao và theo dõi nhiệm vụ của thành viên</p>
-          </div>
-          
-          {hasPermission("mission:create") && (
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tạo nhiệm vụ
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Tạo nhiệm vụ mới</DialogTitle>
-                  <DialogDescription>
-                    Tạo nhiệm vụ mới cho thành viên câu lạc bộ
-                  </DialogDescription>
-                </DialogHeader>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Quản lý Nhiệm vụ</h1>
+          <p className="text-muted-foreground">Tạo và quản lý các nhiệm vụ cho thành viên</p>
+        </div>
+        {user?.permissions?.includes('mission:create') && (
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Tạo nhiệm vụ
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Tạo nhiệm vụ mới</DialogTitle>
+                <DialogDescription>
+                  Tạo nhiệm vụ mới cho thành viên trong câu lạc bộ
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Tiêu đề</Label>
+                  <Input
+                    id="title"
+                    value={missionForm.title}
+                    onChange={(e) => setMissionForm({ ...missionForm, title: e.target.value })}
+                    placeholder="Nhập tiêu đề nhiệm vụ"
+                  />
+                </div>
                 
-                <div className="space-y-4">
+                <div>
+                  <Label htmlFor="description">Mô tả</Label>
+                  <Textarea
+                    id="description"
+                    value={missionForm.description}
+                    onChange={(e) => setMissionForm({ ...missionForm, description: e.target.value })}
+                    placeholder="Mô tả chi tiết nhiệm vụ"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Tiêu đề nhiệm vụ</Label>
-                    <Input
-                      value={missionForm.title}
-                      onChange={(e) => setMissionForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Nhập tiêu đề nhiệm vụ"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label>Mô tả</Label>
-                    <Textarea
-                      value={missionForm.description}
-                      onChange={(e) => setMissionForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Mô tả chi tiết nhiệm vụ"
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Loại nhiệm vụ</Label>
-                      <Select value={missionForm.category} onValueChange={(value) => setMissionForm(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Hàng ngày</SelectItem>
-                          <SelectItem value="weekly">Hàng tuần</SelectItem>
-                          <SelectItem value="monthly">Hàng tháng</SelectItem>
-                          <SelectItem value="special">Đặc biệt</SelectItem>
-                          <SelectItem value="project">Dự án</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label>Kiểu thực hiện</Label>
-                      <Select value={missionForm.type} onValueChange={(value) => setMissionForm(prev => ({ ...prev, type: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="one_time">Một lần</SelectItem>
-                          <SelectItem value="repeatable">Lặp lại</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Số người tham gia tối đa</Label>
-                      <Input
-                        type="number"
-                        value={missionForm.maxParticipants}
-                        onChange={(e) => setMissionForm(prev => ({ ...prev, maxParticipants: e.target.value }))}
-                        placeholder="Để trống nếu không giới hạn"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Điểm thưởng BeePoint</Label>
-                      <Input
-                        type="number"
-                        value={missionForm.beePointsReward}
-                        onChange={(e) => setMissionForm(prev => ({ ...prev, beePointsReward: e.target.value }))}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label>Độ ưu tiên</Label>
-                    <Select value={missionForm.priority} onValueChange={(value) => setMissionForm(prev => ({ ...prev, priority: value }))}>
+                    <Label>Danh mục</Label>
+                    <Select
+                      value={missionForm.category}
+                      onValueChange={(value) => setMissionForm({ ...missionForm, category: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">Thấp</SelectItem>
-                        <SelectItem value="medium">Trung bình</SelectItem>
-                        <SelectItem value="high">Cao</SelectItem>
-                        <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                        <SelectItem value="daily">Hàng ngày</SelectItem>
+                        <SelectItem value="weekly">Hàng tuần</SelectItem>
+                        <SelectItem value="monthly">Hàng tháng</SelectItem>
+                        <SelectItem value="special">Đặc biệt</SelectItem>
+                        <SelectItem value="project">Dự án</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label>Ngày bắt đầu</Label>
-                      <Input
-                        type="datetime-local"
-                        value={missionForm.startDate}
-                        onChange={(e) => setMissionForm(prev => ({ ...prev, startDate: e.target.value }))}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Ngày kết thúc</Label>
-                      <Input
-                        type="datetime-local"
-                        value={missionForm.endDate}
-                        onChange={(e) => setMissionForm(prev => ({ ...prev, endDate: e.target.value }))}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Deadline</Label>
-                      <Input
-                        type="datetime-local"
-                        value={missionForm.deadline}
-                        onChange={(e) => setMissionForm(prev => ({ ...prev, deadline: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="requiresPhoto"
-                      checked={missionForm.requiresPhoto}
-                      onCheckedChange={(checked) => setMissionForm(prev => ({ ...prev, requiresPhoto: !!checked }))}
-                    />
-                    <Label htmlFor="requiresPhoto">Yêu cầu chụp ảnh minh chứng</Label>
-                  </div>
-                  
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={handleCreateMission} disabled={createMissionMutation.isPending}>
-                      {createMissionMutation.isPending ? "Đang tạo..." : "Tạo nhiệm vụ"}
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Hủy
-                    </Button>
+
+                  <div>
+                    <Label>Loại</Label>
+                    <Select
+                      value={missionForm.type}
+                      onValueChange={(value) => setMissionForm({ ...missionForm, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="one_time">Một lần</SelectItem>
+                        <SelectItem value="repeatable">Lặp lại</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="all">Tất cả nhiệm vụ</TabsTrigger>
-            <TabsTrigger value="my">Nhiệm vụ của tôi</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all" className="space-y-4">
-            {missionsLoading ? (
-              <div className="text-center py-8">Đang tải...</div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {missions.map((mission) => (
-                  <Card key={mission.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {getCategoryIcon(mission.category)}
-                          <Badge variant="outline">{mission.category}</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`${getPriorityColor(mission.priority)} text-white`}>
-                            {mission.priority}
-                          </Badge>
-                          {mission.deadline && isDeadlineApproaching(mission.deadline) && (
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                          )}
-                        </div>
-                      </div>
-                      <CardTitle className="text-lg">{mission.title}</CardTitle>
-                      {mission.description && (
-                        <CardDescription className="line-clamp-2">
-                          {mission.description}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <Award className="h-4 w-4" />
-                          {mission.beePointsReward} BeePoint
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {mission.currentParticipants}{mission.maxParticipants ? `/${mission.maxParticipants}` : ""}
-                        </span>
-                      </div>
-                      
-                      {mission.deadline && (
-                        <div className="text-sm text-gray-600">
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Deadline: {new Date(mission.deadline).toLocaleString("vi-VN")}
-                        </div>
-                      )}
-                      
-                      {mission.requiresPhoto && (
-                        <div className="text-sm text-blue-600">
-                          <Camera className="h-4 w-4 inline mr-1" />
-                          Yêu cầu ảnh minh chứng
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-2 pt-2">
-                        {hasPermission("mission:assign") && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedMission(mission);
-                              setIsAssignDialogOpen(true);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4 mr-1" />
-                            Giao
-                          </Button>
-                        )}
-                        
-                        {canSelfAssign(mission) && (
-                          <Button
-                            size="sm"
-                            onClick={() => selfAssignMutation.mutate(mission.id)}
-                            disabled={selfAssignMutation.isPending}
-                          >
-                            Nhận nhiệm vụ
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="my" className="space-y-4">
-            <div className="text-center py-8 text-gray-500">
-              Tính năng nhiệm vụ của tôi sẽ được triển khai sau
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {/* Assignment Dialog */}
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Giao nhiệm vụ</DialogTitle>
-              <DialogDescription>
-                Chọn thành viên để giao nhiệm vụ "{selectedMission?.title}"
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {allUsers.map((user) => (
-                  <div key={user.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`user-${user.id}`}
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedUsers(prev => [...prev, user.id]);
-                        } else {
-                          setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                        }
-                      }}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="maxParticipants">Số người tối đa</Label>
+                    <Input
+                      id="maxParticipants"
+                      type="number"
+                      value={missionForm.maxParticipants}
+                      onChange={(e) => setMissionForm({ ...missionForm, maxParticipants: e.target.value })}
+                      placeholder="Không giới hạn"
                     />
-                    <Label htmlFor={`user-${user.id}`} className="text-sm">
-                      {user.fullName} ({user.username})
-                    </Label>
                   </div>
-                ))}
+
+                  <div>
+                    <Label htmlFor="beePointsReward">Điểm thưởng</Label>
+                    <Input
+                      id="beePointsReward"
+                      type="number"
+                      value={missionForm.beePointsReward}
+                      onChange={(e) => setMissionForm({ ...missionForm, beePointsReward: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Độ ưu tiên</Label>
+                  <Select
+                    value={missionForm.priority}
+                    onValueChange={(value) => setMissionForm({ ...missionForm, priority: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Thấp</SelectItem>
+                      <SelectItem value="medium">Trung bình</SelectItem>
+                      <SelectItem value="high">Cao</SelectItem>
+                      <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Ngày bắt đầu</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={missionForm.startDate}
+                      onChange={(e) => setMissionForm({ ...missionForm, startDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="endDate">Ngày kết thúc</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={missionForm.endDate}
+                      onChange={(e) => setMissionForm({ ...missionForm, endDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deadline">Hạn chót</Label>
+                    <Input
+                      id="deadline"
+                      type="date"
+                      value={missionForm.deadline}
+                      onChange={(e) => setMissionForm({ ...missionForm, deadline: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="requiresPhoto"
+                    checked={missionForm.requiresPhoto}
+                    onCheckedChange={(checked) => 
+                      setMissionForm({ ...missionForm, requiresPhoto: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="requiresPhoto">Yêu cầu tải lên hình ảnh</Label>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handleCreateMission}
+                    disabled={createMissionMutation.isPending}
+                    className="flex-1"
+                  >
+                    {createMissionMutation.isPending ? "Đang tạo..." : "Tạo nhiệm vụ"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    className="flex-1"
+                  >
+                    Hủy
+                  </Button>
+                </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={handleAssignMission} disabled={assignMissionMutation.isPending}>
-                  {assignMissionMutation.isPending ? "Đang giao..." : "Giao nhiệm vụ"}
-                </Button>
-                <Button variant="outline" onClick={() => {
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <div className="grid gap-4">
+        {missions.map((mission: Mission) => (
+          <Card key={mission.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    {mission.title}
+                  </CardTitle>
+                  <CardDescription>{mission.description}</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={`${getPriorityColor(mission.priority)} text-white`}>
+                    {mission.priority}
+                  </Badge>
+                  <Badge className={`${getStatusColor(mission.status)} text-white`}>
+                    {mission.status}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-yellow-500" />
+                    <span>{mission.beePointsReward} BeePoints</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    <span>
+                      {mission.currentParticipants}
+                      {mission.maxParticipants && `/${mission.maxParticipants}`} người
+                    </span>
+                  </div>
+                  {mission.requiresPhoto && (
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-green-500" />
+                      <span>Cần hình ảnh</span>
+                    </div>
+                  )}
+                  {mission.deadline && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-red-500" />
+                      <span>Hạn: {new Date(mission.deadline).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Tạo bởi: {mission.createdBy?.fullName || 'N/A'} • {new Date(mission.createdAt).toLocaleDateString('vi-VN')}
+                  </div>
+                  <div className="flex gap-2">
+                    {canSelfAssign(mission) && (
+                      <Button
+                        size="sm"
+                        onClick={() => selfAssignMutation.mutate(mission.id)}
+                        disabled={selfAssignMutation.isPending}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Tự nhận
+                      </Button>
+                    )}
+                    {user?.permissions?.includes('mission:assign') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedMission(mission);
+                          setIsAssignDialogOpen(true);
+                        }}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Giao việc
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {missions.length === 0 && (
+          <Card>
+            <CardContent className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Chưa có nhiệm vụ nào</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Assignment Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Giao nhiệm vụ</DialogTitle>
+            <DialogDescription>
+              Chọn thành viên để giao nhiệm vụ: {selectedMission?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {users.map((user: User) => (
+                <div key={user.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`user-${user.id}`}
+                    checked={selectedUsers.includes(user.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedUsers([...selectedUsers, user.id]);
+                      } else {
+                        setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`user-${user.id}`} className="flex-1">
+                    {user.fullName} ({user.username})
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleAssignMission}
+                disabled={assignMissionMutation.isPending || selectedUsers.length === 0}
+                className="flex-1"
+              >
+                {assignMissionMutation.isPending ? "Đang giao..." : "Giao nhiệm vụ"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
                   setIsAssignDialogOpen(false);
                   setSelectedUsers([]);
-                }}>
-                  Hủy
-                </Button>
-              </div>
+                }}
+                className="flex-1"
+              >
+                Hủy
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
