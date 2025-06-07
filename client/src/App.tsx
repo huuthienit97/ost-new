@@ -19,6 +19,8 @@ import AcademicYearsPage from "@/pages/academic-years";
 import DivisionsPage from "@/pages/divisions";
 import PositionsPage from "@/pages/positions";
 import MissionsPage from "@/pages/missions";
+import MissionAdminPage from "@/pages/mission-admin";
+import MyMissionsPage from "@/pages/my-missions";
 import ShopPage from "@/pages/shop";
 import ShopAdminPage from "@/pages/shop-admin";
 
@@ -55,6 +57,8 @@ function Router() {
           <Route path="/profile" component={ProfilePage} />
           <Route path="/achievements" component={AchievementsPage} />
           <Route path="/missions" component={MissionsPage} />
+          <Route path="/mission-admin" component={MissionAdminPage} />
+          <Route path="/my-missions" component={MyMissionsPage} />
           <Route path="/shop" component={ShopPage} />
           <Route path="/shop-admin" component={ShopAdminPage} />
           <Route path="/academic-years" component={AcademicYearsPage} />

@@ -3750,6 +3750,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all mission assignments for admin review
+  app.get("/api/missions/assignments", authenticate, authorize(PERMISSIONS.MISSION_REVIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status } = req.query;
+      
+      let whereConditions = [];
+      if (status) {
+        whereConditions.push(eq(missionAssignments.status, status as string));
+      }
+
+      const query = db.select({
+        id: missionAssignments.id,
+        status: missionAssignments.status,
+        assignedDate: missionAssignments.assignedDate,
+        startedDate: missionAssignments.startedDate,
+        completedDate: missionAssignments.completedDate,
+        submissionNote: missionAssignments.submissionNote,
+        reviewNote: missionAssignments.reviewNote,
+        pointsAwarded: missionAssignments.pointsAwarded,
+        user: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username,
+          email: users.email
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          beePointsReward: missions.beePointsReward,
+          deadline: missions.deadline
+        }
+      }).from(missionAssignments)
+        .innerJoin(users, eq(missionAssignments.userId, users.id))
+        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+      const assignments = await query.orderBy(desc(missionAssignments.assignedDate));
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching mission assignments:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách phân công nhiệm vụ" });
+    }
+  });
+
+  // Update mission assignment status (for users to mark as in progress)
+  app.patch("/api/missions/assignments/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const { status } = req.body;
+      const userId = req.user!.id;
+
+      if (!["in_progress", "completed"].includes(status)) {
+        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      }
+
+      // Check if user owns this assignment
+      const [assignment] = await db.select()
+        .from(missionAssignments)
+        .where(and(
+          eq(missionAssignments.id, assignmentId),
+          eq(missionAssignments.userId, userId)
+        ));
+
+      if (!assignment) {
+        return res.status(404).json({ message: "Không tìm thấy phân công nhiệm vụ" });
+      }
+
+      const updateData: any = {
+        status,
+        updatedAt: new Date()
+      };
+
+      if (status === "in_progress" && !assignment.startedDate) {
+        updateData.startedDate = new Date();
+      }
+
+      const [updatedAssignment] = await db.update(missionAssignments)
+        .set(updateData)
+        .where(eq(missionAssignments.id, assignmentId))
+        .returning();
+
+      res.json({
+        message: `Cập nhật trạng thái thành ${status === 'in_progress' ? 'đang thực hiện' : 'hoàn thành'}`,
+        assignment: updatedAssignment
+      });
+    } catch (error) {
+      console.error("Error updating assignment status:", error);
+      res.status(500).json({ message: "Lỗi cập nhật trạng thái nhiệm vụ" });
+    }
+  });
+
+  // Create mission deadline notifications
+  const createMissionNotifications = async (missionId: number, userIds: number[], type: 'assignment' | 'deadline_reminder') => {
+    try {
+      const [mission] = await db.select().from(missions).where(eq(missions.id, missionId));
+      if (!mission) return;
+
+      const notifications = userIds.map(userId => {
+        let title = '';
+        let message = '';
+        
+        if (type === 'assignment') {
+          title = 'Nhiệm vụ mới được giao';
+          message = `Bạn được giao nhiệm vụ: ${mission.title}`;
+        } else {
+          title = 'Nhắc nhở hạn chót nhiệm vụ';
+          message = `Nhiệm vụ "${mission.title}" sắp hết hạn. Hạn chót: ${mission.deadline ? new Date(mission.deadline).toLocaleDateString('vi-VN') : 'Không xác định'}`;
+        }
+
+        return {
+          userId,
+          title,
+          message,
+          type: 'mission',
+          data: { missionId, type }
+        };
+      });
+
+      if (notifications.length > 0) {
+        await db.insert(notifications).values(notifications);
+      }
+    } catch (error) {
+      console.error('Error creating mission notifications:', error);
+    }
+  };
+
+  // Check for mission deadline reminders (run periodically)
+  app.get("/api/missions/check-deadlines", authenticate, authorize(PERMISSIONS.MISSION_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get missions that have deadlines within the next 3 days
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+      const upcomingDeadlines = await db.select({
+        missionId: missions.id,
+        title: missions.title,
+        deadline: missions.deadline,
+        assignments: sql<number>`count(${missionAssignments.id})`
+      })
+      .from(missions)
+      .leftJoin(missionAssignments, eq(missions.id, missionAssignments.missionId))
+      .where(and(
+        eq(missions.isActive, true),
+        eq(missions.status, 'active'),
+        gte(missions.deadline, new Date()),
+        lte(missions.deadline, threeDaysFromNow)
+      ))
+      .groupBy(missions.id, missions.title, missions.deadline);
+
+      // Get users who need deadline reminders
+      for (const mission of upcomingDeadlines) {
+        const assignedUsers = await db.select({
+          userId: missionAssignments.userId
+        })
+        .from(missionAssignments)
+        .where(and(
+          eq(missionAssignments.missionId, mission.missionId),
+          notEq(missionAssignments.status, 'completed')
+        ));
+
+        if (assignedUsers.length > 0) {
+          await createMissionNotifications(
+            mission.missionId, 
+            assignedUsers.map(u => u.userId), 
+            'deadline_reminder'
+          );
+        }
+      }
+
+      res.json({ message: `Checked ${upcomingDeadlines.length} missions for deadline reminders` });
+    } catch (error) {
+      console.error("Error checking mission deadlines:", error);
+      res.status(500).json({ message: "Lỗi kiểm tra hạn chót nhiệm vụ" });
+    }
+  });
+
   // ===== SHOP SYSTEM API ENDPOINTS =====
   
   // Get all shop products (active only for regular users)
