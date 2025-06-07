@@ -92,11 +92,7 @@ export default function MissionsPage() {
   // Create mission mutation
   const createMissionMutation = useMutation({
     mutationFn: async (data: CreateMissionData) => {
-      await apiRequest("/api/missions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("POST", "/api/missions", data);
     },
     onSuccess: () => {
       toast({
@@ -136,9 +132,15 @@ export default function MissionsPage() {
         formData.append("photo", file);
       }
 
-      await apiRequest(`/api/missions/${missionId}/submit`, {
+      return await fetch(`/api/missions/${missionId}/submit`, {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
         body: formData,
+      }).then(res => {
+        if (!res.ok) throw new Error("Submit failed");
+        return res.json();
       });
     },
     onSuccess: () => {
