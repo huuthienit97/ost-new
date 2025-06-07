@@ -6,7 +6,7 @@ import { users, members, beePoints, pointTransactions, achievements, userAchieve
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, inArray } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -3737,6 +3737,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedAt: new Date()
           })
           .where(eq(missions.id, missionId));
+
+        // Send assignment notifications
+        await createMissionNotifications(missionId, assignments.map(a => a.userId), 'assignment');
       }
 
       res.status(201).json({
