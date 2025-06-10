@@ -1030,6 +1030,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user login information by userId
+  app.get("/api/users/:userId/login-info", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Get user basic information
+      const [user] = await db.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        fullName: users.fullName,
+        isActive: users.isActive,
+        mustChangePassword: users.mustChangePassword,
+        lastLogin: users.lastLogin,
+        createdAt: users.createdAt,
+        role: {
+          id: roles.id,
+          name: roles.name,
+          displayName: roles.displayName,
+        }
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.id, userId));
+
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Get associated member information if exists
+      const [memberInfo] = await db.select({
+        id: members.id,
+        studentId: members.studentId,
+        fullName: members.fullName,
+        email: members.email,
+        phone: members.phone,
+        isActive: members.isActive,
+        division: {
+          id: divisions.id,
+          name: divisions.name,
+        },
+        position: {
+          id: positions.id,
+          name: positions.name,
+          displayName: positions.displayName,
+        },
+        academicYear: {
+          id: academicYears.id,
+          name: academicYears.name,
+        }
+      })
+      .from(members)
+      .leftJoin(divisions, eq(members.divisionId, divisions.id))
+      .leftJoin(positions, eq(members.positionId, positions.id))
+      .leftJoin(academicYears, eq(members.academicYearId, academicYears.id))
+      .where(eq(members.userId, userId));
+
+      const result = {
+        ...user,
+        member: memberInfo || null,
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching user login info:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin đăng nhập người dùng" });
+    }
+  });
+
+  // Reset user password by userId
+  app.post("/api/users/:userId/reset-password", authenticate, authorize(PERMISSIONS.MEMBER_EDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Check if user exists
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Generate new random password
+      const newPassword = Math.random().toString(36).slice(-8);
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password and force password change
+      await db
+        .update(users)
+        .set({ 
+          passwordHash: hashedPassword,
+          mustChangePassword: true,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({
+        message: "Đặt lại mật khẩu thành công",
+        newPassword, // Return plain password for display
+        username: user.username
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Lỗi đặt lại mật khẩu" });
+    }
+  });
+
+  // Toggle user account status
+  app.post("/api/users/:userId/toggle-status", authenticate, authorize(PERMISSIONS.MEMBER_EDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Check if user exists
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Toggle active status
+      const newStatus = !user.isActive;
+      await db
+        .update(users)
+        .set({ 
+          isActive: newStatus,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({
+        message: newStatus ? "Kích hoạt tài khoản thành công" : "Vô hiệu hóa tài khoản thành công",
+        isActive: newStatus
+      });
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      res.status(500).json({ message: "Lỗi thay đổi trạng thái tài khoản" });
+    }
+  });
+
   // Get member by ID
   app.get("/api/members/:id", async (req, res) => {
     try {
