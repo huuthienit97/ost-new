@@ -90,6 +90,23 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
+          {/* User Management - Only for admin users */}
+          {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/user-management"}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-indigo-600" />
+                  <span>Quản lý tài khoản</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  Quản lý thông tin đăng nhập và tài khoản người dùng
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Admin Panel - Only for admin users */}
           {(user.role?.name === 'admin' || user.role?.name === 'super_admin') && (
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = "/admin"}>
