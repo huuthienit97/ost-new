@@ -1178,6 +1178,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users with login information for admin management
+  app.get("/api/admin/users", authenticate, authorize(PERMISSIONS.MEMBER_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const usersWithDetails = await db.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        fullName: users.fullName,
+        isActive: users.isActive,
+        mustChangePassword: users.mustChangePassword,
+        lastLogin: users.lastLogin,
+        createdAt: users.createdAt,
+        role: {
+          id: roles.id,
+          name: roles.name,
+          displayName: roles.displayName,
+        },
+        member: {
+          id: members.id,
+          studentId: members.studentId,
+          fullName: members.fullName,
+          email: members.email,
+          phone: members.phone,
+          isActive: members.isActive,
+          division: {
+            id: divisions.id,
+            name: divisions.name,
+          },
+          position: {
+            id: positions.id,
+            name: positions.name,
+            displayName: positions.displayName,
+          }
+        }
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .leftJoin(members, eq(users.id, members.userId))
+      .leftJoin(divisions, eq(members.divisionId, divisions.id))
+      .leftJoin(positions, eq(members.positionId, positions.id))
+      .orderBy(users.createdAt);
+
+      res.json(usersWithDetails);
+    } catch (error) {
+      console.error("Error fetching users for admin:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách người dùng" });
+    }
+  });
+
+  // Create user account for existing member
+  app.post("/api/admin/members/:memberId/create-user", authenticate, authorize(PERMISSIONS.MEMBER_EDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId);
+      
+      if (isNaN(memberId)) {
+        return res.status(400).json({ message: "ID thành viên không hợp lệ" });
+      }
+
+      // Get member information
+      const [member] = await db.select().from(members).where(eq(members.id, memberId));
+      if (!member) {
+        return res.status(404).json({ message: "Không tìm thấy thành viên" });
+      }
+
+      if (member.userId) {
+        return res.status(400).json({ message: "Thành viên đã có tài khoản đăng nhập" });
+      }
+
+      // Generate unique username from full name
+      let baseUsername = member.fullName
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 12);
+      
+      let username = baseUsername;
+      let counter = 1;
+      let isUsernameTaken = true;
+      
+      while (isUsernameTaken) {
+        const existingUser = await db.select().from(users).where(eq(users.username, username));
+        if (existingUser.length === 0) {
+          isUsernameTaken = false;
+        } else {
+          username = `${baseUsername}${counter}`;
+          counter++;
+          if (counter > 999) {
+            return res.status(400).json({ message: "Không thể tạo username duy nhất" });
+          }
+        }
+      }
+      
+      // Generate random password
+      const password = Math.random().toString(36).slice(-8);
+      const hashedPassword = await hashPassword(password);
+      
+      // Get member role (default role for members)
+      const allRoles = await dbStorage.getRoles();
+      const memberRole = allRoles.find(r => r.name === 'member');
+      if (!memberRole) {
+        return res.status(500).json({ message: "Không tìm thấy role member" });
+      }
+      
+      // Create user account
+      const newUser = await dbStorage.createUser({
+        username,
+        email: member.email || `${username}@example.com`,
+        fullName: member.fullName,
+        passwordHash: hashedPassword,
+        roleId: memberRole.id,
+        mustChangePassword: true,
+        isActive: true,
+      });
+
+      // Update member with userId link
+      await db
+        .update(members)
+        .set({ userId: newUser.id })
+        .where(eq(members.id, memberId));
+
+      res.json({
+        message: "Tạo tài khoản đăng nhập thành công",
+        user: {
+          id: newUser.id,
+          username,
+          password, // Return plain password for display
+          email: newUser.email,
+          mustChangePassword: true
+        }
+      });
+    } catch (error) {
+      console.error("Error creating user account:", error);
+      res.status(500).json({ message: "Lỗi tạo tài khoản đăng nhập" });
+    }
+  });
+
+  // Delete user account
+  app.delete("/api/admin/users/:userId", authenticate, authorize(PERMISSIONS.MEMBER_DELETE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Check if user exists
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Prevent deleting admin users
+      if (user.roleId === 1) { // Assuming roleId 1 is admin
+        return res.status(400).json({ message: "Không thể xóa tài khoản quản trị viên" });
+      }
+
+      // Remove userId link from member if exists
+      await db
+        .update(members)
+        .set({ userId: null })
+        .where(eq(members.userId, userId));
+
+      // Delete user account
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ message: "Xóa tài khoản đăng nhập thành công" });
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      res.status(500).json({ message: "Lỗi xóa tài khoản đăng nhập" });
+    }
+  });
+
   // Get member by ID
   app.get("/api/members/:id", async (req, res) => {
     try {
@@ -1288,13 +1461,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error("Full name is required for account creation");
           }
 
-          // Generate username from full name
-          const username = memberData.fullName
+          // Generate unique username from full name
+          let baseUsername = memberData.fullName
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
             .replace(/[^a-z0-9]/g, '')
-            .substring(0, 15);
+            .substring(0, 12);
+          
+          // Check for existing usernames and add suffix if needed
+          let username = baseUsername;
+          let counter = 1;
+          let isUsernameTaken = true;
+          
+          while (isUsernameTaken) {
+            const existingUser = await db.select().from(users).where(eq(users.username, username));
+            if (existingUser.length === 0) {
+              isUsernameTaken = false;
+            } else {
+              username = `${baseUsername}${counter}`;
+              counter++;
+              if (counter > 999) {
+                throw new Error("Cannot generate unique username");
+              }
+            }
+          }
           
           // Generate random password
           const password = Math.random().toString(36).slice(-8);
@@ -1446,11 +1637,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete member
-  app.delete("/api/members/:id", async (req, res) => {
+  app.delete("/api/members/:id", authenticate, authorize(PERMISSIONS.MEMBER_DELETE), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid member ID" });
+      }
+
+      // Get member to check if it has associated user account
+      const [member] = await db.select({
+        id: members.id,
+        userId: members.userId,
+        fullName: members.fullName
+      }).from(members).where(eq(members.id, id));
+
+      if (!member) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+
+      // If member has associated user account, deactivate it first
+      if (member.userId) {
+        await db
+          .update(users)
+          .set({ 
+            isActive: false,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, member.userId));
       }
 
       const deleted = await dbStorage.deleteMember(id);
@@ -1458,8 +1671,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Member not found" });
       }
       
-      res.status(204).send();
+      res.json({ 
+        message: "Xóa thành viên thành công",
+        userAccountDeactivated: !!member.userId
+      });
     } catch (error) {
+      console.error("Error deleting member:", error);
       res.status(500).json({ message: "Failed to delete member" });
     }
   });
