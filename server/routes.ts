@@ -3628,6 +3628,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's missions
+  app.get("/api/missions/my", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { status } = req.query;
+
+      let whereConditions = [eq(missionAssignments.userId, userId)];
+
+      if (status) {
+        whereConditions.push(eq(missionAssignments.status, status as string));
+      }
+
+      const query = db.select({
+        assignment: {
+          id: missionAssignments.id,
+          status: missionAssignments.status,
+          assignedDate: missionAssignments.assignedDate,
+          startedDate: missionAssignments.startedDate,
+          completedDate: missionAssignments.completedDate,
+          submissionNote: missionAssignments.submissionNote,
+          reviewNote: missionAssignments.reviewNote,
+          pointsAwarded: missionAssignments.pointsAwarded
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          category: missions.category,
+          type: missions.type,
+          beePointsReward: missions.beePointsReward,
+          requiresPhoto: missions.requiresPhoto,
+          startDate: missions.startDate,
+          endDate: missions.endDate,
+          deadline: missions.deadline,
+          priority: missions.priority,
+          tags: missions.tags
+        }
+      }).from(missionAssignments)
+        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
+        .where(and(...whereConditions));
+
+      const userMissions = await query.orderBy(desc(missionAssignments.assignedDate));
+      res.json(userMissions);
+    } catch (error) {
+      console.error("Error fetching user missions:", error);
+      res.status(500).json({ message: "Lỗi lấy nhiệm vụ của người dùng" });
+    }
+  });
+
+  // Get all mission assignments for admin review
+  app.get("/api/missions/assignments", authenticate, authorize(PERMISSIONS.MISSION_REVIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status } = req.query;
+      
+      let whereConditions = [];
+      if (status) {
+        whereConditions.push(eq(missionAssignments.status, status as string));
+      }
+
+      const query = db.select({
+        id: missionAssignments.id,
+        status: missionAssignments.status,
+        assignedDate: missionAssignments.assignedDate,
+        startedDate: missionAssignments.startedDate,
+        completedDate: missionAssignments.completedDate,
+        submissionNote: missionAssignments.submissionNote,
+        reviewNote: missionAssignments.reviewNote,
+        pointsAwarded: missionAssignments.pointsAwarded,
+        user: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username,
+          email: users.email
+        },
+        mission: {
+          id: missions.id,
+          title: missions.title,
+          description: missions.description,
+          beePointsReward: missions.beePointsReward,
+          deadline: missions.deadline
+        }
+      }).from(missionAssignments)
+        .innerJoin(users, eq(missionAssignments.userId, users.id))
+        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+      const assignments = await query.orderBy(desc(missionAssignments.assignedDate));
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching mission assignments:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách phân công nhiệm vụ" });
+    }
+  });
+
   // Get mission details
   app.get("/api/missions/:id", authenticate, authorize(PERMISSIONS.MISSION_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
@@ -3792,55 +3886,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error assigning mission:", error);
       res.status(500).json({ message: "Lỗi giao nhiệm vụ" });
-    }
-  });
-
-  // Get user's missions
-  app.get("/api/missions/my", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const { status } = req.query;
-
-      let whereConditions = [eq(missionAssignments.userId, userId)];
-
-      if (status) {
-        whereConditions.push(eq(missionAssignments.status, status as string));
-      }
-
-      const query = db.select({
-        assignment: {
-          id: missionAssignments.id,
-          status: missionAssignments.status,
-          assignedDate: missionAssignments.assignedDate,
-          startedDate: missionAssignments.startedDate,
-          completedDate: missionAssignments.completedDate,
-          submissionNote: missionAssignments.submissionNote,
-          reviewNote: missionAssignments.reviewNote,
-          pointsAwarded: missionAssignments.pointsAwarded
-        },
-        mission: {
-          id: missions.id,
-          title: missions.title,
-          description: missions.description,
-          category: missions.category,
-          type: missions.type,
-          beePointsReward: missions.beePointsReward,
-          requiresPhoto: missions.requiresPhoto,
-          startDate: missions.startDate,
-          endDate: missions.endDate,
-          deadline: missions.deadline,
-          priority: missions.priority,
-          tags: missions.tags
-        }
-      }).from(missionAssignments)
-        .innerJoin(missions, eq(missionAssignments.missionId, missions.id))
-        .where(and(...whereConditions));
-
-      const userMissions = await query.orderBy(desc(missionAssignments.assignedDate));
-      res.json(userMissions);
-    } catch (error) {
-      console.error("Error fetching user missions:", error);
-      res.status(500).json({ message: "Lỗi lấy nhiệm vụ của người dùng" });
     }
   });
 
