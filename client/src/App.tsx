@@ -21,6 +21,7 @@ import PositionsPage from "@/pages/positions";
 import MissionsPage from "@/pages/missions";
 import MissionAdminPage from "@/pages/mission-admin";
 import MyMissionsPage from "@/pages/my-missions";
+import MissionCompletionPage from "@/pages/mission-completion";
 import UserManagementPage from "@/pages/user-management";
 import ShopPage from "@/pages/shop";
 import ShopAdminPage from "@/pages/shop-admin";
@@ -60,6 +61,7 @@ function Router() {
           <Route path="/missions" component={MissionsPage} />
           <Route path="/mission-admin" component={MissionAdminPage} />
           <Route path="/my-missions" component={MyMissionsPage} />
+          <Route path="/mission-completion" component={MissionCompletionPage} />
           <Route path="/user-management" component={UserManagementPage} />
           <Route path="/shop" component={ShopPage} />
           <Route path="/shop-admin" component={ShopAdminPage} />

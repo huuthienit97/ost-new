@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key, Calendar, Building, Crown, Target, ShoppingCart } from "lucide-react";
+import { Users, Shield, UserPlus, LogOut, Settings, Coins, User, Award, Key, Calendar, Building, Crown, Target, ShoppingCart, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
