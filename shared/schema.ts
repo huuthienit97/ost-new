@@ -319,7 +319,7 @@ export const shopProducts = pgTable("shop_products", {
   description: text("description").notNull(),
   beePointsCost: integer("bee_points_cost").notNull(),
   imageUrl: text("image_url"),
-  categoryId: integer("category_id").references(() => shopCategories.id).notNull(),
+  category: text("category").notNull(),
   stockQuantity: integer("stock_quantity"), // null = unlimited
   isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by").references(() => users.id).notNull(),
@@ -362,10 +362,6 @@ export const shopCategoriesRelations = relations(shopCategories, ({ one, many })
 }));
 
 export const shopProductsRelations = relations(shopProducts, ({ one, many }) => ({
-  category: one(shopCategories, {
-    fields: [shopProducts.categoryId],
-    references: [shopCategories.id],
-  }),
   createdBy: one(users, {
     fields: [shopProducts.createdBy],
     references: [users.id],
