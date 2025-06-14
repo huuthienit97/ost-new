@@ -53,7 +53,7 @@ export default function MissionsPage() {
 
   // Fetch user's mission assignments
   const { data: userAssignments = [] } = useQuery({
-    queryKey: ["/api/missions/my-assignments"],
+    queryKey: ["/api/missions/my"],
   });
 
   // Self-assign mutation
@@ -67,7 +67,7 @@ export default function MissionsPage() {
         description: "Tự nhận nhiệm vụ thành công",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/missions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/missions/my-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
     },
     onError: (error: any) => {
       toast({
