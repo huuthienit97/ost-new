@@ -77,6 +77,7 @@ export default function UserDiscovery() {
         );
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
     },
     onError: (error: any) => {
       toast({
@@ -103,6 +104,7 @@ export default function UserDiscovery() {
         );
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile"] });
     },
     onError: (error: any) => {
       toast({

@@ -51,6 +51,7 @@ interface UserProfile {
   friendsCount?: number;
   isOwnProfile?: boolean;
   isFriend?: boolean;
+  connectionStatus?: 'none' | 'pending_sent' | 'pending_received' | 'connected';
 }
 
 interface UserPost {
@@ -296,6 +297,52 @@ export default function UserProfile() {
     setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
+  // Friend request mutation
+  const friendRequestMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/users/connect", {
+        method: "POST",
+        body: JSON.stringify({ 
+          userId: profile.id,
+          message: "Xin chào! Tôi muốn kết bạn với bạn."
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      toast({ title: "Đã gửi lời mời kết bạn!" });
+    },
+    onError: () => {
+      toast({ 
+        title: "Lỗi", 
+        description: "Không thể gửi lời mời kết bạn.",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Cancel friend request mutation
+  const cancelRequestMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/users/connect/${profile.id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      toast({ title: "Đã hủy lời mời kết bạn!" });
+    },
+    onError: () => {
+      toast({ 
+        title: "Lỗi", 
+        description: "Không thể hủy lời mời kết bạn.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   if (profileLoading) {
     return (
       <div className="container max-w-4xl mx-auto p-6">
@@ -423,9 +470,31 @@ export default function UserProfile() {
                   </Button>
                 ) : (
                   <>
-                    <Button variant={profile.isFriend ? "secondary" : "default"}>
-                      {profile.isFriend ? "Bạn bè" : "Kết bạn"}
-                    </Button>
+                    {/* Friend Connection Button */}
+                    {profile.connectionStatus === 'pending_sent' ? (
+                      <Button 
+                        variant="secondary" 
+                        onClick={() => cancelRequestMutation.mutate()}
+                        disabled={cancelRequestMutation.isPending}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {cancelRequestMutation.isPending ? "Đang hủy..." : "Đã gửi"}
+                      </Button>
+                    ) : profile.connectionStatus === 'connected' ? (
+                      <Button variant="secondary" disabled>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Bạn bè
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => friendRequestMutation.mutate()}
+                        disabled={friendRequestMutation.isPending}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {friendRequestMutation.isPending ? "Đang gửi..." : "Kết bạn"}
+                      </Button>
+                    )}
+                    
                     <Button variant="outline">
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Nhắn tin
