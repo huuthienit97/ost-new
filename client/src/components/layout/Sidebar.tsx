@@ -28,7 +28,8 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  Package
 } from "lucide-react";
 
 interface SidebarProps {
