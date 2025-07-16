@@ -5798,7 +5798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(userConnections.id, connectionId),
-            eq(userConnections.addresseeId, req.user!.id),
+            eq(userConnections.requestedId, req.user!.id),
             eq(userConnections.status, "pending")
           )
         );
@@ -5851,7 +5851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(users, eq(userConnections.requesterId, users.id))
         .where(
           and(
-            eq(userConnections.addresseeId, req.user!.id),
+            eq(userConnections.requestedId, req.user!.id),
             eq(userConnections.status, "pending")
           )
         )
@@ -5903,17 +5903,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if this is own profile
       const isOwnProfile = user.id === currentUserId;
       
-      // Get posts count (placeholder for now)
-      const postsCount = 0;
-      const friendsCount = 0;
+      // Get posts count
+      const [postsCountResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(posts)
+        .where(eq(posts.userId, user.id));
+      const postsCount = postsCountResult?.count || 0;
       
-      // Check friendship status (placeholder for now)
-      const isFriend = false;
+      // Get friends count
+      const [friendsCountResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(userConnections)
+        .where(
+          and(
+            or(
+              eq(userConnections.requesterId, user.id),
+              eq(userConnections.requestedId, user.id)
+            ),
+            eq(userConnections.status, "accepted")
+          )
+        );
+      const friendsCount = friendsCountResult?.count || 0;
+      
+      // Check connection status with current user
+      let connectionStatus: 'none' | 'pending_sent' | 'pending_received' | 'connected' = 'none';
+      let isFriend = false;
+      
+      if (!isOwnProfile) {
+        const [connection] = await db
+          .select()
+          .from(userConnections)
+          .where(
+            or(
+              and(
+                eq(userConnections.requesterId, currentUserId),
+                eq(userConnections.requestedId, user.id)
+              ),
+              and(
+                eq(userConnections.requesterId, user.id),
+                eq(userConnections.requestedId, currentUserId)
+              )
+            )
+          )
+          .limit(1);
+        
+        if (connection) {
+          if (connection.status === 'accepted') {
+            connectionStatus = 'connected';
+            isFriend = true;
+          } else if (connection.status === 'pending') {
+            if (connection.requesterId === currentUserId) {
+              connectionStatus = 'pending_sent';
+            } else {
+              connectionStatus = 'pending_received';
+            }
+          }
+        }
+      }
 
       res.json({
         ...user,
         isOwnProfile,
         isFriend,
+        connectionStatus,
         postsCount,
         friendsCount,
       });
