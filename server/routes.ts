@@ -5632,7 +5632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const searchTerm = q.trim().toLowerCase();
       const searchLimit = Math.min(parseInt(limit as string) || 20, 50);
 
-      // Search users excluding current user with connection status
+      // First, get basic user search results
       const foundUsers = await db
         .select({
           id: users.id,
@@ -5641,25 +5641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: users.email,
           avatarUrl: users.avatarUrl,
           bio: users.bio,
-          createdAt: users.createdAt,
-          connectionStatus: userConnections.status,
-          connectionRequesterId: userConnections.requesterId,
-          connectionRequestedId: userConnections.requestedId,
+          createdAt: users.createdAt
         })
         .from(users)
-        .leftJoin(
-          userConnections,
-          or(
-            and(
-              eq(userConnections.requesterId, req.user!.id),
-              eq(userConnections.requestedId, users.id)
-            ),
-            and(
-              eq(userConnections.requesterId, users.id),
-              eq(userConnections.requestedId, req.user!.id)
-            )
-          )
-        )
         .where(
           and(
             ne(users.id, req.user!.id),
@@ -5673,29 +5657,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .limit(searchLimit);
 
+      // Then, get connection status for each user
+      const userIds = foundUsers.map(user => user.id);
+      
+      let connections = [];
+      if (userIds.length > 0) {
+        connections = await db
+          .select({
+            requesterId: userConnections.requesterId,
+            requestedId: userConnections.requestedId,
+            status: userConnections.status,
+          })
+          .from(userConnections)
+          .where(
+            or(
+              and(
+                eq(userConnections.requesterId, req.user!.id),
+                inArray(userConnections.requestedId, userIds)
+              ),
+              and(
+                eq(userConnections.requestedId, req.user!.id),
+                inArray(userConnections.requesterId, userIds)
+              )
+            )
+          );
+      }
+
       // Process results to determine connection status
-      const processedResults = foundUsers.map(result => {
+      const processedResults = foundUsers.map(user => {
         let connectionStatus: 'none' | 'pending_sent' | 'pending_received' | 'connected' = 'none';
         
-        if (result.connectionStatus) {
-          if (result.connectionStatus === 'accepted') {
+        const connection = connections.find(conn => 
+          (conn.requesterId === req.user!.id && conn.requestedId === user.id) ||
+          (conn.requestedId === req.user!.id && conn.requesterId === user.id)
+        );
+
+        if (connection) {
+          if (connection.status === 'accepted') {
             connectionStatus = 'connected';
-          } else if (result.connectionStatus === 'pending') {
-            // Check if current user sent or received the request
-            connectionStatus = result.connectionRequesterId === req.user!.id 
+          } else if (connection.status === 'pending') {
+            connectionStatus = connection.requesterId === req.user!.id 
               ? 'pending_sent' 
               : 'pending_received';
           }
         }
 
         return {
-          id: result.id,
-          username: result.username,
-          fullName: result.fullName,
-          email: result.email,
-          avatarUrl: result.avatarUrl,
-          bio: result.bio,
-          createdAt: result.createdAt,
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          bio: user.bio,
+          createdAt: user.createdAt,
           connectionStatus,
         };
       });
