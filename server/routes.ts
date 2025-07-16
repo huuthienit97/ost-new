@@ -5798,7 +5798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(userConnections.id, connectionId),
-            eq(userConnections.requestedId, req.user!.id),
+            eq(userConnections.addresseeId, req.user!.id),
             eq(userConnections.status, "pending")
           )
         );
@@ -5851,7 +5851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(users, eq(userConnections.requesterId, users.id))
         .where(
           and(
-            eq(userConnections.requestedId, req.user!.id),
+            eq(userConnections.addresseeId, req.user!.id),
             eq(userConnections.status, "pending")
           )
         )
@@ -5918,7 +5918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           and(
             or(
               eq(userConnections.requesterId, user.id),
-              eq(userConnections.requestedId, user.id)
+              eq(userConnections.addresseeId, user.id)
             ),
             eq(userConnections.status, "accepted")
           )
@@ -5937,11 +5937,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             or(
               and(
                 eq(userConnections.requesterId, currentUserId),
-                eq(userConnections.requestedId, user.id)
+                eq(userConnections.addresseeId, user.id)
               ),
               and(
                 eq(userConnections.requesterId, user.id),
-                eq(userConnections.requestedId, currentUserId)
+                eq(userConnections.addresseeId, currentUserId)
               )
             )
           )
