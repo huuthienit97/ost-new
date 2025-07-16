@@ -5631,39 +5631,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Search API called with query:", q, "by user:", req.user?.id);
 
-      // For now, return a simple hardcoded response to verify the endpoint works
-      const mockResults = [
-        {
-          id: 12,
-          username: "thien",
-          fullName: "thien",
-          email: "thien@example.com",
-          avatarUrl: null,
-          bio: null,
-          createdAt: "2025-06-07T08:28:41.167Z",
-          connectionStatus: 'none' as const
-        },
-        {
-          id: 34,
-          username: "thienvu",
-          fullName: "Nguyễn Thiên Vũ",
-          email: "thienvu@club.edu.vn", 
-          avatarUrl: null,
-          bio: null,
-          createdAt: "2025-07-16T08:15:27.734Z",
-          connectionStatus: 'none' as const
+      // Get users from database with connection status
+      const searchResults = await db.execute(sql`
+        SELECT 
+          u.id, u.username, u.full_name, u.email, u.avatar_url, u.bio, u.created_at,
+          uc.status as connection_status,
+          uc.requester_id,
+          uc.addressee_id
+        FROM users u
+        LEFT JOIN user_connections uc ON (
+          (uc.requester_id = ${req.user!.id} AND uc.addressee_id = u.id) OR
+          (uc.addressee_id = ${req.user!.id} AND uc.requester_id = u.id)
+        )
+        WHERE u.id != ${req.user!.id} 
+          AND u.is_active = true
+          AND (u.is_private = false OR u.is_private IS NULL)
+          AND (
+            LOWER(u.full_name) ILIKE LOWER(${'%' + searchTerm + '%'}) OR
+            LOWER(u.username) ILIKE LOWER(${'%' + searchTerm + '%'}) OR  
+            LOWER(u.email) ILIKE LOWER(${'%' + searchTerm + '%'})
+          )
+        LIMIT ${searchLimit}
+      `);
+
+      // Process results to determine connection status
+      const processedResults = searchResults.rows.map((user: any) => {
+        let connectionStatus: 'none' | 'pending_sent' | 'pending_received' | 'connected' = 'none';
+        
+        if (user.connection_status) {
+          if (user.connection_status === 'accepted') {
+            connectionStatus = 'connected';
+          } else if (user.connection_status === 'pending') {
+            connectionStatus = user.requester_id === req.user!.id 
+              ? 'pending_sent' 
+              : 'pending_received';
+          }
         }
-      ];
 
-      // Filter results based on search term
-      const searchTerm = q.trim().toLowerCase();
-      const filteredResults = mockResults.filter(user => 
-        user.fullName.toLowerCase().includes(searchTerm) ||
-        user.username.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm)
-      );
+        return {
+          id: user.id,
+          username: user.username,
+          fullName: user.full_name,
+          email: user.email,
+          avatarUrl: user.avatar_url,
+          bio: user.bio,
+          createdAt: user.created_at,
+          connectionStatus,
+        };
+      });
 
-      res.json(filteredResults);
+      res.json(processedResults);
     } catch (error) {
       console.error("Error searching users:", error);
       res.status(500).json({ message: "Lỗi tìm kiếm người dùng" });
