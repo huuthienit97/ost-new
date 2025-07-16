@@ -31,7 +31,8 @@ import {
   LogOut,
   User,
   Package,
-  LayoutGrid
+  LayoutGrid,
+  Bell
 } from "lucide-react";
 
 interface SidebarProps {

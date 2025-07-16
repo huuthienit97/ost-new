@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -29,6 +30,7 @@ import ShopCategoryAdminPage from "@/pages/shop-category-admin";
 import ShopProductAdminPage from "@/pages/shop-product-admin";
 import ShopOrderAdminPage from "@/pages/shop-order-admin";
 import NotificationsTestPage from "@/pages/notifications-test";
+import NotificationsManagement from "@/pages/admin/notifications";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -76,7 +78,7 @@ function Router() {
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
           <Route path="/notifications-test" component={NotificationsTestPage} />
-          <Route path="/admin/notifications" component={lazy(() => import("@/pages/admin/notifications"))} />
+          <Route path="/admin/notifications" component={NotificationsManagement} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
