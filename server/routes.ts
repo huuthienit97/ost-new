@@ -4382,8 +4382,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { productId, quantity = 1, deliveryInfo } = req.body;
       
+      console.log("Shop purchase request:", { userId: req.user!.id, productId, quantity, deliveryInfo });
+      
       // Get product details
       const product = await dbStorage.getShopProduct(productId);
+      console.log("Product found:", product);
+      
       if (!product || !product.isActive) {
         return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã ngừng bán" });
       }
@@ -4394,9 +4398,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalCost = product.beePointsCost * quantity;
+      console.log("Total cost:", totalCost);
 
       // Check user's BeePoints
       const userBeePoints = await dbStorage.getUserBeePoints(req.user!.id);
+      console.log("User BeePoints:", userBeePoints);
+      
       if (!userBeePoints || userBeePoints.currentPoints < totalCost) {
         return res.status(400).json({ message: "Không đủ BeePoints để đổi thưởng" });
       }
@@ -4411,10 +4418,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
       };
 
+      console.log("Creating order with data:", orderData);
       const order = await dbStorage.createShopOrder(orderData);
+      console.log("Order created:", order);
 
       // Redeem BeePoints
+      console.log("Redeeming BeePoints:", { userId: req.user!.id, orderId: order.id, totalCost });
       const redemptionSuccess = await dbStorage.redeemBeePoints(req.user!.id, order.id, totalCost);
+      console.log("Redemption success:", redemptionSuccess);
       
       if (!redemptionSuccess) {
         return res.status(500).json({ message: "Lỗi xử lý giao dịch BeePoints" });
@@ -4425,6 +4436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await dbStorage.updateShopProduct(productId, {
           stockQuantity: product.stockQuantity - quantity,
         });
+        console.log("Stock updated for product:", productId);
       }
 
       res.status(201).json({
