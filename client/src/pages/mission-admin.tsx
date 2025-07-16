@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Target, Calendar, Users, Award, Camera, Send, CheckCircle, XCircle, Clock, Eye, UserPlus, AlertCircle, Edit, Trash2, UserCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Mission {
   id: number;
@@ -292,21 +293,24 @@ export default function MissionAdminPage() {
 
   if (missionsLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Đang tải...</div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Đang tải...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Quản trị Nhiệm vụ</h1>
-          <p className="text-muted-foreground">Quản lý toàn bộ nhiệm vụ và phân công công việc</p>
-        </div>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản trị Nhiệm vụ</h1>
+            <p className="text-muted-foreground">Quản lý toàn bộ nhiệm vụ và phân công công việc</p>
+          </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -803,6 +807,7 @@ export default function MissionAdminPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

@@ -17,6 +17,7 @@ import { z } from "zod";
 import { Key, Plus, Copy, Trash2, Eye, EyeOff, Calendar, Shield, Globe, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiKey, PERMISSIONS } from "@shared/schema";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 const createApiKeySchema = z.object({
   name: z.string().min(1, "Tên API key là bắt buộc"),
@@ -186,39 +187,27 @@ export default function ApiKeysPage() {
 
   if (!hasPermission("system:admin")) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-red-600">Không có quyền truy cập</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-gray-600">
-              Bạn không có quyền quản lý API keys.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Quyền truy cập bị từ chối</h1>
+            <p className="text-muted-foreground">Bạn không có quyền truy cập trang này</p>
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Quản lý API Keys</h1>
-              <p className="mt-2 text-gray-600">
-                Quản lý quyền truy cập cho ứng dụng thứ 3
-              </p>
-            </div>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý API Keys</h1>
+            <p className="text-muted-foreground">Tạo và quản lý các API keys cho ứng dụng</p>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* API Documentation Card */}
         <Card className="mb-6 border-blue-200 bg-blue-50">
           <CardHeader>
@@ -575,6 +564,6 @@ export default function ApiKeysPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </AppLayout>
   );
 }

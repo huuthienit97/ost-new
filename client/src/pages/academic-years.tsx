@@ -14,6 +14,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Calendar, Clock, Edit2, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 // Academic Year type
 type AcademicYear = {
@@ -137,26 +138,29 @@ export default function AcademicYears() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
+      <AppLayout>
+        <div className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-48 bg-gray-200 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý khóa học</h1>
-          <p className="text-gray-600">Quản lý các khóa học từ tháng 11 đến tháng 11 năm sau</p>
-        </div>
+    <AppLayout>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý khóa học</h1>
+            <p className="text-muted-foreground">Quản lý các khóa học từ tháng 11 đến tháng 11 năm sau</p>
+          </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -324,6 +328,7 @@ export default function AcademicYears() {
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

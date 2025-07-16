@@ -13,6 +13,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, Edit2, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 // Division type
 type Division = {
@@ -148,26 +149,29 @@ export default function Divisions() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <AppLayout>
+        <div className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý ban</h1>
-          <p className="text-gray-600">Quản lý các ban trong câu lạc bộ</p>
-        </div>
+    <AppLayout>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý ban</h1>
+            <p className="text-muted-foreground">Quản lý các ban trong câu lạc bộ</p>
+          </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -335,6 +339,7 @@ export default function Divisions() {
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

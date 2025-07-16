@@ -14,6 +14,7 @@ import { Package, Plus, Edit, Trash2, Eye, ShoppingCart } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 const productSchema = z.object({
   name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
@@ -189,10 +190,14 @@ export default function ShopAdmin() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Quản lý cửa hàng</h1>
-        <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý cửa hàng</h1>
+            <p className="text-muted-foreground">Quản lý sản phẩm và đơn hàng trong cửa hàng</p>
+          </div>
+          <Dialog open={createDialog} onOpenChange={setCreateDialog}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -490,6 +495,7 @@ export default function ShopAdmin() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

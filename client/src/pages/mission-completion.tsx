@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CheckCircle, XCircle, Clock, Eye, MessageSquare, Upload, Award, Calendar, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface MissionAssignment {
   id: number;
@@ -114,11 +115,13 @@ export default function MissionCompletionPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Đang tải...</div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Đang tải...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -127,13 +130,14 @@ export default function MissionCompletionPage() {
   const rejectedAssignments = assignments.filter((assignment: MissionAssignment) => assignment.status === 'rejected');
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Duyệt nhiệm vụ</h1>
-          <p className="text-muted-foreground">Xem xét và duyệt các nhiệm vụ đã nộp</p>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Duyệt nhiệm vụ</h1>
+            <p className="text-muted-foreground">Xem xét và duyệt các nhiệm vụ đã nộp</p>
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>
@@ -412,6 +416,7 @@ export default function MissionCompletionPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

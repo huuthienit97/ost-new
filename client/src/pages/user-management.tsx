@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Users, UserPlus, Settings, Key, Trash2, UserCheck, UserX, RefreshCw, Eye, EyeOff, Copy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface UserWithDetails {
   id: number;
@@ -215,22 +216,25 @@ export default function UserManagementPage() {
 
   if (usersLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Đang tải...</div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Đang tải...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Quản lý Tài khoản Đăng nhập</h1>
-          <p className="text-muted-foreground">Quản lý thông tin đăng nhập của thành viên</p>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý Tài khoản Đăng nhập</h1>
+            <p className="text-muted-foreground">Quản lý thông tin đăng nhập của thành viên</p>
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
@@ -462,6 +466,7 @@ export default function UserManagementPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
