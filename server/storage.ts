@@ -748,8 +748,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Shop order methods
-  async getShopOrders(): Promise<ShopOrder[]> {
-    return await db.select().from(shopOrders);
+  async getShopOrders(): Promise<any[]> {
+    const result = await db
+      .select({
+        id: shopOrders.id,
+        userId: shopOrders.userId,
+        productId: shopOrders.productId,
+        quantity: shopOrders.quantity,
+        totalBeePointsCost: shopOrders.totalBeePointsCost,
+        status: shopOrders.status,
+        notes: shopOrders.notes,
+        deliveryInfo: shopOrders.deliveryInfo,
+        processedBy: shopOrders.processedBy,
+        processedAt: shopOrders.processedAt,
+        createdAt: shopOrders.createdAt,
+        updatedAt: shopOrders.updatedAt,
+        user: {
+          id: users.id,
+          fullName: users.fullName,
+          username: users.username,
+          email: users.email,
+        },
+        product: {
+          id: shopProducts.id,
+          name: shopProducts.name,
+          description: shopProducts.description,
+          beePointsCost: shopProducts.beePointsCost,
+        },
+        processedByUser: {
+          id: sql`processed_user.id`,
+          fullName: sql`processed_user.full_name`,
+          username: sql`processed_user.username`,
+        },
+      })
+      .from(shopOrders)
+      .leftJoin(users, eq(shopOrders.userId, users.id))
+      .leftJoin(shopProducts, eq(shopOrders.productId, shopProducts.id))
+      .leftJoin(sql`users processed_user`, sql`${shopOrders.processedBy} = processed_user.id`)
+      .orderBy(desc(shopOrders.createdAt));
+    return result;
   }
 
   async getShopOrder(id: number): Promise<ShopOrder | undefined> {
@@ -757,8 +794,34 @@ export class DatabaseStorage implements IStorage {
     return order || undefined;
   }
 
-  async getUserShopOrders(userId: number): Promise<ShopOrder[]> {
-    return await db.select().from(shopOrders).where(eq(shopOrders.userId, userId));
+  async getUserShopOrders(userId: number): Promise<any[]> {
+    const result = await db
+      .select({
+        id: shopOrders.id,
+        userId: shopOrders.userId,
+        productId: shopOrders.productId,
+        quantity: shopOrders.quantity,
+        totalBeePointsCost: shopOrders.totalBeePointsCost,
+        status: shopOrders.status,
+        notes: shopOrders.notes,
+        deliveryInfo: shopOrders.deliveryInfo,
+        processedBy: shopOrders.processedBy,
+        processedAt: shopOrders.processedAt,
+        createdAt: shopOrders.createdAt,
+        updatedAt: shopOrders.updatedAt,
+        product: {
+          id: shopProducts.id,
+          name: shopProducts.name,
+          description: shopProducts.description,
+          beePointsCost: shopProducts.beePointsCost,
+          imageUrl: shopProducts.imageUrl,
+        },
+      })
+      .from(shopOrders)
+      .leftJoin(shopProducts, eq(shopOrders.productId, shopProducts.id))
+      .where(eq(shopOrders.userId, userId))
+      .orderBy(desc(shopOrders.createdAt));
+    return result;
   }
 
   async createShopOrder(insertOrder: InsertShopOrder): Promise<ShopOrder> {

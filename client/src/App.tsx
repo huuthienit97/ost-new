@@ -25,6 +25,8 @@ import MissionCompletionPage from "@/pages/mission-completion";
 import UserManagementPage from "@/pages/user-management";
 import ShopPage from "@/pages/shop";
 import ShopAdminPage from "@/pages/shop-admin";
+import ShopProductAdminPage from "@/pages/shop-product-admin";
+import ShopOrderAdminPage from "@/pages/shop-order-admin";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -65,6 +67,8 @@ function Router() {
           <Route path="/user-management" component={UserManagementPage} />
           <Route path="/shop" component={ShopPage} />
           <Route path="/shop-admin" component={ShopAdminPage} />
+          <Route path="/shop-products" component={ShopProductAdminPage} />
+          <Route path="/shop-orders" component={ShopOrderAdminPage} />
           <Route path="/academic-years" component={AcademicYearsPage} />
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
