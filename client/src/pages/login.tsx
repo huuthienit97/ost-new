@@ -30,8 +30,10 @@ export default function LoginPage() {
 
   const initMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/init", {});
-      return response.json();
+      return await apiRequest("/api/auth/init", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     },
     onSuccess: (data) => {
       toast({
@@ -53,11 +55,13 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/login", {
-        username,
-        password,
+      return await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          username,
+          password,
+        }),
       });
-      return response.json();
     },
     onSuccess: (data) => {
       localStorage.setItem("token", data.token);
