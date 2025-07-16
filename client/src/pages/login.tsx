@@ -84,7 +84,7 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!username?.trim() || !password?.trim()) {
       toast({
         title: "Lỗi",
         description: "Vui lòng nhập đầy đủ thông tin",
@@ -123,6 +123,7 @@ export default function LoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
+                    required
                     disabled={loginMutation.isPending}
                   />
                 </div>
@@ -139,6 +140,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
+                    required
                     disabled={loginMutation.isPending}
                   />
                 </div>
