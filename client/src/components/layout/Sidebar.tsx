@@ -112,13 +112,13 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Quản lý sản phẩm",
       href: "/shop-products",
       icon: Package,
-      permission: "shop:manage"
+      adminOnly: true
     },
     {
       title: "Quản lý đơn hàng",
       href: "/shop-orders",
       icon: FileText,
-      permission: "shop:order:view"
+      adminOnly: true
     },
     {
       title: "Quản lý tài khoản",
@@ -174,9 +174,11 @@ export function Sidebar({ className }: SidebarProps) {
 
   const shouldShowItem = (item: NavItem) => {
     if (item.adminOnly) {
-      return user?.role?.name === 'admin' || user?.role?.name === 'super_admin';
+      return user?.role?.name === 'admin' || user?.role?.name === 'super_admin' || user?.role?.displayName === 'Admin';
     }
     if (item.permission) {
+      // Super admin should have all permissions
+      if (user?.role?.name === 'super_admin') return true;
       return hasPermission(item.permission);
     }
     return true;
