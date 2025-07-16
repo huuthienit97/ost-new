@@ -61,7 +61,6 @@ export default function ChatPage() {
   // Auto-select first room when rooms are loaded
   useEffect(() => {
     if (rooms.length > 0 && !selectedRoomId) {
-      console.log("Auto-selecting first room:", rooms[0]);
       setSelectedRoomId(rooms[0].id);
     }
   }, [rooms, selectedRoomId]);
@@ -71,23 +70,27 @@ export default function ChatPage() {
     queryKey: ["/api/chat/users"],
   });
 
-  // Get messages for selected room
-  const { data: messages = [], isLoading: messagesLoading, error: messagesError } = useQuery<ChatMessage[]>({
-    queryKey: ["/api/chat/rooms", selectedRoomId, "messages"],
+  // Get messages for selected room - using different approach
+  const messagesQuery = useQuery<ChatMessage[]>({
+    queryKey: selectedRoomId ? [`messages-${selectedRoomId}`] : ["no-room"],
+    queryFn: async () => {
+      if (!selectedRoomId) return [];
+      return await apiRequest(`/api/chat/rooms/${selectedRoomId}/messages`);
+    },
     enabled: !!selectedRoomId,
-    refetchInterval: 2000, // Auto-refresh every 2 seconds for testing
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
-  // Debug messages
+  const messages = messagesQuery.data || [];
+  const messagesLoading = messagesQuery.isLoading;
+  const messagesError = messagesQuery.error;
+
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
-    console.log("Messages state:", { 
-      selectedRoomId, 
-      messagesLoading, 
-      messagesCount: messages.length,
-      messages: messages.slice(0, 2),
-      error: messagesError
-    });
-  }, [selectedRoomId, messages, messagesLoading, messagesError]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Create private room mutation
   const createRoomMutation = useMutation({
@@ -125,16 +128,13 @@ export default function ChatPage() {
       });
     },
     onSuccess: (newMessage) => {
-      console.log("Message sent successfully:", newMessage);
       setNewMessage("");
-      // Force refresh messages immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+      // Refresh messages and rooms
+      queryClient.invalidateQueries({ queryKey: [`messages-${selectedRoomId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
-      // Also refetch to ensure immediate update
-      queryClient.refetchQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+      queryClient.refetchQueries({ queryKey: [`messages-${selectedRoomId}`] });
     },
-    onError: (error) => {
-      console.error("Error sending message:", error);
+    onError: () => {
       toast({
         title: "Lỗi",
         description: "Không thể gửi tin nhắn",
@@ -151,36 +151,34 @@ export default function ChatPage() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
     
-    console.log("Attempting WebSocket connection to:", wsUrl);
+    // Establishing WebSocket connection
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("WebSocket connected successfully");
+      // WebSocket connected
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
         if (data.type === 'new_message') {
-          console.log("New message received, refreshing UI...");
           // Refresh messages for the current room
-          queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+          queryClient.invalidateQueries({ queryKey: [`messages-${selectedRoomId}`] });
           queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
-          queryClient.refetchQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+          queryClient.refetchQueries({ queryKey: [`messages-${selectedRoomId}`] });
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        // WebSocket message parsing error
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    ws.onerror = () => {
+      setIsConnected(false);
     };
 
     ws.onclose = () => {
-      console.log("WebSocket connection closed");
+      setIsConnected(false);
     };
 
     return () => {
@@ -359,8 +357,6 @@ export default function ChatPage() {
                     ) : messages.length === 0 ? (
                       <div className="text-center text-gray-500">
                         Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!
-                        <br />
-                        <small>Room ID: {selectedRoomId}</small>
                       </div>
                     ) : (
                       <div className="space-y-4">

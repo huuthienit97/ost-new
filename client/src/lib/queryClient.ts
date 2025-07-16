@@ -40,7 +40,10 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const token = localStorage.getItem("token");
     
-    const res = await fetch(queryKey[0] as string, {
+    // Build URL from query key array
+    const url = Array.isArray(queryKey) ? queryKey.join('') : queryKey[0] as string;
+    
+    const res = await fetch(url, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
