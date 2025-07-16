@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus } from "@shared/schema";
-import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, PERMISSIONS } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, inArray } from "drizzle-orm";
@@ -4288,6 +4288,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SHOP SYSTEM API ENDPOINTS =====
   
+  // ===== SHOP CATEGORY API ENDPOINTS =====
+  
+  // Get all shop categories
+  app.get("/api/shop/categories", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categories = await dbStorage.getShopCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching shop categories:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách danh mục" });
+    }
+  });
+
+  // Get single shop category
+  app.get("/api/shop/categories/:id", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const category = await dbStorage.getShopCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Không tìm thấy danh mục" });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching shop category:", error);
+      res.status(500).json({ message: "Lỗi lấy thông tin danh mục" });
+    }
+  });
+
+  // Create new shop category (Admin only)
+  app.post("/api/shop/categories", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryData = insertShopCategorySchema.parse(req.body);
+      const category = await dbStorage.createShopCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating shop category:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Lỗi tạo danh mục" });
+    }
+  });
+
+  // Update shop category (Admin only)
+  app.put("/api/shop/categories/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      const categoryData = insertShopCategorySchema.partial().parse(req.body);
+      const category = await dbStorage.updateShopCategory(categoryId, categoryData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating shop category:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Lỗi cập nhật danh mục" });
+    }
+  });
+
+  // Delete shop category (Admin only)
+  app.delete("/api/shop/categories/:id", authenticate, authorize(PERMISSIONS.SHOP_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      await dbStorage.deleteShopCategory(categoryId);
+      res.json({ message: "Đã xóa danh mục thành công" });
+    } catch (error) {
+      console.error("Error deleting shop category:", error);
+      res.status(500).json({ message: "Lỗi xóa danh mục" });
+    }
+  });
+
   // Get all shop products (active only for regular users)
   app.get("/api/shop/products", authenticate, authorize(PERMISSIONS.SHOP_VIEW), async (req: AuthenticatedRequest, res) => {
     try {

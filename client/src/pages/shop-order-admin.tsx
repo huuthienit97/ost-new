@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Package, User, Calendar, Star, Eye, Edit } from "lucide-react";
+import { Package, User, Calendar, Star, Eye, Edit, ArrowLeft } from "lucide-react";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 export default function ShopOrderAdmin() {
   const [orderDialog, setOrderDialog] = useState(false);
@@ -92,16 +94,26 @@ export default function ShopOrderAdmin() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Quản lý đơn hàng</h1>
-        <div className="text-sm text-gray-600">
-          Tổng cộng: {orders.length} đơn hàng
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 p-6 space-y-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Trang chủ
+            </Button>
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">Quản lý đơn hàng</h1>
+            <div className="text-sm text-gray-600">
+              Tổng cộng: {orders?.length || 0} đơn hàng
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: "Chờ xử lý", status: "pending", color: "border-yellow-200 bg-yellow-50" },
           { label: "Đã xác nhận", status: "confirmed", color: "border-blue-200 bg-blue-50" },
@@ -119,20 +131,20 @@ export default function ShopOrderAdmin() {
             </CardContent>
           </Card>
         ))}
-      </div>
+        </div>
 
-      {/* Orders List */}
-      <div className="space-y-4">
-        {orders.length === 0 ? (
-          <Card>
+        {/* Orders List */}
+        <div className="space-y-4">
+          {orders.length === 0 ? (
+            <Card>
             <CardContent className="p-8 text-center">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có đơn hàng nào</h3>
               <p className="text-gray-600">Các đơn đổi thưởng của thành viên sẽ hiển thị ở đây.</p>
             </CardContent>
-          </Card>
-        ) : (
-          orders.map((order: any) => (
+            </Card>
+          ) : (
+            orders.map((order: any) => (
             <Card key={order.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -210,18 +222,18 @@ export default function ShopOrderAdmin() {
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      {/* Order Management Dialog */}
-      <Dialog open={orderDialog} onOpenChange={setOrderDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Quản lý đơn hàng #{selectedOrder?.id}</DialogTitle>
-          </DialogHeader>
-          
-          {selectedOrder && (
+        {/* Order Management Dialog */}
+        <Dialog open={orderDialog} onOpenChange={setOrderDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Quản lý đơn hàng #{selectedOrder?.id}</DialogTitle>
+            </DialogHeader>
+            
+            {selectedOrder && (
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-md space-y-2">
                 <div><strong>Khách hàng:</strong> {selectedOrder.user?.fullName || selectedOrder.user?.username}</div>
@@ -260,9 +272,9 @@ export default function ShopOrderAdmin() {
                 />
               </div>
             </div>
-          )}
-          
-          <div className="flex space-x-2 pt-4">
+            )}
+            
+            <div className="flex space-x-2 pt-4">
             <Button onClick={() => setOrderDialog(false)} variant="outline" className="flex-1">
               Hủy
             </Button>
@@ -273,9 +285,10 @@ export default function ShopOrderAdmin() {
             >
               {updateMutation.isPending ? "Đang cập nhật..." : "Cập nhật"}
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

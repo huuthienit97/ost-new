@@ -13,6 +13,7 @@ import {
   apiKeys,
   achievements,
   userAchievements,
+  shopCategories,
   shopProducts,
   shopOrders,
   beePointCirculation,
@@ -44,6 +45,8 @@ import {
   type InsertAchievement,
   type UserAchievement,
   type InsertUserAchievement,
+  type ShopCategory,
+  type InsertShopCategory,
   type ShopProduct,
   type InsertShopProduct,
   type ShopOrder,
@@ -51,7 +54,7 @@ import {
   type BeePointCirculation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Role methods
@@ -715,6 +718,34 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  // Shop Categories
+  async getShopCategories(): Promise<ShopCategory[]> {
+    return await db.select().from(shopCategories).orderBy(shopCategories.name);
+  }
+
+  async getShopCategory(id: number): Promise<ShopCategory | undefined> {
+    const [category] = await db.select().from(shopCategories).where(eq(shopCategories.id, id));
+    return category || undefined;
+  }
+
+  async createShopCategory(data: InsertShopCategory): Promise<ShopCategory> {
+    const [category] = await db.insert(shopCategories).values(data).returning();
+    return category;
+  }
+
+  async updateShopCategory(id: number, data: Partial<InsertShopCategory>): Promise<ShopCategory> {
+    const [category] = await db
+      .update(shopCategories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(shopCategories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteShopCategory(id: number): Promise<void> {
+    await db.delete(shopCategories).where(eq(shopCategories.id, id));
+  }
+
   // Shop system methods
   async getShopProducts(): Promise<ShopProduct[]> {
     return await db.select().from(shopProducts).where(eq(shopProducts.isActive, true));
@@ -784,7 +815,7 @@ export class DatabaseStorage implements IStorage {
       .from(shopOrders)
       .leftJoin(users, eq(shopOrders.userId, users.id))
       .leftJoin(shopProducts, eq(shopOrders.productId, shopProducts.id))
-      .leftJoin(sql`users processed_user`, sql`${shopOrders.processedBy} = processed_user.id`)
+      .leftJoin(sql`users AS processed_user`, sql`${shopOrders.processedBy} = processed_user.id`)
       .orderBy(desc(shopOrders.createdAt));
     return result;
   }

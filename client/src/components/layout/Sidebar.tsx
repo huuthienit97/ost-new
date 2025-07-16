@@ -29,7 +29,8 @@ import {
   X,
   LogOut,
   User,
-  Package
+  Package,
+  LayoutGrid
 } from "lucide-react";
 
 interface SidebarProps {
@@ -107,6 +108,12 @@ export function Sidebar({ className }: SidebarProps) {
       href: "/shop-admin",
       icon: ShoppingCart,
       permission: "shop:manage"
+    },
+    {
+      title: "Quản lý danh mục",
+      href: "/shop-categories",
+      icon: LayoutGrid,
+      adminOnly: true
     },
     {
       title: "Quản lý sản phẩm",
