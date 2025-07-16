@@ -34,6 +34,7 @@ import NotificationsManagement from "@/pages/admin/notifications";
 import ChatPage from "@/pages/chat";
 import GuestChatPage from "@/pages/guest-chat";
 import UserDiscovery from "@/pages/user-discovery";
+import UserProfile from "@/pages/user-profile";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -84,6 +85,7 @@ function Router() {
           <Route path="/admin/notifications" component={NotificationsManagement} />
           <Route path="/chat" component={ChatPage} />
           <Route path="/friends" component={UserDiscovery} />
+          <Route path="/profile/:userId" component={UserProfile} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

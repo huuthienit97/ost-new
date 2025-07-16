@@ -5801,6 +5801,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user profile
+  app.get("/api/users/profile/:userId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user!.id;
+      
+      const [user] = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          email: users.email,
+          avatarUrl: users.avatarUrl,
+          bio: users.bio,
+          phone: users.phone,
+          facebookUrl: users.facebookUrl,
+          instagramUrl: users.instagramUrl,
+          tiktokUrl: users.tiktokUrl,
+          youtubeUrl: users.youtubeUrl,
+          linkedinUrl: users.linkedinUrl,
+          githubUrl: users.githubUrl,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.id, parseInt(userId)));
+
+      if (!user) {
+        return res.status(404).json({ message: "Người dùng không tồn tại" });
+      }
+
+      // Check if this is own profile
+      const isOwnProfile = user.id === currentUserId;
+      
+      // Get posts count (placeholder for now)
+      const postsCount = 0;
+      const friendsCount = 0;
+      
+      // Check friendship status (placeholder for now)
+      const isFriend = false;
+
+      res.json({
+        ...user,
+        isOwnProfile,
+        isFriend,
+        postsCount,
+        friendsCount,
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Lỗi khi lấy thông tin người dùng" });
+    }
+  });
+
+  // Get user posts
+  app.get("/api/users/:userId/posts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // For now, return empty array until we implement posts
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching user posts:", error);
+      res.status(500).json({ message: "Lỗi khi lấy bài viết" });
+    }
+  });
+
+  // Create new post
+  app.post("/api/posts", authenticate, upload.array('images', 5), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content } = req.body;
+      const currentUserId = req.user!.id;
+      
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: "Nội dung bài viết không được để trống" });
+      }
+
+      // Handle uploaded images (placeholder)
+      const imageUrls: string[] = [];
+      if (req.files && Array.isArray(req.files)) {
+        req.files.forEach((file) => {
+          imageUrls.push(`/uploads/${file.filename}`);
+        });
+      }
+
+      // For now, just return success without saving to database
+      res.json({ 
+        message: "Tạo bài viết thành công",
+        post: {
+          id: Date.now(),
+          content: content.trim(),
+          imageUrls,
+          likes: 0,
+          comments: 0,
+          createdAt: new Date().toISOString(),
+        }
+      });
+    } catch (error) {
+      console.error("Error creating post:", error);
+      res.status(500).json({ message: "Lỗi khi tạo bài viết" });
+    }
+  });
+
+  // Like/unlike post
+  app.post("/api/posts/:postId/like", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { postId } = req.params;
+      
+      // Placeholder response
+      res.json({ message: "Đã thích bài viết" });
+    } catch (error) {
+      console.error("Error liking post:", error);
+      res.status(500).json({ message: "Lỗi khi thích bài viết" });
+    }
+  });
+
   // Get friends list
   app.get("/api/users/friends", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

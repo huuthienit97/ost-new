@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Users, MessageCircle, Check, X, Clock } from "lucide-react";
+import { Search, UserPlus, Users, MessageCircle, Check, X, Clock, Eye } from "lucide-react";
 
 interface User {
   id: number;
@@ -196,20 +196,29 @@ export default function UserDiscovery() {
                             </p>
                           </div>
                         </div>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setConnectMessage("");
-                              }}
-                              disabled={sendRequestMutation.isPending}
-                            >
-                              <UserPlus className="h-4 w-4 mr-1" />
-                              Kết bạn
-                            </Button>
-                          </DialogTrigger>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.location.href = `/profile/${user.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Xem
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setConnectMessage("");
+                                }}
+                                disabled={sendRequestMutation.isPending}
+                              >
+                                <UserPlus className="h-4 w-4 mr-1" />
+                                Kết bạn
+                              </Button>
+                            </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Gửi lời mời kết bạn</DialogTitle>
@@ -249,6 +258,7 @@ export default function UserDiscovery() {
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
+                        </div>
                       </div>
                     ))}
                   </div>
