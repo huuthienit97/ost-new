@@ -28,7 +28,7 @@ function apiRequest(url: string, options: any = {}) {
 
 export default function NotificationsTest() {
   const { toast } = useToast();
-  const { notifications, unreadCount, isConnected, markAsRead, refreshNotifications } = useNotifications();
+  const { notifications, unreadCount, isConnected, markAsRead, refreshNotifications, connect: reconnect } = useNotifications();
   const [testResults, setTestResults] = useState<any[]>([]);
 
   const testNotificationMutation = useMutation({
@@ -129,12 +129,12 @@ export default function NotificationsTest() {
               </Button>
 
               <Button 
-                onClick={testWebSocketConnection}
+                onClick={reconnect}
                 variant="outline"
                 className="w-full"
               >
                 <Wifi className="w-4 h-4 mr-2" />
-                Kiểm tra WebSocket
+                Kết nối lại WebSocket
               </Button>
 
               <Button 

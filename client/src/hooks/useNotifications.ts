@@ -90,11 +90,14 @@ export function useNotifications() {
   }, [user]);
 
   const disconnect = useCallback(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.close(1000, 'User disconnected');
+    if (ws) {
+      console.log('Manually disconnecting WebSocket...');
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, 'User disconnected');
+      }
+      setWs(null);
+      setIsConnected(false);
     }
-    setWs(null);
-    setIsConnected(false);
   }, [ws]);
 
   const handleWebSocketMessage = (data: any) => {
@@ -184,16 +187,10 @@ export function useNotifications() {
 
   // Connect when user is available
   useEffect(() => {
-    if (user) {
+    if (user && !ws) {
       connect();
-    } else {
-      disconnect();
     }
-
-    return () => {
-      disconnect();
-    };
-  }, [user, connect, disconnect]);
+  }, [user, ws, connect]);
 
   // Ping every 30 seconds to keep connection alive
   useEffect(() => {
