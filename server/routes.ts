@@ -5637,8 +5637,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: users.id,
           username: users.username,
           fullName: users.fullName,
+          email: users.email,
           avatarUrl: users.avatarUrl,
-          bio: users.bio
+          bio: users.bio,
+          createdAt: users.createdAt
         })
         .from(users)
         .where(

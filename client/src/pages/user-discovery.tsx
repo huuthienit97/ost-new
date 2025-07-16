@@ -180,16 +180,20 @@ export default function UserDiscovery() {
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-12 w-12">
                             <AvatarImage src={user.avatarUrl} />
                             <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
                           </Avatar>
-                          <div>
+                          <div className="flex-1">
                             <h3 className="font-medium">{user.fullName}</h3>
                             <p className="text-sm text-gray-500">@{user.username}</p>
+                            <p className="text-xs text-gray-400">{user.email}</p>
                             {user.bio && (
                               <p className="text-xs text-gray-400 mt-1">{user.bio}</p>
                             )}
+                            <p className="text-xs text-gray-300 mt-1">
+                              ID: {user.id} • Tham gia: {new Date(user.createdAt).toLocaleDateString('vi-VN')}
+                            </p>
                           </div>
                         </div>
                         <Dialog>
