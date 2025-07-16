@@ -44,6 +44,7 @@ export default function UserDiscovery() {
   // Search users
   const { data: searchResults, isLoading: searchLoading } = useQuery({
     queryKey: ["/api/users/search", searchTerm],
+    queryFn: () => apiRequest(`/api/users/search?q=${encodeURIComponent(searchTerm)}`),
     enabled: searchTerm.length >= 2,
   });
 
