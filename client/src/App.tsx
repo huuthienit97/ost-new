@@ -28,6 +28,7 @@ import ShopAdminPage from "@/pages/shop-admin";
 import ShopCategoryAdminPage from "@/pages/shop-category-admin";
 import ShopProductAdminPage from "@/pages/shop-product-admin";
 import ShopOrderAdminPage from "@/pages/shop-order-admin";
+import NotificationsTestPage from "@/pages/notifications-test";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -74,7 +75,7 @@ function Router() {
           <Route path="/academic-years" component={AcademicYearsPage} />
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
-          <Route path="/notifications-test" component={lazy(() => import("@/pages/notifications-test"))} />
+          <Route path="/notifications-test" component={NotificationsTestPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
