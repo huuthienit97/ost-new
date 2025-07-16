@@ -74,18 +74,30 @@ export default function UserProfile() {
   const [newPost, setNewPost] = useState("");
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null);
 
-  // Fetch user profile
+  // Fetch user profile 
   const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/users/profile", userId],
-    queryFn: () => apiRequest(`/api/users/profile/${userId}`),
-    enabled: !!userId,
+    queryFn: () => {
+      // If no userId, fetch current user's profile
+      if (!userId) {
+        return apiRequest("/api/auth/me").then(data => data.user);
+      }
+      return apiRequest(`/api/users/profile/${userId}`);
+    },
   });
 
   // Fetch user posts
   const { data: posts = [], isLoading: postsLoading } = useQuery<UserPost[]>({
     queryKey: ["/api/users", userId, "posts"],
-    queryFn: () => apiRequest(`/api/users/${userId}/posts`),
-    enabled: !!userId,
+    queryFn: () => {
+      if (!userId) {
+        // Get current user's posts via /me endpoint
+        return apiRequest("/api/auth/me").then(async (data) => {
+          return apiRequest(`/api/users/${data.user.username}/posts`);
+        });
+      }
+      return apiRequest(`/api/users/${userId}/posts`);
+    },
   });
 
   // Create new post mutation

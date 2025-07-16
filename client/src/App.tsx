@@ -67,6 +67,7 @@ function Router() {
           <Route path="/api-keys" component={ApiKeysPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route path="/profile" component={ProfilePage} />
+          <Route path="/me" component={() => <UserProfile />} />
           <Route path="/achievements" component={AchievementsPage} />
           <Route path="/missions" component={MissionsPage} />
           <Route path="/mission-admin" component={MissionAdminPage} />

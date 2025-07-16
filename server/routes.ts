@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages } from "@shared/schema";
+import { userPosts as posts } from "@shared/posts-schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -5801,11 +5802,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user profile
-  app.get("/api/users/profile/:userId", authenticate, async (req: AuthenticatedRequest, res) => {
+  // Get user profile by username/slug
+  app.get("/api/users/profile/:identifier", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const { userId } = req.params;
+      const { identifier } = req.params;
       const currentUserId = req.user!.id;
+      
+      // Check if identifier is numeric (ID) or string (username/slug)
+      const isNumeric = /^\d+$/.test(identifier);
+      const whereCondition = isNumeric 
+        ? eq(users.id, parseInt(identifier))
+        : eq(users.username, identifier);
       
       const [user] = await db
         .select({
@@ -5825,7 +5832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(eq(users.id, parseInt(userId)));
+        .where(whereCondition);
 
       if (!user) {
         return res.status(404).json({ message: "Người dùng không tồn tại" });
@@ -5855,12 +5862,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user posts
-  app.get("/api/users/:userId/posts", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/users/:identifier/posts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const { userId } = req.params;
+      const { identifier } = req.params;
       
-      // For now, return empty array until we implement posts
-      res.json([]);
+      // Check if identifier is numeric (ID) or string (username)
+      const isNumeric = /^\d+$/.test(identifier);
+      let targetUserId: number;
+      
+      if (isNumeric) {
+        targetUserId = parseInt(identifier);
+      } else {
+        // Look up user by username
+        const [user] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.username, identifier));
+        
+        if (!user) {
+          return res.status(404).json({ message: "Người dùng không tồn tại" });
+        }
+        targetUserId = user.id;
+      }
+
+      // Get posts with author info
+      const userPosts = await db
+        .select({
+          id: posts.id,
+          content: posts.content,
+          imageUrls: posts.imageUrls,
+          createdAt: posts.createdAt,
+          authorId: posts.userId,
+          authorName: users.fullName,
+          authorAvatar: users.avatarUrl,
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.userId, users.id))
+        .where(eq(posts.userId, targetUserId))
+        .orderBy(desc(posts.createdAt));
+
+      const postsWithStats = userPosts.map(post => ({
+        id: post.id,
+        content: post.content,
+        imageUrls: post.imageUrls || [],
+        createdAt: post.createdAt,
+        author: {
+          id: post.authorId,
+          fullName: post.authorName,
+          avatarUrl: post.authorAvatar,
+        },
+        likes: 0, // TODO: implement likes count
+        comments: 0, // TODO: implement comments count
+        isLiked: false, // TODO: check if current user liked this post
+      }));
+
+      res.json(postsWithStats);
     } catch (error) {
       console.error("Error fetching user posts:", error);
       res.status(500).json({ message: "Lỗi khi lấy bài viết" });
@@ -5877,7 +5933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Nội dung bài viết không được để trống" });
       }
 
-      // Handle uploaded images (placeholder)
+      // Handle uploaded images
       const imageUrls: string[] = [];
       if (req.files && Array.isArray(req.files)) {
         req.files.forEach((file) => {
@@ -5885,16 +5941,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // For now, just return success without saving to database
-      res.json({ 
-        message: "Tạo bài viết thành công",
-        post: {
-          id: Date.now(),
+      // Save to database
+      const [newPost] = await db
+        .insert(posts)
+        .values({
+          userId: currentUserId,
           content: content.trim(),
           imageUrls,
+        })
+        .returning();
+
+      // Get author info
+      const [author] = await db
+        .select({
+          id: users.id,
+          fullName: users.fullName,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(users)
+        .where(eq(users.id, currentUserId));
+
+      res.json({
+        message: "Tạo bài viết thành công",
+        post: {
+          ...newPost,
+          author,
           likes: 0,
           comments: 0,
-          createdAt: new Date().toISOString(),
+          isLiked: false,
         }
       });
     } catch (error) {

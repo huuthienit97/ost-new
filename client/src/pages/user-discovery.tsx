@@ -201,7 +201,7 @@ export default function UserDiscovery() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.location.href = `/profile/${user.id}`}
+                            onClick={() => window.location.href = `/profile/${user.username}`}
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Xem
