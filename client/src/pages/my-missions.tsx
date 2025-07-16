@@ -63,8 +63,9 @@ export default function MyMissions() {
   // Start mission mutation
   const startMissionMutation = useMutation({
     mutationFn: async (assignmentId: number) => {
-      return await apiRequest(`/api/missions/assignments/${assignmentId}/status`, "PATCH", { 
-        status: "in_progress" 
+      return await apiRequest(`/api/missions/assignments/${assignmentId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "in_progress" })
       });
     },
     onSuccess: () => {
@@ -97,7 +98,23 @@ export default function MyMissions() {
         formData.append("photo", photo);
       }
 
-      return await apiRequest(`/api/missions/${missionId}/submit`, "POST", formData);
+      // For FormData, we need to use fetch directly to let browser set Content-Type
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/missions/${missionId}/submit`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${response.status}: ${text}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -599,19 +616,21 @@ export default function MyMissions() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-blue-600">Nộp bài nhiệm vụ</DialogTitle>
-              <DialogDescription className="text-base">
-                <div className="bg-blue-50 p-4 rounded-lg mt-3">
-                  <div className="font-semibold text-blue-800">{selectedMission?.mission?.title || "N/A"}</div>
-                  <div className="text-blue-600 text-sm mt-1">{selectedMission?.mission?.description}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge className="bg-yellow-500 text-white">
-                      <Award className="h-3 w-3 mr-1" />
-                      {selectedMission?.mission?.beePointsReward} BeePoints
-                    </Badge>
-                  </div>
-                </div>
+              <DialogDescription>
+                Nộp bài cho nhiệm vụ: {selectedMission?.mission?.title || "N/A"}
               </DialogDescription>
             </DialogHeader>
+            
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <div className="font-semibold text-blue-800">{selectedMission?.mission?.title || "N/A"}</div>
+              <div className="text-blue-600 text-sm mt-1">{selectedMission?.mission?.description}</div>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge className="bg-yellow-500 text-white">
+                  <Award className="h-3 w-3 mr-1" />
+                  {selectedMission?.mission?.beePointsReward} BeePoints
+                </Badge>
+              </div>
+            </div>
             
             <div className="space-y-6">
               <div>
