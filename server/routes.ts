@@ -5403,5 +5403,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wsServer = new NotificationWebSocketServer(httpServer);
   notificationService.setWebSocketServer(wsServer);
   
+  // ===== NOTIFICATIONS MANAGEMENT API =====
+  
+  // Get notifications history for admin
+  app.get("/api/notifications/admin", authenticate, authorize(['system:admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+
+      const notificationsResult = await db.select({
+        id: notifications.id,
+        title: notifications.title,
+        message: notifications.message,
+        type: notifications.type,
+        priority: notifications.priority,
+        metadata: notifications.metadata,
+        createdAt: notifications.createdAt,
+        senderId: notifications.senderId,
+        senderName: users.fullName
+      })
+      .from(notifications)
+      .leftJoin(users, eq(notifications.senderId, users.id))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+      res.json({
+        data: notificationsResult,
+        pagination: {
+          page,
+          limit,
+          total: notificationsResult.length
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Lỗi khi lấy danh sách thông báo" });
+    }
+  });
+
   return httpServer;
 }

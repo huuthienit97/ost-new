@@ -76,6 +76,7 @@ function Router() {
           <Route path="/divisions" component={DivisionsPage} />
           <Route path="/positions" component={PositionsPage} />
           <Route path="/notifications-test" component={NotificationsTestPage} />
+          <Route path="/admin/notifications" component={lazy(() => import("@/pages/admin/notifications"))} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

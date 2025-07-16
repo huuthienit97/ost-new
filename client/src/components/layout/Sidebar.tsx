@@ -162,6 +162,12 @@ export function Sidebar({ className }: SidebarProps) {
       permission: "position:view"
     },
     {
+      title: "Quản lý thông báo",
+      href: "/admin/notifications",
+      icon: Bell,
+      adminOnly: true
+    },
+    {
       title: "API Keys",
       href: "/api-keys",
       icon: Key,
