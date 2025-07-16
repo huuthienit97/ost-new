@@ -5703,11 +5703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           or(
             and(
               eq(userConnections.requesterId, currentUserId),
-              eq(userConnections.requestedId, parseInt(userId))
+              eq(userConnections.addresseeId, parseInt(userId))
             ),
             and(
               eq(userConnections.requesterId, parseInt(userId)),
-              eq(userConnections.requestedId, currentUserId)
+              eq(userConnections.addresseeId, currentUserId)
             )
           )
         )
