@@ -170,7 +170,7 @@ class NotificationWebSocketServer {
     }
   }
 
-  // Public methods for sending notifications
+  // Public methods for sending notifications and chat messages
   public async sendNotificationToUser(userId: number, notification: any) {
     const clientSet = this.connectedClients.get(userId);
     if (clientSet && clientSet.size > 0) {

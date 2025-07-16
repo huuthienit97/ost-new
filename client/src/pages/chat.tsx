@@ -51,11 +51,20 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Get chat rooms
   const { data: rooms = [], isLoading: roomsLoading } = useQuery({
     queryKey: ["/api/chat/rooms"],
   });
+
+  // Auto-select first room when rooms are loaded
+  useEffect(() => {
+    if (rooms.length > 0 && !selectedRoomId) {
+      console.log("Auto-selecting first room:", rooms[0]);
+      setSelectedRoomId(rooms[0].id);
+    }
+  }, [rooms, selectedRoomId]);
 
   // Get available users for new chat
   const { data: availableUsers = [] } = useQuery<User[]>({
@@ -63,10 +72,22 @@ export default function ChatPage() {
   });
 
   // Get messages for selected room
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<ChatMessage[]>({
+  const { data: messages = [], isLoading: messagesLoading, error: messagesError } = useQuery<ChatMessage[]>({
     queryKey: ["/api/chat/rooms", selectedRoomId, "messages"],
     enabled: !!selectedRoomId,
+    refetchInterval: 2000, // Auto-refresh every 2 seconds for testing
   });
+
+  // Debug messages
+  useEffect(() => {
+    console.log("Messages state:", { 
+      selectedRoomId, 
+      messagesLoading, 
+      messagesCount: messages.length,
+      messages: messages.slice(0, 2),
+      error: messagesError
+    });
+  }, [selectedRoomId, messages, messagesLoading, messagesError]);
 
   // Create private room mutation
   const createRoomMutation = useMutation({
@@ -103,12 +124,17 @@ export default function ChatPage() {
         body: JSON.stringify({ content }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (newMessage) => {
+      console.log("Message sent successfully:", newMessage);
       setNewMessage("");
+      // Force refresh messages immediately
       queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
+      // Also refetch to ensure immediate update
+      queryClient.refetchQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error sending message:", error);
       toast({
         title: "Lỗi",
         description: "Không thể gửi tin nhắn",
@@ -116,6 +142,53 @@ export default function ChatPage() {
       });
     },
   });
+
+  // WebSocket connection for real-time messaging
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
+    
+    console.log("Attempting WebSocket connection to:", wsUrl);
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("WebSocket connected successfully");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
+        if (data.type === 'new_message') {
+          console.log("New message received, refreshing UI...");
+          // Refresh messages for the current room
+          queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
+          queryClient.refetchQueries({ queryKey: ["/api/chat/rooms", selectedRoomId, "messages"] });
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [queryClient, selectedRoomId]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -286,6 +359,8 @@ export default function ChatPage() {
                     ) : messages.length === 0 ? (
                       <div className="text-center text-gray-500">
                         Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!
+                        <br />
+                        <small>Room ID: {selectedRoomId}</small>
                       </div>
                     ) : (
                       <div className="space-y-4">
