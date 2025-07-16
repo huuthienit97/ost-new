@@ -10,6 +10,8 @@ import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, in
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { NotificationWebSocketServer } from "./websocket";
+import { notificationService } from "./notificationService";
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), "public", "uploads");
@@ -3880,6 +3882,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'assigned'
       }).returning();
 
+      // Get user and mission info for notification
+      const [missionInfo] = await db.select()
+        .from(missions)
+        .where(eq(missions.id, missionId));
+      
+      const [userInfo] = await db.select()
+        .from(users)
+        .where(eq(users.id, userId));
+
+      // Send notification to assigned user
+      if (missionInfo && userInfo) {
+        await notificationService.notifyMissionAssigned(
+          [userId], 
+          missionInfo.title, 
+          req.user!.fullName
+        );
+      }
+
       // Update participant count
       await db.update(missions)
         .set({ 
@@ -3889,6 +3909,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(missions.id, missionId));
 
       res.status(201).json(assignment);
+
+      // Send notification for self-assignment
+      await notificationService.notifyMissionAssigned(
+        [userId], 
+        mission.title, 
+        "Tự đăng ký"
+      );
     } catch (error) {
       console.error("Error assigning mission:", error);
       res.status(500).json({ message: "Lỗi giao nhiệm vụ" });
@@ -4030,6 +4057,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: status === 'completed' ? "Duyệt nhiệm vụ thành công" : "Từ chối nhiệm vụ",
         assignment: updatedAssignment
       });
+
+      // Send notification to user about review result
+      await notificationService.notifyMissionReviewed(
+        [assignment.mission_assignments.userId],
+        assignment.missions.title,
+        status,
+        pointsToAward
+      );
     } catch (error) {
       console.error("Error reviewing mission:", error);
       res.status(500).json({ message: "Lỗi duyệt nhiệm vụ" });
@@ -4068,7 +4103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Bạn đã được giao nhiệm vụ này" });
       }
 
-      // Create self-assignment
+      // Create self-assignment  
       const [assignment] = await db.insert(missionAssignments).values({
         missionId,
         userId,
@@ -4254,6 +4289,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Cập nhật trạng thái thành ${status === 'in_progress' ? 'đang thực hiện' : 'hoàn thành'}`,
         assignment: updatedAssignment
       });
+
+      // Send notification for mission start
+      if (status === 'in_progress') {
+        const [mission] = await db.select()
+          .from(missions)
+          .where(eq(missions.id, assignment.missionId));
+        
+        if (mission) {
+          await notificationService.notifyMissionCompleted(
+            [userId], 
+            mission.title, 
+            req.user!.fullName
+          );
+        }
+      }
     } catch (error) {
       console.error("Error updating assignment status:", error);
       res.status(500).json({ message: "Lỗi cập nhật trạng thái nhiệm vụ" });
@@ -5277,5 +5327,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket server for real-time notifications
+  const wsServer = new NotificationWebSocketServer(httpServer);
+  notificationService.setWebSocketServer(wsServer);
+  
   return httpServer;
 }

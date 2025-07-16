@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 import { 
   Home, 
   Users, 
@@ -247,14 +248,16 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-        </Button>
+        <div className="ml-auto flex items-center space-x-2">
+          {!collapsed && <NotificationIcon />}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* User Info */}
