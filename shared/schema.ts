@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  isPrivate: boolean("is_private").notNull().default(false), // Privacy setting
 });
 
 export const departments = pgTable("departments", {

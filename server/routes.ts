@@ -5631,6 +5631,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Search API called with query:", q, "by user:", req.user?.id);
 
+      const searchTerm = q.trim();
+      const searchLimit = Math.min(parseInt(limit as string) || 20, 50);
+
       // Get users from database with connection status
       const searchResults = await db.execute(sql`
         SELECT 
@@ -5647,9 +5650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           AND u.is_active = true
           AND (u.is_private = false OR u.is_private IS NULL)
           AND (
-            LOWER(u.full_name) ILIKE LOWER(${'%' + searchTerm + '%'}) OR
-            LOWER(u.username) ILIKE LOWER(${'%' + searchTerm + '%'}) OR  
-            LOWER(u.email) ILIKE LOWER(${'%' + searchTerm + '%'})
+            LOWER(u.full_name) ILIKE LOWER(${`%${searchTerm}%`}) OR
+            LOWER(u.username) ILIKE LOWER(${`%${searchTerm}%`}) OR  
+            LOWER(u.email) ILIKE LOWER(${`%${searchTerm}%`})
           )
         LIMIT ${searchLimit}
       `);

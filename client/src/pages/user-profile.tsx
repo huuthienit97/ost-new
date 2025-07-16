@@ -343,6 +343,7 @@ export default function UserProfile() {
                         accept="image/*"
                         onChange={handleImageSelect}
                         className="hidden"
+                        id="post-images"
                         id="image-upload"
                       />
                       <Button
