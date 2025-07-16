@@ -29,11 +29,20 @@ class NotificationWebSocketServer {
       const url = new URL(info.req.url, `http://${info.req.headers.host}`);
       const token = url.searchParams.get('token');
       
+      console.log('WebSocket verification - URL:', info.req.url);
+      console.log('WebSocket verification - Token present:', !!token);
+      
       if (!token) {
+        console.log('WebSocket verification failed: No token');
         return false;
       }
 
       const decoded = verifyToken(token);
+      console.log('WebSocket verification - Token valid:', !!decoded);
+      if (decoded) {
+        console.log('WebSocket verification - User ID:', decoded.id);
+      }
+      
       return !!decoded;
     } catch (error) {
       console.error('WebSocket verification failed:', error);
@@ -52,21 +61,21 @@ class NotificationWebSocketServer {
       }
 
       const decoded = verifyToken(token);
-      if (!decoded || !decoded.userId) {
+      if (!decoded || !decoded.id) {
         ws.close(4002, 'Invalid token');
         return;
       }
 
-      ws.userId = decoded.userId;
+      ws.userId = decoded.id;
       ws.username = decoded.username;
 
       // Add to connected clients
-      if (!this.connectedClients.has(decoded.userId)) {
-        this.connectedClients.set(decoded.userId, new Set());
+      if (!this.connectedClients.has(decoded.id)) {
+        this.connectedClients.set(decoded.id, new Set());
       }
-      this.connectedClients.get(decoded.userId)!.add(ws);
+      this.connectedClients.get(decoded.id)!.add(ws);
 
-      console.log(`WebSocket connected: User ${decoded.username} (ID: ${decoded.userId})`);
+      console.log(`WebSocket connected: User ${decoded.username} (ID: ${decoded.id})`);
 
       // Send initial data
       await this.sendUnreadNotifications(ws);

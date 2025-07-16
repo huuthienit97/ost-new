@@ -5008,6 +5008,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug token endpoint  
+  app.get("/api/auth/debug-token", authenticate, async (req: AuthenticatedRequest, res) => {
+    res.json({
+      user: req.user,
+      token_valid: true,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Test notification endpoint
   app.post("/api/notifications/test", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

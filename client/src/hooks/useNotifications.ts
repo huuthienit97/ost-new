@@ -33,14 +33,21 @@ export function useNotifications() {
   const [isConnected, setIsConnected] = useState(false);
 
   const connect = useCallback(() => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user, skipping WebSocket connection');
+      return;
+    }
 
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      console.log('No token found, skipping WebSocket connection');
+      return;
+    }
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+      console.log('Attempting WebSocket connection to:', wsUrl);
       
       const websocket = new WebSocket(wsUrl);
 
