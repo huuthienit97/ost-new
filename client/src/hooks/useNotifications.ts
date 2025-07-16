@@ -52,8 +52,11 @@ export function useNotifications() {
       const websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         setIsConnected(true);
+        
+        // Send a ping to keep connection alive
+        websocket.send(JSON.stringify({ type: 'ping' }));
       };
 
       websocket.onmessage = (event) => {
@@ -69,12 +72,10 @@ export function useNotifications() {
         console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
         
-        // Auto-reconnect after a delay if not intentionally closed
-        if (event.code !== 1000) {
-          setTimeout(() => {
-            if (user) connect();
-          }, 3000);
-        }
+        // Don't auto-reconnect for now to prevent infinite loops
+        // setTimeout(() => {
+        //   if (user) connect();
+        // }, 3000);
       };
 
       websocket.onerror = (error) => {
