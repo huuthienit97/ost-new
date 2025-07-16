@@ -2815,17 +2815,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { totalSupply, exchangeRate, welcomeBonus, activityMultiplier } = req.body;
 
+      console.log("Updating BeePoint config:", { totalSupply, exchangeRate, welcomeBonus, activityMultiplier });
+
       if (totalSupply !== undefined) {
-        await dbStorage.updateSetting("beepoint_total_supply", totalSupply.toString(), "Tổng cung BeePoint trong hệ thống");
+        await dbStorage.setSetting("beepoint_total_supply", totalSupply.toString(), "Tổng cung BeePoint trong hệ thống");
+        console.log("Updated totalSupply:", totalSupply);
       }
       if (exchangeRate !== undefined) {
-        await dbStorage.updateSetting("beepoint_exchange_rate", exchangeRate.toString(), "Tỷ lệ đổi BeePoint sang phần thưởng");
+        await dbStorage.setSetting("beepoint_exchange_rate", exchangeRate.toString(), "Tỷ lệ đổi BeePoint sang phần thưởng");
+        console.log("Updated exchangeRate:", exchangeRate);
       }
       if (welcomeBonus !== undefined) {
-        await dbStorage.updateSetting("beepoint_welcome_bonus", welcomeBonus.toString(), "BeePoint thưởng cho thành viên mới");
+        await dbStorage.setSetting("beepoint_welcome_bonus", welcomeBonus.toString(), "BeePoint thưởng cho thành viên mới");
+        console.log("Updated welcomeBonus:", welcomeBonus);
       }
       if (activityMultiplier !== undefined) {
-        await dbStorage.updateSetting("beepoint_activity_multiplier", activityMultiplier.toString(), "Hệ số nhân điểm hoạt động");
+        await dbStorage.setSetting("beepoint_activity_multiplier", activityMultiplier.toString(), "Hệ số nhân điểm hoạt động");
+        console.log("Updated activityMultiplier:", activityMultiplier);
       }
 
       res.json({ message: "Cập nhật cấu hình BeePoint thành công" });
@@ -2848,7 +2854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const setting of defaultSettings) {
         const existing = await dbStorage.getSetting(setting.key);
         if (!existing) {
-          await dbStorage.createSetting(setting.key, setting.value, setting.description);
+          await dbStorage.setSetting(setting.key, setting.value, setting.description);
         }
       }
 
