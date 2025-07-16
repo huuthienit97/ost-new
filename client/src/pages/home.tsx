@@ -115,8 +115,8 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {myMissions.slice(0, 3).map((mission: any) => (
-                  <div key={mission.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                {myMissions.slice(0, 3).map((mission: any, index: number) => (
+                  <div key={`mission-${mission.id || index}`} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-medium">{mission.mission.title}</h4>
                       <p className="text-sm text-muted-foreground">{mission.mission.description}</p>

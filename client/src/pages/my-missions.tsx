@@ -4,29 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Target, Calendar, Users, Award, Camera, Send, CheckCircle, XCircle, Clock, Eye, Play, Upload, AlertTriangle } from "lucide-react";
+import { 
+  Target, 
+  Clock, 
+  Award, 
+  CheckCircle, 
+  Play, 
+  Upload, 
+  Camera, 
+  Calendar,
+  AlertCircle,
+  FileText
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/layout/AppLayout";
-
-interface Mission {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  type: string;
-  beePointsReward: number;
-  requiresPhoto: boolean;
-  startDate?: string;
-  endDate?: string;
-  deadline?: string;
-  priority: string;
-  tags: string[];
-}
 
 interface MissionAssignment {
   id: number;
@@ -37,40 +34,50 @@ interface MissionAssignment {
   submissionNote?: string;
   reviewNote?: string;
   pointsAwarded: number;
-  mission: Mission;
+  mission: {
+    id: number;
+    title: string;
+    description: string;
+    beePointsReward: number;
+    deadline?: string;
+    requiresPhoto: boolean;
+  };
 }
 
-export default function MyMissionsPage() {
+export default function MyMissions() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [selectedMission, setSelectedMission] = useState<MissionAssignment | null>(null);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<MissionAssignment | null>(null);
   const [submissionNote, setSubmissionNote] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Fetch user's missions
-  const { data: myMissions = [], isLoading: missionsLoading } = useQuery({
+  // Fetch my assigned missions
+  const { data: myMissions = [], isLoading } = useQuery({
     queryKey: ["/api/missions/my"],
+    enabled: !!user,
   });
 
-  // Update assignment status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ assignmentId, status }: { assignmentId: number; status: string }) => {
-      return await apiRequest("PATCH", `/api/missions/assignments/${assignmentId}/status`, { status });
+  // Start mission mutation
+  const startMissionMutation = useMutation({
+    mutationFn: async (assignmentId: number) => {
+      return await apiRequest("PATCH", `/api/missions/assignments/${assignmentId}/status`, { 
+        status: "in_progress" 
+      });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Thành công",
-        description: data.message || "Cập nhật trạng thái thành công",
+        description: "Bạn đã bắt đầu thực hiện nhiệm vụ",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
     },
     onError: (error: any) => {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể cập nhật trạng thái",
+        description: error.message || "Không thể bắt đầu nhiệm vụ",
         variant: "destructive",
       });
     },
@@ -78,35 +85,28 @@ export default function MyMissionsPage() {
 
   // Submit mission mutation
   const submitMissionMutation = useMutation({
-    mutationFn: async ({ missionId, submissionNote, file }: { missionId: number; submissionNote: string; file?: File }) => {
+    mutationFn: async ({ missionId, submissionNote, photo }: { 
+      missionId: number; 
+      submissionNote: string; 
+      photo?: File 
+    }) => {
       const formData = new FormData();
       formData.append("submissionNote", submissionNote);
-      if (file) {
-        formData.append("photo", file);
+      if (photo) {
+        formData.append("photo", photo);
       }
 
-      const response = await fetch(`/api/missions/${missionId}/submit`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+      return await apiRequest("POST", `/api/missions/${missionId}/submit`, {
         body: formData,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to submit mission");
-      }
-
-      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Thành công",
-        description: "Nộp nhiệm vụ thành công",
+        description: data.message || "Đã nộp nhiệm vụ thành công",
       });
       setIsSubmitDialogOpen(false);
-      setSelectedAssignment(null);
+      setSelectedMission(null);
       setSubmissionNote("");
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
@@ -120,71 +120,46 @@ export default function MyMissionsPage() {
     },
   });
 
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      assigned: { label: "Đã giao", variant: "secondary" as const, color: "bg-blue-100 text-blue-800" },
+      in_progress: { label: "Đang thực hiện", variant: "default" as const, color: "bg-yellow-100 text-yellow-800" },
+      submitted: { label: "Đã nộp", variant: "default" as const, color: "bg-purple-100 text-purple-800" },
+      completed: { label: "Hoàn thành", variant: "default" as const, color: "bg-green-100 text-green-800" },
+      rejected: { label: "Yêu cầu làm lại", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+    };
+
+    const config = statusConfig[status] || statusConfig.assigned;
+    return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
+  };
+
   const handleStartMission = (assignment: MissionAssignment) => {
-    updateStatusMutation.mutate({
-      assignmentId: assignment.id,
-      status: "in_progress"
-    });
+    startMissionMutation.mutate(assignment.id);
   };
 
   const handleSubmitMission = () => {
-    if (!selectedAssignment) return;
-
-    if (selectedAssignment.mission.requiresPhoto && !selectedFile) {
-      toast({
-        title: "Lỗi",
-        description: "Nhiệm vụ này yêu cầu tải lên hình ảnh",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!selectedMission) return;
+    
     submitMissionMutation.mutate({
-      missionId: selectedAssignment.mission.id,
+      missionId: selectedMission.mission.id,
       submissionNote,
-      file: selectedFile || undefined,
+      photo: selectedFile || undefined,
     });
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "bg-red-500";
-      case "high": return "bg-orange-500";
-      case "medium": return "bg-yellow-500";
-      case "low": return "bg-green-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "assigned": return "bg-blue-500";
-      case "in_progress": return "bg-yellow-500";
-      case "completed": return "bg-green-500";
-      case "submitted": return "bg-purple-500";
-      case "rejected": return "bg-red-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "assigned": return "Đã giao";
-      case "in_progress": return "Đang thực hiện";
-      case "completed": return "Hoàn thành";
-      case "submitted": return "Đã nộp";
-      case "rejected": return "Từ chối";
-      default: return status;
-    }
+  const openSubmitDialog = (mission: MissionAssignment) => {
+    setSelectedMission(mission);
+    setSubmissionNote("");
+    setSelectedFile(null);
+    setIsSubmitDialogOpen(true);
   };
 
   const isDeadlineNear = (deadline?: string) => {
     if (!deadline) return false;
     const deadlineDate = new Date(deadline);
     const now = new Date();
-    const diffTime = deadlineDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3 && diffDays >= 0;
+    const diffDays = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+    return diffDays <= 3 && diffDays > 0;
   };
 
   const isOverdue = (deadline?: string) => {
@@ -194,30 +169,23 @@ export default function MyMissionsPage() {
     return deadlineDate < now;
   };
 
-  const getDaysUntilDeadline = (deadline?: string) => {
-    if (!deadline) return null;
-    const deadlineDate = new Date(deadline);
-    const now = new Date();
-    const diffTime = deadlineDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  if (missionsLoading) {
+  if (isLoading) {
     return (
       <AppLayout>
         <div className="p-6">
           <div className="flex items-center justify-center h-32">
-            <div className="text-lg">Đang tải...</div>
+            <div className="text-lg">Đang tải nhiệm vụ...</div>
           </div>
         </div>
       </AppLayout>
     );
   }
 
-  const assignedMissions = myMissions.filter((item: any) => item.assignment.status === 'assigned');
-  const inProgressMissions = myMissions.filter((item: any) => item.assignment.status === 'in_progress');
-  const submittedMissions = myMissions.filter((item: any) => ['submitted', 'completed', 'rejected'].includes(item.assignment.status));
+  const assignedMissions = myMissions.filter((m: any) => m.assignment?.status === 'assigned');
+  const inProgressMissions = myMissions.filter((m: any) => m.assignment?.status === 'in_progress');
+  const submittedMissions = myMissions.filter((m: any) => m.assignment?.status === 'submitted');
+  const completedMissions = myMissions.filter((m: any) => m.assignment?.status === 'completed');
+  const rejectedMissions = myMissions.filter((m: any) => m.assignment?.status === 'rejected');
 
   return (
     <AppLayout>
@@ -225,47 +193,34 @@ export default function MyMissionsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Nhiệm vụ của tôi</h1>
-            <p className="text-muted-foreground">
-              Quản lý và theo dõi tiến độ các nhiệm vụ được giao
-            </p>
+            <p className="text-muted-foreground">Xem và quản lý các nhiệm vụ được giao</p>
           </div>
         </div>
 
-      <Tabs defaultValue="assigned" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="assigned" className="relative">
-            Được giao
-            {assignedMissions.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                {assignedMissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="in_progress" className="relative">
-            Đang thực hiện
-            {inProgressMissions.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                {inProgressMissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="relative">
-            Đã hoàn thành
-            {submittedMissions.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                {submittedMissions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="assigned" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="assigned">
+              Chờ thực hiện ({assignedMissions.length})
+            </TabsTrigger>
+            <TabsTrigger value="in_progress">
+              Đang làm ({inProgressMissions.length})
+            </TabsTrigger>
+            <TabsTrigger value="submitted">
+              Đã nộp ({submittedMissions.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Hoàn thành ({completedMissions.length})
+            </TabsTrigger>
+            <TabsTrigger value="rejected">
+              Làm lại ({rejectedMissions.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="assigned" className="space-y-4">
-          <div className="grid gap-4">
-            {assignedMissions.map((item: any) => {
-              const assignment = item.assignment;
-              const mission = item.mission;
-              const daysUntilDeadline = getDaysUntilDeadline(mission.deadline);
-
+          <TabsContent value="assigned" className="space-y-4">
+            {assignedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
+              
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
@@ -275,60 +230,61 @@ export default function MyMissionsPage() {
                           <Target className="h-5 w-5" />
                           {mission.title}
                           {isOverdue(mission.deadline) && (
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                            <Badge variant="destructive" className="ml-2">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Quá hạn
+                            </Badge>
+                          )}
+                          {isDeadlineNear(mission.deadline) && !isOverdue(mission.deadline) && (
+                            <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Gần hạn
+                            </Badge>
                           )}
                         </CardTitle>
                         <CardDescription>{mission.description}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={`${getPriorityColor(mission.priority)} text-white`}>
-                          {mission.priority}
-                        </Badge>
-                        <Badge className={`${getStatusColor(assignment.status)} text-white`}>
-                          {getStatusText(assignment.status)}
+                        {getStatusBadge(assignment.status)}
+                        <Badge className="bg-yellow-500 text-white">
+                          <Award className="h-3 w-3 mr-1" />
+                          {mission.beePointsReward}
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          <span>{mission.beePointsReward} BeePoints</span>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="font-medium">Ngày giao:</div>
+                          <div>{new Date(assignment.assignedDate).toLocaleDateString('vi-VN')}</div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-blue-500" />
-                          <span>Giao: {new Date(assignment.assignedDate).toLocaleDateString('vi-VN')}</span>
-                        </div>
-                        {mission.requiresPhoto && (
-                          <div className="flex items-center gap-2">
-                            <Camera className="h-4 w-4 text-green-500" />
-                            <span>Cần hình ảnh</span>
-                          </div>
-                        )}
                         {mission.deadline && (
-                          <div className="flex items-center gap-2">
-                            <Clock className={`h-4 w-4 ${isOverdue(mission.deadline) ? 'text-red-500' : isDeadlineNear(mission.deadline) ? 'text-orange-500' : 'text-blue-500'}`} />
-                            <span className={isOverdue(mission.deadline) ? 'text-red-500 font-medium' : isDeadlineNear(mission.deadline) ? 'text-orange-500 font-medium' : ''}>
-                              {isOverdue(mission.deadline) 
-                                ? `Quá hạn ${Math.abs(daysUntilDeadline!)} ngày`
-                                : daysUntilDeadline === 0 
-                                ? 'Hạn hôm nay' 
-                                : `Còn ${daysUntilDeadline} ngày`
-                              }
-                            </span>
+                          <div className="space-y-1">
+                            <div className="font-medium">Hạn cuối:</div>
+                            <div className={isOverdue(mission.deadline) ? "text-red-600 font-medium" : ""}>
+                              <Calendar className="h-4 w-4 inline mr-1" />
+                              {new Date(mission.deadline).toLocaleDateString('vi-VN')}
+                            </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-end">
+                      {mission.requiresPhoto && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                          <Camera className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-blue-700">Nhiệm vụ này yêu cầu hình ảnh minh chứng</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end">
                         <Button
                           onClick={() => handleStartMission(assignment)}
-                          disabled={updateStatusMutation.isPending}
+                          disabled={startMissionMutation.isPending}
                         >
                           <Play className="h-4 w-4 mr-2" />
-                          Bắt đầu thực hiện
+                          {startMissionMutation.isPending ? "Đang bắt đầu..." : "Bắt đầu thực hiện"}
                         </Button>
                       </div>
                     </div>
@@ -342,21 +298,18 @@ export default function MyMissionsPage() {
                 <CardContent className="flex items-center justify-center h-32">
                   <div className="text-center">
                     <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Không có nhiệm vụ mới được giao</p>
+                    <p className="text-muted-foreground">Không có nhiệm vụ nào chờ thực hiện</p>
                   </div>
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="in_progress" className="space-y-4">
-          <div className="grid gap-4">
-            {inProgressMissions.map((item: any) => {
-              const assignment = item.assignment;
-              const mission = item.mission;
-              const daysUntilDeadline = getDaysUntilDeadline(mission.deadline);
-
+          <TabsContent value="in_progress" className="space-y-4">
+            {inProgressMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
+              
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
@@ -366,62 +319,68 @@ export default function MyMissionsPage() {
                           <Target className="h-5 w-5" />
                           {mission.title}
                           {isOverdue(mission.deadline) && (
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                            <Badge variant="destructive" className="ml-2">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Quá hạn
+                            </Badge>
+                          )}
+                          {isDeadlineNear(mission.deadline) && !isOverdue(mission.deadline) && (
+                            <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Gần hạn
+                            </Badge>
                           )}
                         </CardTitle>
                         <CardDescription>{mission.description}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={`${getPriorityColor(mission.priority)} text-white`}>
-                          {mission.priority}
-                        </Badge>
-                        <Badge className={`${getStatusColor(assignment.status)} text-white`}>
-                          {getStatusText(assignment.status)}
+                        {getStatusBadge(assignment.status)}
+                        <Badge className="bg-yellow-500 text-white">
+                          <Award className="h-3 w-3 mr-1" />
+                          {mission.beePointsReward}
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          <span>{mission.beePointsReward} BeePoints</span>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="font-medium">Ngày bắt đầu:</div>
+                          <div>{assignment.startedDate ? new Date(assignment.startedDate).toLocaleDateString('vi-VN') : 'N/A'}</div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-green-500" />
-                          <span>Bắt đầu: {assignment.startedDate ? new Date(assignment.startedDate).toLocaleDateString('vi-VN') : 'N/A'}</span>
-                        </div>
-                        {mission.requiresPhoto && (
-                          <div className="flex items-center gap-2">
-                            <Camera className="h-4 w-4 text-green-500" />
-                            <span>Cần hình ảnh</span>
-                          </div>
-                        )}
                         {mission.deadline && (
-                          <div className="flex items-center gap-2">
-                            <Clock className={`h-4 w-4 ${isOverdue(mission.deadline) ? 'text-red-500' : isDeadlineNear(mission.deadline) ? 'text-orange-500' : 'text-blue-500'}`} />
-                            <span className={isOverdue(mission.deadline) ? 'text-red-500 font-medium' : isDeadlineNear(mission.deadline) ? 'text-orange-500 font-medium' : ''}>
-                              {isOverdue(mission.deadline) 
-                                ? `Quá hạn ${Math.abs(daysUntilDeadline!)} ngày`
-                                : daysUntilDeadline === 0 
-                                ? 'Hạn hôm nay' 
-                                : `Còn ${daysUntilDeadline} ngày`
-                              }
-                            </span>
+                          <div className="space-y-1">
+                            <div className="font-medium">Hạn cuối:</div>
+                            <div className={isOverdue(mission.deadline) ? "text-red-600 font-medium" : ""}>
+                              <Calendar className="h-4 w-4 inline mr-1" />
+                              {new Date(mission.deadline).toLocaleDateString('vi-VN')}
+                            </div>
                           </div>
                         )}
+                        <div className="space-y-1">
+                          <div className="font-medium">Thời gian thực hiện:</div>
+                          <div>
+                            {assignment.startedDate ? 
+                              Math.ceil((new Date().getTime() - new Date(assignment.startedDate).getTime()) / (1000 * 3600 * 24)) 
+                              : 0} ngày
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-end">
+                      {mission.requiresPhoto && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                          <Camera className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-blue-700">Nhiệm vụ này yêu cầu hình ảnh minh chứng</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end">
                         <Button
-                          onClick={() => {
-                            setSelectedAssignment(assignment);
-                            setIsSubmitDialogOpen(true);
-                          }}
+                          onClick={() => openSubmitDialog(assignment)}
                         >
                           <Upload className="h-4 w-4 mr-2" />
-                          Nộp nhiệm vụ
+                          Nộp bài
                         </Button>
                       </div>
                     </div>
@@ -434,74 +393,58 @@ export default function MyMissionsPage() {
               <Card>
                 <CardContent className="flex items-center justify-center h-32">
                   <div className="text-center">
-                    <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Không có nhiệm vụ đang thực hiện</p>
+                    <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Không có nhiệm vụ nào đang thực hiện</p>
                   </div>
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="completed" className="space-y-4">
-          <div className="grid gap-4">
-            {submittedMissions.map((item: any) => {
-              const assignment = item.assignment;
-              const mission = item.mission;
-
+          <TabsContent value="submitted" className="space-y-4">
+            {submittedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
+              
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <CardTitle className="flex items-center gap-2">
-                          <Target className="h-5 w-5" />
+                          <FileText className="h-5 w-5" />
                           {mission.title}
                         </CardTitle>
                         <CardDescription>{mission.description}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={`${getPriorityColor(mission.priority)} text-white`}>
-                          {mission.priority}
-                        </Badge>
-                        <Badge className={`${getStatusColor(assignment.status)} text-white`}>
-                          {getStatusText(assignment.status)}
+                        {getStatusBadge(assignment.status)}
+                        <Badge className="bg-yellow-500 text-white">
+                          <Award className="h-3 w-3 mr-1" />
+                          {mission.beePointsReward}
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          <span>{assignment.pointsAwarded || mission.beePointsReward} BeePoints</span>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="font-medium">Ngày nộp:</div>
+                          <div>{assignment.completedDate ? new Date(assignment.completedDate).toLocaleDateString('vi-VN') : 'N/A'}</div>
                         </div>
-                        {assignment.completedDate && (
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span>Hoàn thành: {new Date(assignment.completedDate).toLocaleDateString('vi-VN')}</span>
-                          </div>
-                        )}
-                        {assignment.status === 'submitted' && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-purple-500" />
-                            <span>Chờ đánh giá</span>
-                          </div>
-                        )}
+                        <div className="space-y-1">
+                          <div className="font-medium">Trạng thái:</div>
+                          <div>Chờ giáo viên đánh giá</div>
+                        </div>
                       </div>
 
                       {assignment.submissionNote && (
-                        <div>
-                          <span className="font-medium text-sm">Ghi chú nộp bài:</span>
-                          <p className="text-sm text-muted-foreground mt-1">{assignment.submissionNote}</p>
-                        </div>
-                      )}
-
-                      {assignment.reviewNote && (
-                        <div>
-                          <span className="font-medium text-sm">Nhận xét:</span>
-                          <p className="text-sm text-muted-foreground mt-1">{assignment.reviewNote}</p>
+                        <div className="space-y-2">
+                          <div className="font-medium text-sm">Ghi chú nộp bài:</div>
+                          <div className="p-3 bg-muted rounded-md text-sm">
+                            {assignment.submissionNote}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -514,79 +457,203 @@ export default function MyMissionsPage() {
               <Card>
                 <CardContent className="flex items-center justify-center h-32">
                   <div className="text-center">
-                    <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Không có nhiệm vụ nào đã nộp</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="space-y-4">
+            {completedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
+              
+              return (
+                <Card key={assignment.id} className="hover:shadow-md transition-shadow border-green-200">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          {mission.title}
+                        </CardTitle>
+                        <CardDescription>{mission.description}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(assignment.status)}
+                        <Badge className="bg-green-500 text-white">
+                          <Award className="h-3 w-3 mr-1" />
+                          {assignment.pointsAwarded || mission.beePointsReward}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="font-medium">Ngày hoàn thành:</div>
+                          <div>{assignment.completedDate ? new Date(assignment.completedDate).toLocaleDateString('vi-VN') : 'N/A'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="font-medium">BeePoints nhận được:</div>
+                          <div className="text-green-600 font-medium">+{assignment.pointsAwarded || mission.beePointsReward}</div>
+                        </div>
+                      </div>
+
+                      {assignment.reviewNote && (
+                        <div className="space-y-2">
+                          <div className="font-medium text-sm">Nhận xét từ giáo viên:</div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm">
+                            {assignment.reviewNote}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {completedMissions.length === 0 && (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <div className="text-center">
+                    <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">Chưa có nhiệm vụ nào hoàn thành</p>
                   </div>
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
 
-      {/* Submit Mission Dialog */}
-      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nộp nhiệm vụ</DialogTitle>
-            <DialogDescription>
-              Nộp bài cho nhiệm vụ: {selectedAssignment?.mission.title}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="submissionNote">Ghi chú</Label>
-              <Textarea
-                id="submissionNote"
-                value={submissionNote}
-                onChange={(e) => setSubmissionNote(e.target.value)}
-                placeholder="Mô tả về việc hoàn thành nhiệm vụ..."
-                rows={4}
-              />
-            </div>
+          <TabsContent value="rejected" className="space-y-4">
+            {rejectedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
+              
+              return (
+                <Card key={assignment.id} className="hover:shadow-md transition-shadow border-red-200">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-500" />
+                          {mission.title}
+                        </CardTitle>
+                        <CardDescription>{mission.description}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(assignment.status)}
+                        <Badge className="bg-yellow-500 text-white">
+                          <Award className="h-3 w-3 mr-1" />
+                          {mission.beePointsReward}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {assignment.reviewNote && (
+                        <div className="space-y-2">
+                          <div className="font-medium text-sm">Nhận xét từ giáo viên:</div>
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm">
+                            {assignment.reviewNote}
+                          </div>
+                        </div>
+                      )}
 
-            {selectedAssignment?.mission.requiresPhoto && (
-              <div>
-                <Label htmlFor="photo">Hình ảnh {selectedAssignment.mission.requiresPhoto && "(Bắt buộc)"}</Label>
-                <input
-                  id="photo"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                {selectedFile && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Đã chọn: {selectedFile.name}
-                  </p>
-                )}
-              </div>
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={() => handleStartMission(assignment)}
+                          disabled={startMissionMutation.isPending}
+                          variant="outline"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          {startMissionMutation.isPending ? "Đang bắt đầu..." : "Làm lại"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {rejectedMissions.length === 0 && (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <div className="text-center">
+                    <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Không có nhiệm vụ nào cần làm lại</p>
+                  </div>
+                </CardContent>
+              </Card>
             )}
+          </TabsContent>
+        </Tabs>
 
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleSubmitMission}
-                disabled={submitMissionMutation.isPending || (selectedAssignment?.mission.requiresPhoto && !selectedFile)}
-                className="flex-1"
-              >
-                {submitMissionMutation.isPending ? "Đang nộp..." : "Nộp nhiệm vụ"}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsSubmitDialogOpen(false);
-                  setSelectedAssignment(null);
-                  setSubmissionNote("");
-                  setSelectedFile(null);
-                }}
-                className="flex-1"
-              >
-                Hủy
-              </Button>
+        {/* Submit Mission Dialog */}
+        <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Nộp bài nhiệm vụ</DialogTitle>
+              <DialogDescription>
+                Nộp bài cho nhiệm vụ: {selectedMission?.mission.title}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="submissionNote">Ghi chú nộp bài</Label>
+                <Textarea
+                  id="submissionNote"
+                  value={submissionNote}
+                  onChange={(e) => setSubmissionNote(e.target.value)}
+                  placeholder="Mô tả về cách bạn hoàn thành nhiệm vụ..."
+                  rows={4}
+                />
+              </div>
+
+              {selectedMission?.mission.requiresPhoto && (
+                <div>
+                  <Label htmlFor="photo">Hình ảnh minh chứng *</Label>
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  />
+                  {selectedFile && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Đã chọn: {selectedFile.name}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleSubmitMission}
+                  disabled={
+                    submitMissionMutation.isPending || 
+                    (selectedMission?.mission.requiresPhoto && !selectedFile)
+                  }
+                  className="flex-1"
+                >
+                  {submitMissionMutation.isPending ? "Đang nộp..." : "Nộp bài"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSubmitDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Hủy
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
