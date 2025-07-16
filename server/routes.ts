@@ -5717,6 +5717,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Không tìm thấy kết nối để hủy" });
       }
 
+      // Send notification to the addressee if it was a pending request
+      if (deletedConnection.status === 'pending' && deletedConnection.requesterId === currentUserId) {
+        await notificationService.createNotification(currentUserId, {
+          title: "Lời mời kết bạn đã bị hủy",
+          message: `${req.user!.fullName || req.user!.username} đã hủy lời mời kết bạn`,
+          type: 'info',
+          priority: 'low',
+          targetType: 'user',
+          targetIds: [deletedConnection.addresseeId.toString()],
+          metadata: {
+            type: 'friend_request_cancelled',
+            connectionId: deletedConnection.id,
+            requesterId: currentUserId,
+            requesterName: req.user!.fullName || req.user!.username
+          }
+        });
+      }
+
       res.json({ 
         message: "Đã hủy lời mời kết bạn thành công"
       });
@@ -5766,6 +5784,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "pending"
         })
         .returning();
+
+      // Send notification to the target user
+      await notificationService.createNotification(req.user!.id, {
+        title: "Lời mời kết bạn mới",
+        message: `${req.user!.fullName || req.user!.username} đã gửi lời mời kết bạn cho bạn`,
+        type: 'info',
+        priority: 'normal',
+        targetType: 'user',
+        targetIds: [userId.toString()],
+        metadata: {
+          type: 'friend_request',
+          connectionId: connection.id,
+          requesterId: req.user!.id,
+          requesterName: req.user!.fullName || req.user!.username,
+          requesterAvatar: req.user!.avatarUrl
+        }
+      });
 
       res.json({
         message: "Đã gửi lời mời kết bạn",
@@ -5817,6 +5852,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .where(eq(userConnections.id, connectionId))
         .returning();
+
+      // Send notification to the requester
+      const notificationMessage = action === 'accept' 
+        ? `${req.user!.fullName || req.user!.username} đã chấp nhận lời mời kết bạn của bạn`
+        : `${req.user!.fullName || req.user!.username} đã từ chối lời mời kết bạn của bạn`;
+
+      await notificationService.createNotification(req.user!.id, {
+        title: action === 'accept' ? "Lời mời được chấp nhận" : "Lời mời bị từ chối",
+        message: notificationMessage,
+        type: action === 'accept' ? 'success' : 'info',
+        priority: 'normal',
+        targetType: 'user',
+        targetIds: [connection.requesterId.toString()],
+        metadata: {
+          type: 'friend_request_response',
+          connectionId: connection.id,
+          responseAction: action,
+          responderId: req.user!.id,
+          responderName: req.user!.fullName || req.user!.username,
+          responderAvatar: req.user!.avatarUrl
+        }
+      });
 
       res.json({
         message: action === 'accept' ? "Đã chấp nhận lời mời kết bạn" : "Đã từ chối lời mời kết bạn",

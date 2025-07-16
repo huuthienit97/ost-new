@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { NotificationIcon } from "@/components/notifications/NotificationIcon";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { 
   Home, 
   Users, 
@@ -268,7 +268,7 @@ export function Sidebar({ className }: SidebarProps) {
           )}
         </div>
         <div className="ml-auto flex items-center space-x-2">
-          {!collapsed && <NotificationIcon />}
+          {!collapsed && <NotificationDropdown />}
           <Button
             variant="ghost"
             size="sm"

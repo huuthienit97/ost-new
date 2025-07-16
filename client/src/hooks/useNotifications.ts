@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
@@ -10,209 +10,115 @@ interface Notification {
   priority: 'low' | 'normal' | 'high' | 'urgent';
   metadata?: any;
   createdAt: string;
-  readAt?: string;
-}
-
-interface NotificationStatus {
-  id: number;
-  status: 'delivered' | 'read';
-  readAt?: string;
-}
-
-interface NotificationWithStatus {
-  notification: Notification;
-  status: NotificationStatus;
 }
 
 export function useNotifications() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [notifications, setNotifications] = useState<NotificationWithStatus[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
-  const connect = useCallback(() => {
-    if (!user) {
-      console.log('No user, skipping WebSocket connection');
-      return;
-    }
+  useEffect(() => {
+    if (!isAuthenticated) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.log('No token found, skipping WebSocket connection');
-      return;
-    }
+    let ws: WebSocket;
+    let reconnectInterval: NodeJS.Timeout;
 
-    try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
-      console.log('Attempting WebSocket connection to:', wsUrl);
+    const connect = () => {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       
-      const websocket = new WebSocket(wsUrl);
-
-      websocket.onopen = () => {
-        console.log('WebSocket connected successfully');
-        setIsConnected(true);
-        
-        // Send a ping to keep connection alive
-        websocket.send(JSON.stringify({ type: 'ping' }));
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('Connected to notification WebSocket');
+        // Clear any existing reconnection attempts
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+        }
       };
 
-      websocket.onmessage = (event) => {
+      ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          handleWebSocketMessage(data);
+          
+          if (data.type === 'notification') {
+            const notification = data.notification as Notification;
+            
+            // Add to notifications list
+            setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep last 50
+            setUnreadCount(prev => prev + 1);
+            
+            // Show toast notification for friend requests
+            if (notification.metadata?.type === 'friend_request') {
+              toast({
+                title: notification.title,
+                description: notification.message,
+                variant: "default",
+              });
+            } else if (notification.metadata?.type === 'friend_request_response') {
+              toast({
+                title: notification.title,
+                description: notification.message,
+                variant: notification.metadata.responseAction === 'accept' ? "default" : "destructive",
+              });
+            } else {
+              // General notifications
+              toast({
+                title: notification.title,
+                description: notification.message,
+                variant: notification.type === 'error' ? "destructive" : "default",
+              });
+            }
+          }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
       };
 
-      websocket.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
-        setIsConnected(false);
-        
-        // Don't auto-reconnect for now to prevent infinite loops
-        // setTimeout(() => {
-        //   if (user) connect();
-        // }, 3000);
+      ws.onclose = () => {
+        console.log('WebSocket connection closed, attempting to reconnect...');
+        // Attempt to reconnect every 5 seconds
+        reconnectInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.CLOSED) {
+            connect();
+          }
+        }, 5000);
       };
 
-      websocket.onerror = (error) => {
+      ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        setIsConnected(false);
       };
+    };
 
-      setWs(websocket);
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
-    }
-  }, [user]);
+    connect();
 
-  const disconnect = useCallback(() => {
-    if (ws) {
-      console.log('Manually disconnecting WebSocket...');
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1000, 'User disconnected');
+    return () => {
+      if (ws) {
+        ws.close();
       }
-      setWs(null);
-      setIsConnected(false);
-    }
-  }, [ws]);
+      if (reconnectInterval) {
+        clearInterval(reconnectInterval);
+      }
+    };
+  }, [isAuthenticated, toast]);
 
-  const handleWebSocketMessage = (data: any) => {
-    switch (data.type) {
-      case 'notifications':
-        setNotifications(data.data || []);
-        setUnreadCount(data.data?.filter((n: NotificationWithStatus) => !n.status.readAt).length || 0);
-        break;
-
-      case 'new_notification':
-        const newNotification = data.data;
-        
-        // Add to notifications list
-        setNotifications(prev => [{
-          notification: newNotification,
-          status: { id: 0, status: 'delivered' }
-        }, ...prev]);
-        
-        setUnreadCount(prev => prev + 1);
-
-        // Show toast notification
-        toast({
-          title: newNotification.title,
-          description: newNotification.message,
-          variant: newNotification.type === 'error' ? 'destructive' : 'default',
-        });
-        break;
-
-      case 'pong':
-        // Handle ping/pong for keep-alive
-        break;
-
-      case 'error':
-        console.error('WebSocket error:', data.message);
-        break;
-    }
+  const markAsRead = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAsRead = useCallback(async (notificationId: number) => {
-    try {
-      // Send to server via WebSocket
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'mark_read',
-          notificationId
-        }));
-      }
-
-      // Also make HTTP request as backup
-      const token = localStorage.getItem('token');
-      await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // Update local state
-      setNotifications(prev => 
-        prev.map(n => 
-          n.notification.id === notificationId 
-            ? { ...n, status: { ...n.status, status: 'read', readAt: new Date().toISOString() } }
-            : n
-        )
-      );
-      
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  }, [ws]);
-
-  const markAllAsRead = useCallback(async () => {
-    const unreadNotifications = notifications.filter(n => !n.status.readAt);
-    
-    for (const notification of unreadNotifications) {
-      await markAsRead(notification.notification.id);
-    }
-  }, [notifications, markAsRead]);
-
-  const refreshNotifications = useCallback(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'get_notifications' }));
-    }
-  }, [ws]);
-
-  // Connect when user is available
-  useEffect(() => {
-    if (user && !ws) {
-      connect();
-    }
-  }, [user, ws, connect]);
-
-  // Ping every 30 seconds to keep connection alive
-  useEffect(() => {
-    if (!isConnected || !ws) return;
-
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 30000);
-
-    return () => clearInterval(pingInterval);
-  }, [isConnected, ws]);
+  const clearAll = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+  };
 
   return {
     notifications,
     unreadCount,
-    isConnected,
     markAsRead,
-    markAllAsRead,
-    refreshNotifications,
-    connect,
-    disconnect
+    clearAll
   };
 }
