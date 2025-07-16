@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Package, Plus, Edit, Trash2, Star, Eye } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function ShopProductAdmin() {
   const [editDialog, setEditDialog] = useState(false);
@@ -156,11 +157,16 @@ export default function ShopProductAdmin() {
   };
 
   if (productsLoading) {
-    return <div className="p-6">Đang tải sản phẩm...</div>;
+    return (
+      <AppLayout>
+        <div className="p-6">Đang tải sản phẩm...</div>
+      </AppLayout>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AppLayout>
+      <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý sản phẩm</h1>
         <Button onClick={openCreateDialog}>
@@ -434,6 +440,7 @@ export default function ShopProductAdmin() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

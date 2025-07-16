@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Package, User, Calendar, Star, Eye, Edit, ArrowLeft } from "lucide-react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function ShopOrderAdmin() {
   const [orderDialog, setOrderDialog] = useState(false);
@@ -90,13 +90,16 @@ export default function ShopOrderAdmin() {
   };
 
   if (ordersLoading) {
-    return <div className="p-6">Đang tải đơn hàng...</div>;
+    return (
+      <AppLayout>
+        <div className="p-6">Đang tải đơn hàng...</div>
+      </AppLayout>
+    );
   }
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 space-y-6">
+    <AppLayout>
+      <div className="p-6 space-y-6">
         <div className="flex items-center gap-4 mb-6">
           <Link href="/">
             <Button variant="outline" size="sm">
@@ -289,6 +292,6 @@ export default function ShopOrderAdmin() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </AppLayout>
   );
 }
