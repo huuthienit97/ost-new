@@ -75,6 +75,7 @@ export default function MyMissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
     },
     onError: (error: any) => {
+      console.error("Start mission error:", error);
       toast({
         title: "Lỗi",
         description: error.message || "Không thể bắt đầu nhiệm vụ",
@@ -110,6 +111,7 @@ export default function MyMissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/missions/my"] });
     },
     onError: (error: any) => {
+      console.error("Submit mission error:", error);
       toast({
         title: "Lỗi",
         description: error.message || "Không thể nộp nhiệm vụ",
@@ -594,59 +596,117 @@ export default function MyMissions() {
 
         {/* Submit Mission Dialog */}
         <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nộp bài nhiệm vụ</DialogTitle>
-              <DialogDescription>
-                Nộp bài cho nhiệm vụ: {selectedMission?.mission?.title || "N/A"}
+              <DialogTitle className="text-xl font-bold text-blue-600">Nộp bài nhiệm vụ</DialogTitle>
+              <DialogDescription className="text-base">
+                <div className="bg-blue-50 p-4 rounded-lg mt-3">
+                  <div className="font-semibold text-blue-800">{selectedMission?.mission?.title || "N/A"}</div>
+                  <div className="text-blue-600 text-sm mt-1">{selectedMission?.mission?.description}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className="bg-yellow-500 text-white">
+                      <Award className="h-3 w-3 mr-1" />
+                      {selectedMission?.mission?.beePointsReward} BeePoints
+                    </Badge>
+                  </div>
+                </div>
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            
+            <div className="space-y-6">
               <div>
-                <Label htmlFor="submissionNote">Ghi chú nộp bài</Label>
+                <Label htmlFor="submissionNote" className="text-base font-medium">Chi tiết hoàn thành nhiệm vụ *</Label>
                 <Textarea
                   id="submissionNote"
                   value={submissionNote}
                   onChange={(e) => setSubmissionNote(e.target.value)}
-                  placeholder="Mô tả về cách bạn hoàn thành nhiệm vụ..."
-                  rows={4}
+                  placeholder="Mô tả chi tiết về cách bạn hoàn thành nhiệm vụ, những khó khăn gặp phải, kết quả đạt được..."
+                  rows={6}
+                  className="mt-2"
                 />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Hãy mô tả rõ ràng quá trình thực hiện và kết quả để giáo viên dễ đánh giá
+                </p>
               </div>
 
-              {selectedMission?.mission?.requiresPhoto && (
-                <div>
-                  <Label htmlFor="photo">Hình ảnh minh chứng *</Label>
+              <div>
+                <Label htmlFor="photo" className="text-base font-medium">
+                  Hình ảnh minh chứng {selectedMission?.mission?.requiresPhoto ? "*" : "(Tùy chọn)"}
+                </Label>
+                <div className="mt-2 space-y-3">
                   <Input
                     id="photo"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*,.pdf,.doc,.docx"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="cursor-pointer"
                   />
                   {selectedFile && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Đã chọn: {selectedFile.name}
-                    </p>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-green-800">Đã chọn file:</span>
+                      </div>
+                      <p className="text-sm text-green-700 mt-1">{selectedFile.name}</p>
+                      <p className="text-xs text-green-600">
+                        Kích thước: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
                   )}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-sm text-gray-600">
+                      <strong>Hỗ trợ:</strong> Hình ảnh (JPG, PNG), Video (MP4), Tài liệu (PDF, Word)
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Kích thước tối đa: 10MB
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleSubmitMission}
-                  disabled={
-                    submitMissionMutation.isPending || 
-                    (selectedMission?.mission?.requiresPhoto && !selectedFile)
-                  }
-                  className="flex-1"
-                >
-                  {submitMissionMutation.isPending ? "Đang nộp..." : "Nộp bài"}
-                </Button>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Lưu ý quan trọng:</p>
+                    <ul className="text-sm text-yellow-700 mt-1 space-y-1">
+                      <li>• Đảm bảo mô tả chi tiết và chính xác</li>
+                      <li>• File đính kèm phải rõ ràng, có chất lượng tốt</li>
+                      <li>• Sau khi nộp, bạn không thể chỉnh sửa</li>
+                      <li>• Giáo viên sẽ review và cho điểm trong 3-5 ngày</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
                   onClick={() => setIsSubmitDialogOpen(false)}
                   className="flex-1"
                 >
                   Hủy
+                </Button>
+                <Button
+                  onClick={handleSubmitMission}
+                  disabled={
+                    submitMissionMutation.isPending || 
+                    !submissionNote.trim() ||
+                    (selectedMission?.mission?.requiresPhoto && !selectedFile)
+                  }
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {submitMissionMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Đang nộp...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Nộp bài ngay
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
