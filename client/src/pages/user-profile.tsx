@@ -80,7 +80,10 @@ export default function UserProfile() {
     queryFn: () => {
       // If no userId, fetch current user's profile
       if (!userId) {
-        return apiRequest("/api/auth/me").then(data => data.user);
+        return apiRequest("/api/auth/me").then(data => ({
+          ...data.user,
+          isOwnProfile: true
+        }));
       }
       return apiRequest(`/api/users/profile/${userId}`);
     },
@@ -343,7 +346,6 @@ export default function UserProfile() {
                         accept="image/*"
                         onChange={handleImageSelect}
                         className="hidden"
-                        id="post-images"
                         id="image-upload"
                       />
                       <Button
