@@ -112,7 +112,7 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Quản lý sản phẩm",
       href: "/shop-products",
       icon: Package,
-      permission: "shop:product:create"
+      permission: "shop:manage"
     },
     {
       title: "Quản lý đơn hàng",
