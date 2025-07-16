@@ -11,19 +11,25 @@ export async function apiRequest(
   url: string,
   options: {
     method?: string;
-    body?: string;
+    body?: string | FormData;
     headers?: Record<string, string>;
   } = {}
 ): Promise<any> {
   const token = localStorage.getItem("token");
   
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  // Don't set Content-Type for FormData - let browser handle it
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  
   const res = await fetch(url, {
     method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
     body: options.body,
     credentials: "include",
   });

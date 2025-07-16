@@ -34,8 +34,16 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Body parsing middleware - conditional for multipart uploads
+app.use((req, res, next) => {
+  // Skip JSON parsing for multipart form data (file uploads)
+  if (req.headers['content-type']?.includes('multipart/form-data')) {
+    return next();
+  }
+  express.json({ limit: "50mb" })(req, res, next);
+});
+
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
