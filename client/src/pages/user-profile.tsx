@@ -26,7 +26,9 @@ import {
   Youtube,
   User,
   Mail,
-  Phone
+  Phone,
+  Send,
+  UserPlus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -598,7 +600,7 @@ export default function UserProfile() {
                         </div>
                         
                         <Button variant="ghost" size="sm">
-                          <Linkedin className="h-4 w-4" />
+                          <Share2 className="h-4 w-4" />
                         </Button>
                       </div>
 
