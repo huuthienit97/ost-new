@@ -4971,7 +4971,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *       201:
    *         description: Thông báo đã được tạo
    */
-  app.post("/api/notifications", authenticate, authorize([PERMISSIONS.NOTIFICATION_CREATE]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/notifications", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        title,
+        message,
+        type = "info",
+        priority = "normal",
+        targetType,
+        targetIds = [],
+        scheduledAt,
+        metadata = {},
+      } = req.body;
+
+      const senderId = req.user!.id;
+
+      // Use notification service to create and send notification
+      const result = await notificationService.createNotification(senderId, {
+        title,
+        message,
+        type,
+        priority,
+        targetType,
+        targetIds,
+        metadata
+      });
+
+      res.status(201).json({
+        message: "Thông báo đã được tạo và gửi thành công",
+        notification: result.notification,
+        recipientCount: result.recipientCount
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ message: "Lỗi tạo thông báo" });
+    }
+  });
+
+  // Test notification endpoint
+  app.post("/api/notifications/test", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await notificationService.createNotification(req.user!.id, {
+        title: "🔔 Test Notification",
+        message: "Đây là thông báo test để kiểm tra hệ thống realtime. Thời gian: " + new Date().toLocaleString('vi-VN'),
+        type: "info",
+        priority: "normal",
+        targetType: "user",
+        targetIds: [req.user!.id.toString()],
+        metadata: { test: true, timestamp: Date.now() }
+      });
+
+      res.json({
+        message: "Test notification đã được gửi",
+        notification: result.notification,
+        recipientCount: result.recipientCount
+      });
+    } catch (error) {
+      console.error("Error sending test notification:", error);
+      res.status(500).json({ message: "Lỗi gửi test notification" });
+    }
+  });
+
+  // Legacy notification creation (keeping for compatibility)
+  app.post("/api/notifications/legacy", authenticate, authorize([PERMISSIONS.NOTIFICATION_CREATE]), async (req: AuthenticatedRequest, res) => {
     try {
       const {
         title,
