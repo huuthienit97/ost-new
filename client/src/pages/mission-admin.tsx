@@ -124,10 +124,13 @@ export default function MissionAdminPage() {
   // Create mission mutation
   const createMissionMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/missions", {
-        ...data,
-        maxParticipants: data.maxParticipants ? parseInt(data.maxParticipants) : null,
-        beePointsReward: parseInt(data.beePointsReward) || 0,
+      return await apiRequest("/api/missions", {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          maxParticipants: data.maxParticipants ? parseInt(data.maxParticipants) : null,
+          beePointsReward: parseInt(data.beePointsReward) || 0,
+        })
       });
     },
     onSuccess: () => {
@@ -151,7 +154,10 @@ export default function MissionAdminPage() {
   // Bulk assign mission mutation
   const assignMissionMutation = useMutation({
     mutationFn: async ({ missionId, userIds }: { missionId: number; userIds: number[] }) => {
-      return await apiRequest("POST", `/api/missions/${missionId}/assign-bulk`, { userIds });
+      return await apiRequest(`/api/missions/${missionId}/assign-bulk`, {
+        method: "POST",
+        body: JSON.stringify({ userIds })
+      });
     },
     onSuccess: () => {
       toast({
@@ -175,10 +181,13 @@ export default function MissionAdminPage() {
   // Review assignment mutation
   const reviewAssignmentMutation = useMutation({
     mutationFn: async (data: { assignmentId: number; status: string; reviewNote: string; pointsAwarded: number }) => {
-      return await apiRequest("POST", `/api/missions/assignments/${data.assignmentId}/review`, {
-        status: data.status,
-        reviewNote: data.reviewNote,
-        pointsAwarded: data.pointsAwarded,
+      return await apiRequest(`/api/missions/assignments/${data.assignmentId}/review`, {
+        method: "POST",
+        body: JSON.stringify({
+          status: data.status,
+          reviewNote: data.reviewNote,
+          pointsAwarded: data.pointsAwarded,
+        })
       });
     },
     onSuccess: () => {
