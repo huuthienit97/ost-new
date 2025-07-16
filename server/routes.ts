@@ -5632,7 +5632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const searchTerm = q.trim().toLowerCase();
       const searchLimit = Math.min(parseInt(limit as string) || 20, 50);
 
-      // Search users excluding current user
+      // Search users excluding current user with connection status
       const foundUsers = await db
         .select({
           id: users.id,
@@ -5641,9 +5641,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: users.email,
           avatarUrl: users.avatarUrl,
           bio: users.bio,
-          createdAt: users.createdAt
+          createdAt: users.createdAt,
+          connectionStatus: userConnections.status,
+          connectionRequesterId: userConnections.requesterId,
+          connectionRequestedId: userConnections.requestedId,
         })
         .from(users)
+        .leftJoin(
+          userConnections,
+          or(
+            and(
+              eq(userConnections.requesterId, req.user!.id),
+              eq(userConnections.requestedId, users.id)
+            ),
+            and(
+              eq(userConnections.requesterId, users.id),
+              eq(userConnections.requestedId, req.user!.id)
+            )
+          )
+        )
         .where(
           and(
             ne(users.id, req.user!.id),
@@ -5657,7 +5673,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .limit(searchLimit);
 
-      res.json(foundUsers);
+      // Process results to determine connection status
+      const processedResults = foundUsers.map(result => {
+        let connectionStatus: 'none' | 'pending_sent' | 'pending_received' | 'connected' = 'none';
+        
+        if (result.connectionStatus) {
+          if (result.connectionStatus === 'accepted') {
+            connectionStatus = 'connected';
+          } else if (result.connectionStatus === 'pending') {
+            // Check if current user sent or received the request
+            connectionStatus = result.connectionRequesterId === req.user!.id 
+              ? 'pending_sent' 
+              : 'pending_received';
+          }
+        }
+
+        return {
+          id: result.id,
+          username: result.username,
+          fullName: result.fullName,
+          email: result.email,
+          avatarUrl: result.avatarUrl,
+          bio: result.bio,
+          createdAt: result.createdAt,
+          connectionStatus,
+        };
+      });
+
+      res.json(processedResults);
     } catch (error) {
       console.error("Error searching users:", error);
       res.status(500).json({ message: "Lỗi tìm kiếm người dùng" });
