@@ -77,11 +77,15 @@ export default function UserProfile() {
   // Fetch user profile
   const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/users/profile", userId],
+    queryFn: () => apiRequest(`/api/users/profile/${userId}`),
+    enabled: !!userId,
   });
 
   // Fetch user posts
   const { data: posts = [], isLoading: postsLoading } = useQuery<UserPost[]>({
     queryKey: ["/api/users", userId, "posts"],
+    queryFn: () => apiRequest(`/api/users/${userId}/posts`),
+    enabled: !!userId,
   });
 
   // Create new post mutation
