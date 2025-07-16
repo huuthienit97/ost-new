@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Target, Calendar, Users, Award, Camera, UserPlus, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Mission {
   id: number;
@@ -129,19 +130,22 @@ export default function MissionsPage() {
 
   if (missionsLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Đang tải...</div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Đang tải...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Nhiệm vụ</h1>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Nhiệm vụ</h1>
           <p className="text-muted-foreground">Xem và tham gia các nhiệm vụ</p>
         </div>
         <div className="flex gap-2">
@@ -269,7 +273,8 @@ export default function MissionsPage() {
             </Card>
           );
         })}
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

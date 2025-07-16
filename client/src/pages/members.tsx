@@ -16,6 +16,7 @@ import { MemberDetailsModal } from "@/components/member-details-modal";
 import { getInitials, getAvatarGradient } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { MemberWithDepartment, Department, PERMISSIONS } from "@shared/schema";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Stats {
   totalMembers: number;
@@ -112,63 +113,22 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <Users className="text-white text-lg" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">CLB Sáng Tạo</h1>
-                  <p className="text-xs text-gray-500">Trường THPT ABC</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right mr-3">
-                <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                <p className="text-xs text-gray-500">{user?.role.displayName}</p>
-              </div>
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
-                  {user?.fullName ? getInitials(user.fullName) : "A"}
-                </span>
-              </div>
-              {user && hasPermission("system_admin") && (
-                <Button variant="ghost" size="sm" asChild>
-                  <a href="/admin">Quản trị</a>
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={logout} title="Đăng xuất">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý thành viên</h1>
+            <p className="text-muted-foreground">
+              Quản lý thông tin thành viên CLB Sáng Tạo
+            </p>
           </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Quản lý thành viên</h2>
-              <p className="text-gray-600 mt-1">Quản lý thông tin và tổ chức thành viên câu lạc bộ</p>
-            </div>
-            {hasPermission("member_create") && (
-              <div className="mt-4 sm:mt-0">
-                <Button onClick={handleAddMember} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Thêm thành viên
-                </Button>
-              </div>
-            )}
-          </div>
+          {hasPermission(PERMISSIONS.MEMBER_CREATE) && (
+            <Button onClick={handleAddMember}>
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm thành viên
+            </Button>
+          )}
         </div>
 
         {/* Stats Overview */}
@@ -380,9 +340,8 @@ export default function MembersPage() {
             </div>
           </div>
         )}
-      </div>
 
-      <AddMemberModal
+        <AddMemberModal
         open={isModalOpen}
         onOpenChange={handleModalClose}
         editingMember={editingMember}
@@ -421,6 +380,7 @@ export default function MembersPage() {
         }}
         canEdit={hasPermission(PERMISSIONS.MEMBER_EDIT)}
       />
-    </div>
+      </div>
+    </AppLayout>
   );
 }

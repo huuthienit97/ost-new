@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ShoppingCart, Package, History, Star } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function Shop() {
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -85,14 +86,23 @@ export default function Shop() {
   };
 
   if (productsLoading) {
-    return <div className="p-6">Đang tải sản phẩm...</div>;
+    return (
+      <AppLayout>
+        <div className="p-6">Đang tải sản phẩm...</div>
+      </AppLayout>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Cửa hàng đổi thưởng</h1>
-        <div className="flex items-center space-x-4">
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Cửa hàng đổi thưởng</h1>
+            <p className="text-muted-foreground">
+              Đổi BeePoints lấy các phần thưởng hấp dẫn
+            </p>
+          </div>
           <div className="flex items-center space-x-2">
             <Star className="h-5 w-5 text-yellow-500" />
             <span className="font-semibold">
@@ -100,7 +110,6 @@ export default function Shop() {
             </span>
           </div>
         </div>
-      </div>
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -290,6 +299,7 @@ export default function Shop() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

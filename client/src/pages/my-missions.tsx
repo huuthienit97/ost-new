@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Target, Calendar, Users, Award, Camera, Send, CheckCircle, XCircle, Clock, Eye, Play, Upload, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Mission {
   id: number;
@@ -204,11 +205,13 @@ export default function MyMissionsPage() {
 
   if (missionsLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-lg">Đang tải...</div>
+      <AppLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg">Đang tải...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -217,13 +220,16 @@ export default function MyMissionsPage() {
   const submittedMissions = myMissions.filter((item: any) => ['submitted', 'completed', 'rejected'].includes(item.assignment.status));
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Nhiệm vụ của tôi</h1>
-          <p className="text-muted-foreground">Theo dõi và hoàn thành các nhiệm vụ được giao</p>
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Nhiệm vụ của tôi</h1>
+            <p className="text-muted-foreground">
+              Quản lý và theo dõi tiến độ các nhiệm vụ được giao
+            </p>
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="assigned" className="space-y-4">
         <TabsList>
@@ -581,6 +587,7 @@ export default function MyMissionsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
