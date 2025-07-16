@@ -32,7 +32,8 @@ import {
   User,
   Package,
   LayoutGrid,
-  Bell
+  Bell,
+  MessageCircle
 } from "lucide-react";
 
 interface SidebarProps {
@@ -69,6 +70,11 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Thành viên",
       href: "/members",
       icon: Users,
+    },
+    {
+      title: "Chat",
+      href: "/chat",
+      icon: MessageCircle,
     },
     {
       title: "Nhiệm vụ",

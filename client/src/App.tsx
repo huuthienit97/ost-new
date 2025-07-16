@@ -31,6 +31,8 @@ import ShopProductAdminPage from "@/pages/shop-product-admin";
 import ShopOrderAdminPage from "@/pages/shop-order-admin";
 import NotificationsTestPage from "@/pages/notifications-test";
 import NotificationsManagement from "@/pages/admin/notifications";
+import ChatPage from "@/pages/chat";
+import GuestChatPage from "@/pages/guest-chat";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -79,6 +81,7 @@ function Router() {
           <Route path="/positions" component={PositionsPage} />
           <Route path="/notifications-test" component={NotificationsTestPage} />
           <Route path="/admin/notifications" component={NotificationsManagement} />
+          <Route path="/chat" component={ChatPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
@@ -88,6 +91,9 @@ function Router() {
           <Route component={LandingPage} />
         </>
       )}
+      
+      {/* Guest chat available on all pages */}
+      <GuestChatPage />
     </Switch>
   );
 }

@@ -676,6 +676,74 @@ export type NotificationWithStatus = Notification & {
   readCount?: number;
 };
 
+// Chat Rooms table - for group chats and private chats
+export const chatRooms = pgTable("chat_rooms", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull().default("private"), // private, group, support
+  isPublic: boolean("is_public").default(false),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata").default({}),
+});
+
+// Chat Room Members table - who can access which chat rooms
+export const chatRoomMembers = pgTable("chat_room_members", {
+  id: serial("id").primaryKey(),
+  roomId: integer("room_id").references(() => chatRooms.id).notNull(),
+  userId: integer("user_id").references(() => users.id),
+  guestId: varchar("guest_id", { length: 255 }), // for non-logged in users
+  role: varchar("role", { length: 50 }).default("member"), // member, admin, moderator
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastReadAt: timestamp("last_read_at"),
+  isActive: boolean("is_active").default(true),
+});
+
+// Chat Messages table
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  roomId: integer("room_id").references(() => chatRooms.id).notNull(),
+  senderId: integer("sender_id").references(() => users.id),
+  guestId: varchar("guest_id", { length: 255 }), // for non-logged in users
+  senderName: varchar("sender_name", { length: 255 }), // for guest users
+  content: text("content").notNull(),
+  messageType: varchar("message_type", { length: 50 }).default("text"), // text, image, file, system
+  fileUrl: varchar("file_url", { length: 500 }),
+  replyToId: integer("reply_to_id").references(() => chatMessages.id),
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  metadata: jsonb("metadata").default({}),
+});
+
+// Chat Room relations
+export const chatRoomsRelations = relations(chatRooms, ({ one, many }) => ({
+  creator: one(users, { fields: [chatRooms.createdBy], references: [users.id] }),
+  members: many(chatRoomMembers),
+  messages: many(chatMessages),
+}));
+
+export const chatRoomMembersRelations = relations(chatRoomMembers, ({ one }) => ({
+  room: one(chatRooms, { fields: [chatRoomMembers.roomId], references: [chatRooms.id] }),
+  user: one(users, { fields: [chatRoomMembers.userId], references: [users.id] }),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  room: one(chatRooms, { fields: [chatMessages.roomId], references: [chatRooms.id] }),
+  sender: one(users, { fields: [chatMessages.senderId], references: [users.id] }),
+  replyTo: one(chatMessages, { fields: [chatMessages.replyToId], references: [chatMessages.id] }),
+}));
+
+export type ChatRoom = typeof chatRooms.$inferSelect;
+export type InsertChatRoom = typeof chatRooms.$inferInsert;
+export type ChatRoomMember = typeof chatRoomMembers.$inferSelect;
+export type InsertChatRoomMember = typeof chatRoomMembers.$inferInsert;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
 // Extended types
 export type UserWithRole = User & {
   role: Role;

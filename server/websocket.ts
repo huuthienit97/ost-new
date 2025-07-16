@@ -227,6 +227,19 @@ class NotificationWebSocketServer {
   public getConnectedUsers(): number[] {
     return Array.from(this.connectedClients.keys());
   }
+
+  // Method for broadcasting to chat rooms
+  public broadcastToRoom(roomId: number, type: string, data: any) {
+    const message = JSON.stringify({ type, data, roomId });
+    
+    this.connectedClients.forEach((clientSet, userId) => {
+      clientSet.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(message);
+        }
+      });
+    });
+  }
 }
 
 export { NotificationWebSocketServer };

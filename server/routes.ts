@@ -12,6 +12,8 @@ import path from "path";
 import fs from "fs";
 import { NotificationWebSocketServer } from "./websocket";
 import { notificationService } from "./notificationService";
+import { chatService } from "./chatService";
+import { verifyToken } from "./auth";
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), "public", "uploads");
@@ -5440,6 +5442,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching notifications:", error);
       res.status(500).json({ message: "Lỗi khi lấy danh sách thông báo" });
+    }
+  });
+
+  // Chat Routes
+  
+  // Get user's chat rooms
+  app.get("/api/chat/rooms", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const rooms = await chatService.getUserRooms(userId);
+      res.json(rooms);
+    } catch (error) {
+      console.error("Error fetching chat rooms:", error);
+      res.status(500).json({ message: "Lỗi khi lấy danh sách phòng chat" });
+    }
+  });
+
+  // Get or create private chat room
+  app.post("/api/chat/rooms/private", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { targetUserId } = req.body;
+      const userId = req.user!.id;
+
+      if (!targetUserId || targetUserId === userId) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      const room = await chatService.createPrivateRoom(userId, targetUserId);
+      res.json(room);
+    } catch (error) {
+      console.error("Error creating private room:", error);
+      res.status(500).json({ message: "Lỗi khi tạo phòng chat riêng tư" });
+    }
+  });
+
+  // Get or create support room for guest
+  app.post("/api/chat/rooms/support", async (req, res) => {
+    try {
+      const { guestId, guestName } = req.body;
+
+      if (!guestId || !guestName) {
+        return res.status(400).json({ message: "Thiếu thông tin khách" });
+      }
+
+      const room = await chatService.getOrCreateSupportRoom(guestId, guestName);
+      res.json(room);
+    } catch (error) {
+      console.error("Error creating support room:", error);
+      res.status(500).json({ message: "Lỗi khi tạo phòng hỗ trợ" });
+    }
+  });
+
+  // Get room messages
+  app.get("/api/chat/rooms/:roomId/messages", async (req, res) => {
+    try {
+      const roomId = parseInt(req.params.roomId);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+
+      // Check access - either authenticated user or guest with guestId
+      let hasAccess = false;
+      let currentUserId: number | undefined;
+      let currentGuestId: string | undefined;
+
+      if (req.headers.authorization) {
+        try {
+          const token = req.headers.authorization.split(" ")[1];
+          const decoded = verifyToken(token);
+          currentUserId = decoded.id;
+          hasAccess = await chatService.hasRoomAccess(roomId, currentUserId);
+        } catch (error) {
+          // Invalid token, check for guest access
+        }
+      }
+
+      if (!hasAccess && req.query.guestId) {
+        currentGuestId = req.query.guestId as string;
+        hasAccess = await chatService.hasRoomAccess(roomId, undefined, currentGuestId);
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Không có quyền truy cập phòng chat này" });
+      }
+
+      const messages = await chatService.getRoomMessages(roomId, limit, offset);
+      
+      // Mark messages as read from current user
+      const messagesWithUserFlag = messages.map(msg => ({
+        ...msg,
+        isFromCurrentUser: currentUserId ? msg.senderId === currentUserId : msg.guestId === currentGuestId,
+      }));
+
+      res.json(messagesWithUserFlag);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Lỗi khi lấy tin nhắn" });
+    }
+  });
+
+  // Send message
+  app.post("/api/chat/rooms/:roomId/messages", async (req, res) => {
+    try {
+      const roomId = parseInt(req.params.roomId);
+      const { content, guestId, guestName } = req.body;
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Nội dung tin nhắn không được để trống" });
+      }
+
+      let senderId: number | undefined;
+      let hasAccess = false;
+
+      // Check authentication
+      if (req.headers.authorization) {
+        try {
+          const token = req.headers.authorization.split(" ")[1];
+          const decoded = verifyToken(token);
+          senderId = decoded.id;
+          hasAccess = await chatService.hasRoomAccess(roomId, senderId);
+        } catch (error) {
+          // Invalid token
+        }
+      }
+
+      // Check guest access
+      if (!hasAccess && guestId) {
+        hasAccess = await chatService.hasRoomAccess(roomId, undefined, guestId);
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Không có quyền gửi tin nhắn vào phòng này" });
+      }
+
+      const message = await chatService.sendMessage(
+        roomId,
+        content.trim(),
+        senderId,
+        guestId,
+        guestName
+      );
+
+      // Broadcast to WebSocket clients if server exists
+      if (typeof wsServer !== 'undefined' && wsServer.broadcastToRoom) {
+        wsServer.broadcastToRoom(roomId, "new_message", message);
+      }
+
+      res.json(message);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Lỗi khi gửi tin nhắn" });
+    }
+  });
+
+  // Get available users for new chat
+  app.get("/api/chat/users", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const currentUserId = req.user!.id;
+      const users = await chatService.getAvailableUsers(currentUserId);
+      
+      // Remove current user from the list
+      const filteredUsers = users.filter(user => user.id !== currentUserId);
+      
+      res.json(filteredUsers.map(user => ({
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+      })));
+    } catch (error) {
+      console.error("Error fetching available users:", error);
+      res.status(500).json({ message: "Lỗi khi lấy danh sách người dùng" });
     }
   });
 
