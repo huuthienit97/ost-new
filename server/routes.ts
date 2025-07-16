@@ -5664,6 +5664,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel/Delete friend request
+  app.delete("/api/users/connect/:userId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user!.id;
+      
+      // Find and delete the connection request
+      const [deletedConnection] = await db
+        .delete(userConnections)
+        .where(
+          or(
+            and(
+              eq(userConnections.requesterId, currentUserId),
+              eq(userConnections.requestedId, parseInt(userId))
+            ),
+            and(
+              eq(userConnections.requesterId, parseInt(userId)),
+              eq(userConnections.requestedId, currentUserId)
+            )
+          )
+        )
+        .returning();
+
+      if (!deletedConnection) {
+        return res.status(404).json({ message: "Không tìm thấy kết nối để hủy" });
+      }
+
+      res.json({ 
+        message: "Đã hủy lời mời kết bạn thành công"
+      });
+    } catch (error) {
+      console.error("Error canceling friend request:", error);
+      res.status(500).json({ message: "Lỗi khi hủy lời mời kết bạn" });
+    }
+  });
+
   // Send friend request
   app.post("/api/users/connect", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

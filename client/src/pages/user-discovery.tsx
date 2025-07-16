@@ -19,6 +19,7 @@ interface User {
   fullName: string;
   avatarUrl?: string;
   bio?: string;
+  connectionStatus?: 'none' | 'pending_sent' | 'pending_received' | 'connected';
 }
 
 interface FriendRequest {
@@ -62,16 +63,51 @@ export default function UserDiscovery() {
   const sendRequestMutation = useMutation({
     mutationFn: async ({ userId, message }: { userId: number; message: string }) =>
       apiRequest(`/api/users/connect`, "POST", { userId, message }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({ title: "Thành công", description: "Đã gửi lời mời kết bạn" });
       setSelectedUser(null);
       setConnectMessage("");
+      // Update search results to show "pending_sent" status
+      queryClient.setQueryData(["/api/users/search", searchTerm], (oldData: User[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(user => 
+          user.id === variables.userId 
+            ? { ...user, connectionStatus: 'pending_sent' as const }
+            : user
+        );
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
     },
     onError: (error: any) => {
       toast({
         title: "Lỗi",
         description: error.message || "Không thể gửi lời mời kết bạn",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cancel friend request mutation
+  const cancelRequestMutation = useMutation({
+    mutationFn: async (userId: number) =>
+      apiRequest(`/api/users/connect/${userId}`, "DELETE"),
+    onSuccess: (_, userId) => {
+      toast({ title: "Thành công", description: "Đã hủy lời mời kết bạn" });
+      // Update search results to show "none" status
+      queryClient.setQueryData(["/api/users/search", searchTerm], (oldData: User[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(user => 
+          user.id === userId 
+            ? { ...user, connectionStatus: 'none' as const }
+            : user
+        );
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể hủy lời mời",
         variant: "destructive",
       });
     },
@@ -206,59 +242,82 @@ export default function UserDiscovery() {
                             <Eye className="h-4 w-4 mr-1" />
                             Xem
                           </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setConnectMessage("");
-                                }}
-                                disabled={sendRequestMutation.isPending}
-                              >
-                                <UserPlus className="h-4 w-4 mr-1" />
-                                Kết bạn
-                              </Button>
-                            </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Gửi lời mời kết bạn</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-12 w-12">
-                                  <AvatarImage src={selectedUser?.avatarUrl} />
-                                  <AvatarFallback>
-                                    {selectedUser ? getInitials(selectedUser.fullName) : ""}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <h3 className="font-medium">{selectedUser?.fullName}</h3>
-                                  <p className="text-sm text-gray-500">@{selectedUser?.username}</p>
+                          
+                          {/* Friend Connection Button */}
+                          {user.connectionStatus === 'pending_sent' ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => cancelRequestMutation.mutate(user.id)}
+                              disabled={cancelRequestMutation.isPending}
+                            >
+                              <Clock className="h-4 w-4 mr-1" />
+                              {cancelRequestMutation.isPending ? "Đang hủy..." : "Đã gửi"}
+                            </Button>
+                          ) : user.connectionStatus === 'connected' ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              disabled
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Bạn bè
+                            </Button>
+                          ) : (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setConnectMessage("");
+                                  }}
+                                  disabled={sendRequestMutation.isPending}
+                                >
+                                  <UserPlus className="h-4 w-4 mr-1" />
+                                  Kết bạn
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Gửi lời mời kết bạn</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-12 w-12">
+                                      <AvatarImage src={selectedUser?.avatarUrl} />
+                                      <AvatarFallback>
+                                        {selectedUser ? getInitials(selectedUser.fullName) : ""}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h3 className="font-medium">{selectedUser?.fullName}</h3>
+                                      <p className="text-sm text-gray-500">@{selectedUser?.username}</p>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">
+                                      Lời nhắn (tùy chọn):
+                                    </label>
+                                    <Textarea
+                                      placeholder="Xin chào! Tôi muốn kết bạn với bạn..."
+                                      value={connectMessage}
+                                      onChange={(e) => setConnectMessage(e.target.value)}
+                                      rows={3}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Lời nhắn (tùy chọn):
-                                </label>
-                                <Textarea
-                                  placeholder="Xin chào! Tôi muốn kết bạn với bạn..."
-                                  value={connectMessage}
-                                  onChange={(e) => setConnectMessage(e.target.value)}
-                                  rows={3}
-                                />
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button
-                                onClick={handleSendRequest}
-                                disabled={sendRequestMutation.isPending}
-                              >
-                                {sendRequestMutation.isPending ? "Đang gửi..." : "Gửi lời mời"}
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                                <DialogFooter>
+                                  <Button
+                                    onClick={handleSendRequest}
+                                    disabled={sendRequestMutation.isPending}
+                                  >
+                                    {sendRequestMutation.isPending ? "Đang gửi..." : "Gửi lời mời"}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          )}
                         </div>
                       </div>
                     ))}
