@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages } from "@shared/schema";
-import { userPosts as posts } from "@shared/posts-schema";
+import { userPosts as posts, postLikes, postComments } from "@shared/posts-schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -5963,19 +5963,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(posts.userId, targetUserId))
         .orderBy(desc(posts.createdAt));
 
-      const postsWithStats = userPosts.map(post => ({
-        id: post.id,
-        content: post.content,
-        imageUrls: post.imageUrls || [],
-        createdAt: post.createdAt,
-        author: {
-          id: post.authorId,
-          fullName: post.authorName,
-          avatarUrl: post.authorAvatar,
-        },
-        likes: 0, // TODO: implement likes count
-        comments: 0, // TODO: implement comments count
-        isLiked: false, // TODO: check if current user liked this post
+      // Get like and comment counts for each post, plus check if current user liked
+      const postsWithStats = await Promise.all(userPosts.map(async (post) => {
+        // Get likes count
+        const [likesCount] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(postLikes)
+          .where(eq(postLikes.postId, post.id));
+        
+        // Get comments count
+        const [commentsCount] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(postComments)
+          .where(eq(postComments.postId, post.id));
+        
+        // Check if current user liked this post
+        const [userLike] = await db
+          .select()
+          .from(postLikes)
+          .where(and(eq(postLikes.postId, post.id), eq(postLikes.userId, req.user!.id)))
+          .limit(1);
+        
+        return {
+          id: post.id,
+          content: post.content,
+          imageUrls: post.imageUrls || [],
+          createdAt: post.createdAt,
+          author: {
+            id: post.authorId,
+            fullName: post.authorName,
+            avatarUrl: post.authorAvatar,
+          },
+          likes: likesCount.count || 0,
+          comments: commentsCount.count || 0,
+          isLiked: !!userLike,
+        };
       }));
 
       res.json(postsWithStats);
@@ -6042,13 +6064,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Like/unlike post
   app.post("/api/posts/:postId/like", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const { postId } = req.params;
+      const postId = parseInt(req.params.postId);
+      const userId = req.user!.id;
       
-      // Placeholder response
-      res.json({ message: "Đã thích bài viết" });
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+      
+      // Check if post exists
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      if (!post) {
+        return res.status(404).json({ message: "Không tìm thấy bài viết" });
+      }
+      
+      // Check if already liked
+      const [existingLike] = await db
+        .select()
+        .from(postLikes)
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)))
+        .limit(1);
+      
+      if (existingLike) {
+        // Unlike - remove like
+        await db
+          .delete(postLikes)
+          .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+        
+        res.json({ message: "Đã bỏ thích bài viết", liked: false });
+      } else {
+        // Like - add like
+        await db.insert(postLikes).values({
+          postId,
+          userId
+        });
+        
+        res.json({ message: "Đã thích bài viết", liked: true });
+      }
     } catch (error) {
-      console.error("Error liking post:", error);
-      res.status(500).json({ message: "Lỗi khi thích bài viết" });
+      console.error("Error toggling post like:", error);
+      res.status(500).json({ message: "Lỗi khi thích/bỏ thích bài viết" });
+    }
+  });
+
+  // Add comment to post
+  app.post("/api/posts/:postId/comments", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const userId = req.user!.id;
+      const { content } = req.body;
+      
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Nội dung bình luận không được để trống" });
+      }
+      
+      // Check if post exists
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      if (!post) {
+        return res.status(404).json({ message: "Không tìm thấy bài viết" });
+      }
+      
+      // Create comment
+      const [newComment] = await db
+        .insert(postComments)
+        .values({
+          postId,
+          userId,
+          content: content.trim()
+        })
+        .returning();
+      
+      // Get author info
+      const [author] = await db
+        .select({
+          id: users.id,
+          fullName: users.fullName,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      res.status(201).json({
+        message: "Đã thêm bình luận",
+        comment: {
+          ...newComment,
+          author
+        }
+      });
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      res.status(500).json({ message: "Lỗi khi tạo bình luận" });
+    }
+  });
+
+  // Get comments for a post
+  app.get("/api/posts/:postId/comments", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+      
+      const comments = await db
+        .select({
+          id: postComments.id,
+          content: postComments.content,
+          createdAt: postComments.createdAt,
+          author: {
+            id: users.id,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          }
+        })
+        .from(postComments)
+        .innerJoin(users, eq(postComments.userId, users.id))
+        .where(eq(postComments.postId, postId))
+        .orderBy(desc(postComments.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Lỗi khi lấy bình luận" });
     }
   });
 

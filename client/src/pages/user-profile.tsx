@@ -66,6 +66,89 @@ interface UserPost {
   isLiked?: boolean;
 }
 
+interface Comment {
+  id: number;
+  content: string;
+  createdAt: string;
+  author: {
+    id: number;
+    fullName: string;
+    avatarUrl?: string;
+  };
+}
+
+// Comments Section Component
+function CommentsSection({ postId }: { postId: number }) {
+  const { data: comments = [], isLoading } = useQuery<Comment[]>({
+    queryKey: ["/api/posts", postId, "comments"],
+    queryFn: () => apiRequest(`/api/posts/${postId}/comments`),
+  });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "short", 
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2].map((i) => (
+          <div key={i} className="flex gap-2 animate-pulse">
+            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            <div className="flex-1 space-y-1">
+              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {comments.map((comment) => (
+        <div key={comment.id} className="flex gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={comment.author.avatarUrl} />
+            <AvatarFallback className="text-xs">
+              {getInitials(comment.author.fullName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="bg-gray-100 rounded-lg px-3 py-2">
+              <div className="font-semibold text-sm">{comment.author.fullName}</div>
+              <p className="text-sm">{comment.content}</p>
+            </div>
+            <div className="text-xs text-gray-500 mt-1 ml-2">
+              {formatDate(comment.createdAt)}
+            </div>
+          </div>
+        </div>
+      ))}
+      {comments.length === 0 && (
+        <p className="text-gray-500 text-sm text-center py-2">
+          Chưa có bình luận nào
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function UserProfile() {
   const { userId } = useParams();
   const { toast } = useToast();
@@ -73,6 +156,8 @@ export default function UserProfile() {
   
   const [newPost, setNewPost] = useState("");
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null);
+  const [showComments, setShowComments] = useState<Record<number, boolean>>({});
+  const [newComment, setNewComment] = useState<Record<number, string>>({});
 
   // Fetch user profile 
   const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
@@ -145,6 +230,29 @@ export default function UserProfile() {
     },
   });
 
+  // Add comment mutation
+  const addCommentMutation = useMutation({
+    mutationFn: async ({ postId, content }: { postId: number; content: string }) => {
+      return apiRequest(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      });
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/posts", variables.postId, "comments"] });
+      setNewComment(prev => ({ ...prev, [variables.postId]: "" }));
+      toast({ title: "Đã thêm bình luận!" });
+    },
+    onError: () => {
+      toast({ 
+        title: "Lỗi", 
+        description: "Không thể thêm bình luận.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -173,6 +281,17 @@ export default function UserProfile() {
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedImages(e.target.files);
+  };
+
+  const handleAddComment = (postId: number) => {
+    const content = newComment[postId]?.trim();
+    if (!content) return;
+    
+    addCommentMutation.mutate({ postId, content });
+  };
+
+  const toggleComments = (postId: number) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   if (profileLoading) {
@@ -468,16 +587,53 @@ export default function UserProfile() {
                             {post.likes}
                           </Button>
                           
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => toggleComments(post.id)}
+                          >
                             <MessageCircle className="h-4 w-4 mr-2" />
                             {post.comments}
                           </Button>
                         </div>
                         
                         <Button variant="ghost" size="sm">
-                          <Share2 className="h-4 w-4" />
+                          <Linkedin className="h-4 w-4" />
                         </Button>
                       </div>
+
+                      {/* Comments Section */}
+                      {showComments[post.id] && (
+                        <div className="space-y-3 border-t pt-3">
+                          {/* Add Comment Form */}
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Viết bình luận..."
+                              value={newComment[post.id] || ""}
+                              onChange={(e) => setNewComment(prev => ({ 
+                                ...prev, 
+                                [post.id]: e.target.value 
+                              }))}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleAddComment(post.id);
+                                }
+                              }}
+                            />
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleAddComment(post.id)}
+                              disabled={!newComment[post.id]?.trim() || addCommentMutation.isPending}
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* Comments List */}
+                          <CommentsSection postId={post.id} />
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
