@@ -2,11 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages } from "@shared/schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
-import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, inArray } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, inArray, asc, like, count } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -5614,6 +5614,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching available users:", error);
       res.status(500).json({ message: "Lỗi khi lấy danh sách người dùng" });
+    }
+  });
+
+  // User Discovery & Friend System APIs
+
+  // Search users for discovery
+  app.get("/api/users/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { q, limit = 20 } = req.query;
+      
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        return res.status(400).json({ message: "Từ khóa tìm kiếm phải có ít nhất 2 ký tự" });
+      }
+
+      const searchTerm = q.trim().toLowerCase();
+      const searchLimit = Math.min(parseInt(limit as string) || 20, 50);
+
+      // Search users excluding current user
+      const foundUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          avatarUrl: users.avatarUrl,
+          bio: users.bio
+        })
+        .from(users)
+        .where(
+          and(
+            ne(users.id, req.user!.id),
+            eq(users.isActive, true),
+            or(
+              ilike(users.fullName, `%${searchTerm}%`),
+              ilike(users.username, `%${searchTerm}%`),
+              ilike(users.email, `%${searchTerm}%`)
+            )
+          )
+        )
+        .limit(searchLimit);
+
+      res.json(foundUsers);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Lỗi tìm kiếm người dùng" });
+    }
+  });
+
+  // Send friend request
+  app.post("/api/users/connect", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, message } = req.body;
+
+      if (!userId || userId === req.user!.id) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Check if target user exists
+      const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+      if (!targetUser) {
+        return res.status(404).json({ message: "Người dùng không tồn tại" });
+      }
+
+      // Check if connection already exists
+      const existingConnections = await db
+        .select()
+        .from(userConnections)
+        .where(
+          and(
+            eq(userConnections.requesterId, req.user!.id),
+            eq(userConnections.addresseeId, userId)
+          )
+        );
+
+      if (existingConnections.length > 0) {
+        return res.status(400).json({ message: "Đã gửi lời mời kết bạn trước đó" });
+      }
+
+      // Create connection request
+      const [connection] = await db
+        .insert(userConnections)
+        .values({
+          requesterId: req.user!.id,
+          addresseeId: userId,
+          requestMessage: message || null,
+          status: "pending"
+        })
+        .returning();
+
+      res.json({
+        message: "Đã gửi lời mời kết bạn",
+        connection: {
+          id: connection.id,
+          status: connection.status,
+          requestedAt: connection.requestedAt
+        }
+      });
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      res.status(500).json({ message: "Lỗi gửi lời mời kết bạn" });
+    }
+  });
+
+  // Respond to friend request
+  app.post("/api/users/respond/:connectionId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const connectionId = parseInt(req.params.connectionId);
+      const { action } = req.body; // 'accept' or 'reject'
+
+      if (!['accept', 'reject'].includes(action)) {
+        return res.status(400).json({ message: "Hành động không hợp lệ" });
+      }
+
+      // Find connection
+      const [connection] = await db
+        .select()
+        .from(userConnections)
+        .where(
+          and(
+            eq(userConnections.id, connectionId),
+            eq(userConnections.addresseeId, req.user!.id),
+            eq(userConnections.status, "pending")
+          )
+        );
+
+      if (!connection) {
+        return res.status(404).json({ message: "Lời mời không tồn tại hoặc đã được xử lý" });
+      }
+
+      // Update connection status
+      const [updatedConnection] = await db
+        .update(userConnections)
+        .set({
+          status: action === 'accept' ? 'accepted' : 'rejected',
+          respondedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(userConnections.id, connectionId))
+        .returning();
+
+      res.json({
+        message: action === 'accept' ? "Đã chấp nhận lời mời kết bạn" : "Đã từ chối lời mời kết bạn",
+        connection: {
+          id: updatedConnection.id,
+          status: updatedConnection.status,
+          respondedAt: updatedConnection.respondedAt
+        }
+      });
+    } catch (error) {
+      console.error("Error responding to friend request:", error);
+      res.status(500).json({ message: "Lỗi xử lý lời mời kết bạn" });
+    }
+  });
+
+  // Get friend requests (received)
+  app.get("/api/users/requests", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const connections = await db
+        .select({
+          id: userConnections.id,
+          requestMessage: userConnections.requestMessage,
+          requestedAt: userConnections.requestedAt,
+          requester: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl
+          }
+        })
+        .from(userConnections)
+        .innerJoin(users, eq(userConnections.requesterId, users.id))
+        .where(
+          and(
+            eq(userConnections.addresseeId, req.user!.id),
+            eq(userConnections.status, "pending")
+          )
+        )
+        .orderBy(desc(userConnections.requestedAt));
+
+      res.json(connections);
+    } catch (error) {
+      console.error("Error fetching friend requests:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách lời mời kết bạn" });
+    }
+  });
+
+  // Get friends list
+  app.get("/api/users/friends", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get accepted connections where user is either requester or addressee
+      const connections = await db
+        .select({
+          connectionId: userConnections.id,
+          connectedAt: userConnections.respondedAt,
+          friend: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+            bio: users.bio
+          }
+        })
+        .from(userConnections)
+        .innerJoin(users, 
+          or(
+            and(eq(userConnections.requesterId, req.user!.id), eq(users.id, userConnections.addresseeId)),
+            and(eq(userConnections.addresseeId, req.user!.id), eq(users.id, userConnections.requesterId))
+          )
+        )
+        .where(
+          and(
+            eq(userConnections.status, "accepted"),
+            or(
+              eq(userConnections.requesterId, req.user!.id),
+              eq(userConnections.addresseeId, req.user!.id)
+            )
+          )
+        )
+        .orderBy(desc(userConnections.respondedAt));
+
+      res.json(connections);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách bạn bè" });
+    }
+  });
+
+  // Create private chat with friend
+  app.post("/api/users/chat/:friendId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const friendId = parseInt(req.params.friendId);
+
+      // Check if they are friends
+      const friendship = await db
+        .select()
+        .from(userConnections)
+        .where(
+          and(
+            eq(userConnections.status, "accepted"),
+            or(
+              and(eq(userConnections.requesterId, req.user!.id), eq(userConnections.addresseeId, friendId)),
+              and(eq(userConnections.addresseeId, req.user!.id), eq(userConnections.requesterId, friendId))
+            )
+          )
+        );
+
+      if (friendship.length === 0) {
+        return res.status(403).json({ message: "Bạn chỉ có thể chat với bạn bè" });
+      }
+
+      // Create or get existing private room
+      const room = await chatService.createPrivateRoom(req.user!.id, friendId);
+      res.json(room);
+    } catch (error) {
+      console.error("Error creating chat with friend:", error);
+      res.status(500).json({ message: "Lỗi tạo chat với bạn bè" });
     }
   });
 

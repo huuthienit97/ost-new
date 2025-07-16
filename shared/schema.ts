@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -647,6 +647,8 @@ export type ShopProduct = typeof shopProducts.$inferSelect;
 export type InsertShopOrder = z.infer<typeof insertShopOrderSchema>;
 export type ShopOrder = typeof shopOrders.$inferSelect;
 
+// This will be moved later after userConnections table definition
+
 export type BeePointCirculation = typeof beePointCirculation.$inferSelect;
 
 // Notification system schemas
@@ -719,6 +721,33 @@ export const chatMessages = pgTable("chat_messages", {
   metadata: jsonb("metadata").default({}),
 });
 
+// User Connections/Friendship table
+export const userConnections = pgTable("user_connections", {
+  id: serial("id").primaryKey(),
+  requesterId: integer("requester_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  addresseeId: integer("addressee_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'accepted', 'rejected', 'blocked'
+  requestMessage: text("request_message"), // Optional message when sending friend request
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  respondedAt: timestamp("responded_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// User Connections relations
+export const userConnectionsRelations = relations(userConnections, ({ one }) => ({
+  requester: one(users, {
+    fields: [userConnections.requesterId],
+    references: [users.id],
+    relationName: "connectionRequester",
+  }),
+  addressee: one(users, {
+    fields: [userConnections.addresseeId],
+    references: [users.id],
+    relationName: "connectionAddressee",
+  }),
+}));
+
 // Chat Room relations
 export const chatRoomsRelations = relations(chatRooms, ({ one, many }) => ({
   creator: one(users, { fields: [chatRooms.createdBy], references: [users.id] }),
@@ -743,6 +772,17 @@ export type ChatRoomMember = typeof chatRoomMembers.$inferSelect;
 export type InsertChatRoomMember = typeof chatRoomMembers.$inferInsert;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+// User connections schemas and types
+export const insertUserConnectionSchema = createInsertSchema(userConnections).omit({
+  id: true,
+  requestedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
+export type UserConnection = typeof userConnections.$inferSelect;
 
 // Extended types
 export type UserWithRole = User & {

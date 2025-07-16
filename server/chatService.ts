@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc } from "drizzle-orm";
+import { eq, and, or, desc, asc, like } from "drizzle-orm";
 import { db } from "./db";
 import {
   chatRooms,
