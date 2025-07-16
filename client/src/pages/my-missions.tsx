@@ -63,7 +63,7 @@ export default function MyMissions() {
   // Start mission mutation
   const startMissionMutation = useMutation({
     mutationFn: async (assignmentId: number) => {
-      return await apiRequest("PATCH", `/api/missions/assignments/${assignmentId}/status`, { 
+      return await apiRequest(`/api/missions/assignments/${assignmentId}/status`, "PATCH", { 
         status: "in_progress" 
       });
     },
@@ -96,9 +96,7 @@ export default function MyMissions() {
         formData.append("photo", photo);
       }
 
-      return await apiRequest("POST", `/api/missions/${missionId}/submit`, {
-        body: formData,
-      });
+      return await apiRequest(`/api/missions/${missionId}/submit`, "POST", formData);
     },
     onSuccess: (data) => {
       toast({
@@ -141,7 +139,7 @@ export default function MyMissions() {
     if (!selectedMission) return;
     
     submitMissionMutation.mutate({
-      missionId: selectedMission.mission.id,
+      missionId: selectedMission.mission?.id || 0,
       submissionNote,
       photo: selectedFile || undefined,
     });
@@ -181,11 +179,11 @@ export default function MyMissions() {
     );
   }
 
-  const assignedMissions = myMissions.filter((m: any) => m.assignment?.status === 'assigned');
-  const inProgressMissions = myMissions.filter((m: any) => m.assignment?.status === 'in_progress');
-  const submittedMissions = myMissions.filter((m: any) => m.assignment?.status === 'submitted');
-  const completedMissions = myMissions.filter((m: any) => m.assignment?.status === 'completed');
-  const rejectedMissions = myMissions.filter((m: any) => m.assignment?.status === 'rejected');
+  const assignedMissions = myMissions.filter((m: any) => m.status === 'assigned');
+  const inProgressMissions = myMissions.filter((m: any) => m.status === 'in_progress');
+  const submittedMissions = myMissions.filter((m: any) => m.status === 'submitted');
+  const completedMissions = myMissions.filter((m: any) => m.status === 'completed');
+  const rejectedMissions = myMissions.filter((m: any) => m.status === 'rejected');
 
   return (
     <AppLayout>
@@ -217,9 +215,8 @@ export default function MyMissions() {
           </TabsList>
 
           <TabsContent value="assigned" className="space-y-4">
-            {assignedMissions.map((missionData: any) => {
-              const assignment = missionData.assignment;
-              const mission = missionData.mission;
+            {assignedMissions.map((assignment: any) => {
+              const mission = assignment.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -306,9 +303,8 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="in_progress" className="space-y-4">
-            {inProgressMissions.map((missionData: any) => {
-              const assignment = missionData.assignment;
-              const mission = missionData.mission;
+            {inProgressMissions.map((assignment: any) => {
+              const mission = assignment.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -402,9 +398,8 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="submitted" className="space-y-4">
-            {submittedMissions.map((missionData: any) => {
-              const assignment = missionData.assignment;
-              const mission = missionData.mission;
+            {submittedMissions.map((assignment: any) => {
+              const mission = assignment.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -466,9 +461,8 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            {completedMissions.map((missionData: any) => {
-              const assignment = missionData.assignment;
-              const mission = missionData.mission;
+            {completedMissions.map((assignment: any) => {
+              const mission = assignment.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow border-green-200">
@@ -530,9 +524,8 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-4">
-            {rejectedMissions.map((missionData: any) => {
-              const assignment = missionData.assignment;
-              const mission = missionData.mission;
+            {rejectedMissions.map((assignment: any) => {
+              const mission = assignment.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow border-red-200">
@@ -600,7 +593,7 @@ export default function MyMissions() {
             <DialogHeader>
               <DialogTitle>Nộp bài nhiệm vụ</DialogTitle>
               <DialogDescription>
-                Nộp bài cho nhiệm vụ: {selectedMission?.mission.title}
+                Nộp bài cho nhiệm vụ: {selectedMission?.mission?.title || "N/A"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -615,7 +608,7 @@ export default function MyMissions() {
                 />
               </div>
 
-              {selectedMission?.mission.requiresPhoto && (
+              {selectedMission?.mission?.requiresPhoto && (
                 <div>
                   <Label htmlFor="photo">Hình ảnh minh chứng *</Label>
                   <Input
@@ -637,7 +630,7 @@ export default function MyMissions() {
                   onClick={handleSubmitMission}
                   disabled={
                     submitMissionMutation.isPending || 
-                    (selectedMission?.mission.requiresPhoto && !selectedFile)
+                    (selectedMission?.mission?.requiresPhoto && !selectedFile)
                   }
                   className="flex-1"
                 >
