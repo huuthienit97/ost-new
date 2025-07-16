@@ -73,7 +73,7 @@ export default function ChatPage() {
     mutationFn: async (targetUserId: number) => {
       return await apiRequest(`/api/chat/rooms/private`, {
         method: "POST",
-        body: { targetUserId },
+        body: JSON.stringify({ targetUserId }),
       });
     },
     onSuccess: (room) => {
@@ -100,7 +100,7 @@ export default function ChatPage() {
     mutationFn: async ({ roomId, content }: { roomId: number; content: string }) => {
       return await apiRequest(`/api/chat/rooms/${roomId}/messages`, {
         method: "POST",
-        body: { content },
+        body: JSON.stringify({ content }),
       });
     },
     onSuccess: () => {
