@@ -131,7 +131,7 @@ export default function MyMissions() {
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
   };
 
-  const handleStartMission = (assignment: MissionAssignment) => {
+  const handleStartMission = (assignment: any) => {
     startMissionMutation.mutate(assignment.id);
   };
 
@@ -145,8 +145,8 @@ export default function MyMissions() {
     });
   };
 
-  const openSubmitDialog = (mission: MissionAssignment) => {
-    setSelectedMission(mission);
+  const openSubmitDialog = (missionData: any) => {
+    setSelectedMission(missionData);
     setSubmissionNote("");
     setSelectedFile(null);
     setIsSubmitDialogOpen(true);
@@ -179,11 +179,11 @@ export default function MyMissions() {
     );
   }
 
-  const assignedMissions = myMissions.filter((m: any) => m.status === 'assigned');
-  const inProgressMissions = myMissions.filter((m: any) => m.status === 'in_progress');
-  const submittedMissions = myMissions.filter((m: any) => m.status === 'submitted');
-  const completedMissions = myMissions.filter((m: any) => m.status === 'completed');
-  const rejectedMissions = myMissions.filter((m: any) => m.status === 'rejected');
+  const assignedMissions = myMissions.filter((m: any) => m.assignment?.status === 'assigned');
+  const inProgressMissions = myMissions.filter((m: any) => m.assignment?.status === 'in_progress');
+  const submittedMissions = myMissions.filter((m: any) => m.assignment?.status === 'submitted');
+  const completedMissions = myMissions.filter((m: any) => m.assignment?.status === 'completed');
+  const rejectedMissions = myMissions.filter((m: any) => m.assignment?.status === 'rejected');
 
   return (
     <AppLayout>
@@ -215,8 +215,9 @@ export default function MyMissions() {
           </TabsList>
 
           <TabsContent value="assigned" className="space-y-4">
-            {assignedMissions.map((assignment: any) => {
-              const mission = assignment.mission;
+            {assignedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -303,8 +304,9 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="in_progress" className="space-y-4">
-            {inProgressMissions.map((assignment: any) => {
-              const mission = assignment.mission;
+            {inProgressMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -373,7 +375,7 @@ export default function MyMissions() {
 
                       <div className="flex justify-end">
                         <Button
-                          onClick={() => openSubmitDialog(assignment)}
+                          onClick={() => openSubmitDialog(missionData)}
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Nộp bài
@@ -398,8 +400,9 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="submitted" className="space-y-4">
-            {submittedMissions.map((assignment: any) => {
-              const mission = assignment.mission;
+            {submittedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -461,8 +464,9 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            {completedMissions.map((assignment: any) => {
-              const mission = assignment.mission;
+            {completedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow border-green-200">
@@ -524,8 +528,9 @@ export default function MyMissions() {
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-4">
-            {rejectedMissions.map((assignment: any) => {
-              const mission = assignment.mission;
+            {rejectedMissions.map((missionData: any) => {
+              const assignment = missionData.assignment;
+              const mission = missionData.mission;
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow border-red-200">
