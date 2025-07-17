@@ -311,6 +311,7 @@ export default function UserProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users/profile", userId] });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/search"] });
       toast({ title: "Đã gửi lời mời kết bạn!" });
     },
     onError: () => {
@@ -332,6 +333,7 @@ export default function UserProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users/profile", userId] });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/search"] });
       toast({ title: "Đã hủy lời mời kết bạn!" });
     },
     onError: () => {

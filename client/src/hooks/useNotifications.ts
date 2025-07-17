@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { queryClient } from '@/lib/queryClient';
 
 interface Notification {
   id: number;
@@ -26,7 +27,8 @@ export function useNotifications() {
 
     const connect = () => {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const token = localStorage.getItem('token');
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token || '')}`;
       
       ws = new WebSocket(wsUrl);
       
@@ -56,12 +58,28 @@ export function useNotifications() {
                 description: notification.message,
                 variant: "default",
               });
+              // Invalidate friend requests and user discovery cache
+              queryClient.invalidateQueries({ queryKey: ['/api/users/requests'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
             } else if (notification.metadata?.type === 'friend_request_response') {
               toast({
                 title: notification.title,
                 description: notification.message,
                 variant: notification.metadata.responseAction === 'accept' ? "default" : "destructive",
               });
+              // Invalidate user profile and discovery cache
+              queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
+            } else if (notification.metadata?.type === 'friend_request_cancelled') {
+              toast({
+                title: notification.title,
+                description: notification.message,
+                variant: "default",
+              });
+              // Invalidate friend requests cache
+              queryClient.invalidateQueries({ queryKey: ['/api/users/requests'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
             } else {
               // General notifications
               toast({
