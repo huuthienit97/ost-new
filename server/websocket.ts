@@ -175,24 +175,28 @@ class NotificationWebSocketServer {
     const clientSet = this.connectedClients.get(userId);
     if (clientSet && clientSet.size > 0) {
       const message = JSON.stringify({
-        type: 'new_notification',
-        data: notification
+        type: 'notification',
+        notification: notification
       });
 
+      console.log(`Sending notification to user ${userId}:`, message);
       clientSet.forEach(ws => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(message);
         }
       });
+    } else {
+      console.log(`User ${userId} not connected, cannot send notification`);
     }
   }
 
   public async sendNotificationToUsers(userIds: number[], notification: any) {
     const message = JSON.stringify({
-      type: 'new_notification',
-      data: notification
+      type: 'notification',
+      notification: notification
     });
 
+    console.log(`Sending notification to users ${userIds.join(', ')}:`, message);
     userIds.forEach(userId => {
       const clientSet = this.connectedClients.get(userId);
       if (clientSet && clientSet.size > 0) {
@@ -201,16 +205,19 @@ class NotificationWebSocketServer {
             ws.send(message);
           }
         });
+      } else {
+        console.log(`User ${userId} not connected, cannot send notification`);
       }
     });
   }
 
   public async broadcastNotification(notification: any) {
     const message = JSON.stringify({
-      type: 'new_notification',
-      data: notification
+      type: 'notification',
+      notification: notification
     });
 
+    console.log('Broadcasting notification to all users:', message);
     this.connectedClients.forEach((clientSet) => {
       clientSet.forEach(ws => {
         if (ws.readyState === WebSocket.OPEN) {
