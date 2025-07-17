@@ -125,6 +125,11 @@ export function Sidebar({ className }: SidebarProps) {
 
   const postManagementItems: NavItem[] = [
     {
+      title: "Bài viết của tôi",
+      href: "/my-posts", 
+      icon: FileText,
+    },
+    {
       title: "Quản lý bài viết",
       href: "/post-management", 
       icon: FileText,

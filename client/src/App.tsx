@@ -38,6 +38,7 @@ import GuestChatPage from "@/pages/guest-chat";
 import UserDiscovery from "@/pages/user-discovery";
 import UserProfile from "@/pages/user-profile";
 import PostManagement from "@/pages/post-management";
+import MyPostsPage from "@/pages/my-posts";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -94,6 +95,7 @@ function Router() {
           <Route path="/profile/:userId" component={UserProfile} />
           <Route path="/newsfeed" component={NewsfeedPage} />
           <Route path="/post-management" component={PostManagement} />
+          <Route path="/my-posts" component={MyPostsPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Pin, PinOff, Eye, Trash2, MessageCircle, Heart } from "lucide-react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,22 +122,17 @@ export default function PostManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tải danh sách bài viết...</p>
-          </div>
+      <AppLayout>
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải danh sách bài viết...</p>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6">
+    <AppLayout>
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Quản lý bài viết</h1>
@@ -262,7 +257,6 @@ export default function PostManagement() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 }

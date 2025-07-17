@@ -56,19 +56,20 @@ const EMOJI_OPTIONS = [
 interface Post {
   id: number;
   content: string;
-  imageUrls?: string[];
-  likesCount: number;
-  commentsCount: number;
-  isLiked: boolean;
-  isPinned: boolean;
+  images?: string[];
   visibility: 'public' | 'friends' | 'private';
+  isPinned: boolean;
   createdAt: string;
   author: {
     id: number;
-    username: string;
     fullName: string;
     avatarUrl?: string;
   };
+  _count: {
+    likes: number;
+    comments: number;
+  };
+  isLiked?: boolean;
   comments?: Comment[];
 }
 
@@ -402,7 +403,7 @@ export default function NewsfeedPage() {
                       <Avatar>
                         <AvatarImage src={post.author.avatarUrl} alt={post.author.fullName} />
                         <AvatarFallback className="bg-blue-500 text-white">
-                          {post.author.fullName?.charAt(0) || post.author.username?.charAt(0) || 'U'}
+                          {post.author.fullName?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -435,9 +436,9 @@ export default function NewsfeedPage() {
                 <CardContent>
                   <p className="whitespace-pre-wrap mb-4">{post.content}</p>
                   
-                  {post.imageUrls && post.imageUrls.length > 0 && (
+                  {post.images && post.images.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      {post.imageUrls.map((url, index) => (
+                      {post.images.map((url, index) => (
                         <img
                           key={index}
                           src={url}
@@ -457,11 +458,11 @@ export default function NewsfeedPage() {
                         className={post.isLiked ? "text-red-500" : ""}
                       >
                         <Heart className={`h-4 w-4 mr-1 ${post.isLiked ? "fill-current" : ""}`} />
-                        {post.likesCount}
+                        {post._count.likes}
                       </Button>
                       <Button variant="ghost" size="sm">
                         <MessageCircle className="h-4 w-4 mr-1" />
-                        {post.commentsCount}
+                        {post._count.comments}
                       </Button>
                       <Button variant="ghost" size="sm">
                         <Share2 className="h-4 w-4 mr-1" />
@@ -567,9 +568,9 @@ export default function NewsfeedPage() {
               <CardContent>
                 <p className="whitespace-pre-wrap mb-4">{post.content}</p>
                 
-                {post.imageUrls && post.imageUrls.length > 0 && (
+                {post.images && post.images.length > 0 && (
                   <div className="grid grid-cols-2 gap-2 mb-4">
-                    {post.imageUrls.map((url, index) => (
+                    {post.images.map((url, index) => (
                       <img
                         key={index}
                         src={url}
@@ -589,11 +590,11 @@ export default function NewsfeedPage() {
                       className={post.isLiked ? "text-red-500" : ""}
                     >
                       <Heart className={`h-4 w-4 mr-1 ${post.isLiked ? "fill-current" : ""}`} />
-                      {post.likesCount}
+                      {post._count.likes}
                     </Button>
                     <Button variant="ghost" size="sm">
                       <MessageCircle className="h-4 w-4 mr-1" />
-                      {post.commentsCount}
+                      {post._count.comments}
                     </Button>
                     <Button variant="ghost" size="sm">
                       <Share2 className="h-4 w-4 mr-1" />

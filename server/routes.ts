@@ -7035,12 +7035,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .insert(posts)
         .values({
           content: content.trim(),
-          userId: req.user!.id,
-          imageUrls: imageUrls.length > 0 ? imageUrls : [],
+          authorId: req.user!.id,
+          images: imageUrls.length > 0 ? imageUrls : [],
           visibility: visibility,
           isPinned: false,
-          likes: 0,
-          comments: 0,
         })
         .returning();
 
@@ -7049,27 +7047,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           id: posts.id,
           content: posts.content,
-          imageUrls: posts.imageUrls,
-          likesCount: posts.likes,
-          commentsCount: posts.comments,
+          images: posts.images,
           visibility: posts.visibility,
           isPinned: posts.isPinned,
           createdAt: posts.createdAt,
           author: {
             id: users.id,
-            username: users.username,
             fullName: users.fullName,
             avatarUrl: users.avatarUrl,
           },
+          _count: {
+            likes: sql<number>`0`,
+            comments: sql<number>`0`,
+          },
         })
         .from(posts)
-        .innerJoin(users, eq(posts.userId, users.id))
+        .innerJoin(users, eq(posts.authorId, users.id))
         .where(eq(posts.id, newPost.id));
 
-      res.status(201).json(postWithAuthor);
+      res.status(201).json({
+        ...postWithAuthor,
+        isLiked: false,
+        comments: []
+      });
     } catch (error) {
       console.error("Error creating post:", error);
       res.status(500).json({ message: "Lỗi tạo bài viết" });
+    }
+  });
+
+  // Get user's own posts
+  app.get("/api/posts/my-posts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postsData = await db
+        .select({
+          id: posts.id,
+          content: posts.content,
+          images: posts.images,
+          visibility: posts.visibility,
+          isPinned: posts.isPinned,
+          createdAt: posts.createdAt,
+          author: {
+            id: users.id,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+          _count: {
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+          },
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.authorId, users.id))
+        .where(eq(posts.authorId, req.user!.id))
+        .orderBy(desc(posts.createdAt));
+
+      res.json(postsData);
+    } catch (error) {
+      console.error("Error fetching user posts:", error);
+      res.status(500).json({ message: "Lỗi lấy bài viết của bạn" });
+    }
+  });
+
+  // Delete user's own post
+  app.delete("/api/posts/:postId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const userId = req.user!.id;
+
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+
+      // Check if post exists and belongs to user (or user is admin)
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      
+      if (!post) {
+        return res.status(404).json({ message: "Bài viết không tồn tại" });
+      }
+
+      const isAdmin = req.user!.permissions.includes('system:admin');
+      if (post.authorId !== userId && !isAdmin) {
+        return res.status(403).json({ message: "Bạn không có quyền xóa bài viết này" });
+      }
+
+      // Delete related data first
+      await db.delete(postLikes).where(eq(postLikes.postId, postId));
+      await db.delete(postComments).where(eq(postComments.postId, postId));
+      
+      // Delete the post
+      await db.delete(posts).where(eq(posts.id, postId));
+
+      res.json({ message: "Đã xóa bài viết thành công" });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      res.status(500).json({ message: "Lỗi xóa bài viết" });
     }
   });
 
