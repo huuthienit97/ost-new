@@ -12,7 +12,8 @@ export const userPosts = pgTable("user_posts", {
   imageUrls: text("image_urls").array().default([]),
   likes: integer("likes").default(0).notNull(),
   comments: integer("comments").default(0).notNull(),
-  isPublic: boolean("is_public").default(true).notNull(),
+  visibility: text("visibility").notNull().default("public"), // public, friends, private
+  isPinned: boolean("is_pinned").default(false).notNull(), // For admin pinned posts
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -25,10 +27,31 @@ import {
   Trash2,
   Edit,
   Pin,
-  PinOff
+  PinOff,
+  Smile
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+
+// Popular emoji options
+const EMOJI_OPTIONS = [
+  "😀", "😃", "😄", "😁", "😆", "🥹", "😅", "😂", "🤣", "🥲",
+  "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗",
+  "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓",
+  "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕",
+  "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤",
+  "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰",
+  "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑",
+  "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤",
+  "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕",
+  "🤑", "🤠", "👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙",
+  "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "👊", "✊",
+  "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "❤️", "🧡",
+  "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "❣️", "💕",
+  "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️", "✝️", "☪️",
+  "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈",
+  "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓", "🆔"
+];
 
 interface Post {
   id: number;
@@ -66,8 +89,10 @@ export default function NewsfeedPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newPostContent, setNewPostContent] = useState("");
+  const [postVisibility, setPostVisibility] = useState("public");
   const [postImages, setPostImages] = useState<FileList | null>(null);
   const [commentContent, setCommentContent] = useState<{ [key: number]: string }>({});
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch newsfeed posts
@@ -98,7 +123,9 @@ export default function NewsfeedPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/posts/newsfeed"] });
       setNewPostContent("");
+      setPostVisibility("public");
       setPostImages(null);
+      setShowEmojiPicker(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -145,10 +172,17 @@ export default function NewsfeedPage() {
         body: JSON.stringify({ isPinned: pin }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { pin }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/posts/newsfeed"] });
       toast({ title: pin ? "Đã ghim bài viết" : "Đã bỏ ghim bài viết" });
     },
+    onError: (error) => {
+      toast({ 
+        title: "Lỗi", 
+        description: error.message || "Không thể thực hiện thao tác",
+        variant: "destructive" 
+      });
+    }
   });
 
   const handleCreatePost = () => {
@@ -164,7 +198,7 @@ export default function NewsfeedPage() {
     createPostMutation.mutate({
       content: newPostContent,
       images: postImages || undefined,
-      visibility: "public",
+      visibility: postVisibility,
     });
   };
 
@@ -181,6 +215,11 @@ export default function NewsfeedPage() {
 
   const handlePinPost = (postId: number, currentlyPinned: boolean) => {
     pinPostMutation.mutate({ postId, pin: !currentlyPinned });
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewPostContent(prev => prev + emoji);
+    setShowEmojiPicker(false);
   };
 
   const getVisibilityIcon = (visibility: string) => {
@@ -233,7 +272,7 @@ export default function NewsfeedPage() {
             <div className="flex items-center space-x-3">
               <Avatar>
                 <AvatarImage src={user?.avatarUrl} alt={user?.fullName} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-blue-500 text-white">
                   {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -248,6 +287,21 @@ export default function NewsfeedPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Image Preview */}
+            {postImages && postImages.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {Array.from(postImages).map((file, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <input
@@ -266,19 +320,68 @@ export default function NewsfeedPage() {
                   <Camera className="h-4 w-4 mr-2" />
                   Ảnh
                 </Button>
-                {postImages && postImages.length > 0 && (
-                  <span className="text-sm text-gray-600">
-                    {postImages.length} ảnh đã chọn
-                  </span>
-                )}
+
+                {/* Emoji Picker */}
+                <DropdownMenu open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Smile className="h-4 w-4 mr-2" />
+                      Emoji
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64 max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-8 gap-1 p-2">
+                      {EMOJI_OPTIONS.map((emoji, index) => (
+                        <DropdownMenuItem
+                          key={index}
+                          className="w-8 h-8 p-0 flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleEmojiSelect(emoji)}
+                        >
+                          <span className="text-lg">{emoji}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Visibility Selector */}
+                <Select value={postVisibility} onValueChange={setPostVisibility}>
+                  <SelectTrigger className="w-auto">
+                    <div className="flex items-center space-x-1">
+                      {getVisibilityIcon(postVisibility)}
+                      <span className="text-sm">{getVisibilityText(postVisibility)}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">
+                      <div className="flex items-center space-x-2">
+                        <Globe className="h-4 w-4 text-green-500" />
+                        <span>Công khai</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="friends">
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <span>Bạn bè</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="private">
+                      <div className="flex items-center space-x-2">
+                        <Lock className="h-4 w-4 text-gray-500" />
+                        <span>Riêng tư</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 onClick={handleCreatePost}
-                disabled={createPostMutation.isPending}
+                disabled={createPostMutation.isPending || !newPostContent.trim()}
                 size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Đăng
+                {createPostMutation.isPending ? "Đang đăng..." : "Đăng"}
               </Button>
             </div>
           </CardContent>
@@ -298,8 +401,8 @@ export default function NewsfeedPage() {
                     <div className="flex items-center space-x-3">
                       <Avatar>
                         <AvatarImage src={post.author.avatarUrl} alt={post.author.fullName} />
-                        <AvatarFallback>
-                          {post.author.fullName?.charAt(0) || post.author.username?.charAt(0)}
+                        <AvatarFallback className="bg-blue-500 text-white">
+                          {post.author.fullName?.charAt(0) || post.author.username?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -374,8 +477,8 @@ export default function NewsfeedPage() {
                         <div key={comment.id} className="flex space-x-3">
                           <Avatar className="w-8 h-8">
                             <AvatarImage src={comment.author.avatarUrl} alt={comment.author.fullName} />
-                            <AvatarFallback className="text-xs">
-                              {comment.author.fullName?.charAt(0) || comment.author.username?.charAt(0)}
+                            <AvatarFallback className="text-xs bg-gray-400 text-white">
+                              {comment.author.fullName?.charAt(0) || comment.author.username?.charAt(0) || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 bg-gray-100 rounded-lg p-3">
@@ -394,7 +497,7 @@ export default function NewsfeedPage() {
                   <div className="flex space-x-3 mt-4 pt-4 border-t">
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={user?.avatarUrl} alt={user?.fullName} />
-                      <AvatarFallback className="text-xs">
+                      <AvatarFallback className="text-xs bg-blue-500 text-white">
                         {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -436,8 +539,8 @@ export default function NewsfeedPage() {
                   <div className="flex items-center space-x-3">
                     <Avatar>
                       <AvatarImage src={post.author.avatarUrl} alt={post.author.fullName} />
-                      <AvatarFallback>
-                        {post.author.fullName?.charAt(0) || post.author.username?.charAt(0)}
+                      <AvatarFallback className="bg-blue-500 text-white">
+                        {post.author.fullName?.charAt(0) || post.author.username?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>

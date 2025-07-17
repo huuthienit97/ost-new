@@ -6910,8 +6910,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(posts)
         .innerJoin(users, eq(posts.userId, users.id))
-        .where(eq(posts.isPublic, true))
-        .orderBy(desc(posts.createdAt))
+        .where(or(
+          eq(posts.visibility, "public"),
+          eq(posts.isPinned, true)
+        ))
+        .orderBy(desc(posts.isPinned), desc(posts.createdAt))
         .limit(50);
 
       // Check if current user liked each post
@@ -6963,7 +6966,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...post,
         isLiked: likedPostIds.has(post.id),
         comments: commentsByPost.get(post.id) || [],
-        isPinned: false, // TODO: Add pinned logic when admin feature added
       }));
 
       res.json(postsWithInteractions);
@@ -6976,11 +6978,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new post
   app.post("/api/posts", authenticate, upload.array('images', 5), async (req: AuthenticatedRequest, res) => {
     try {
-      const { content, isPublic = true } = req.body;
+      const { content, visibility = "public" } = req.body;
       const files = req.files as Express.Multer.File[];
 
       if (!content?.trim()) {
         return res.status(400).json({ message: "Nội dung bài viết không được để trống" });
+      }
+
+      // Validate visibility
+      if (!["public", "friends", "private"].includes(visibility)) {
+        return res.status(400).json({ message: "Chế độ hiển thị không hợp lệ" });
       }
 
       // Handle image uploads
@@ -6995,13 +7002,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: content.trim(),
           userId: req.user!.id,
           imageUrls: imageUrls.length > 0 ? imageUrls : [],
-          isPublic: isPublic === 'true' || isPublic === true,
+          visibility: visibility,
+          isPinned: false,
           likes: 0,
           comments: 0,
         })
         .returning();
 
-      res.status(201).json(newPost);
+      // Get post with author info
+      const [postWithAuthor] = await db
+        .select({
+          id: posts.id,
+          content: posts.content,
+          imageUrls: posts.imageUrls,
+          likesCount: posts.likes,
+          commentsCount: posts.comments,
+          visibility: posts.visibility,
+          isPinned: posts.isPinned,
+          createdAt: posts.createdAt,
+          author: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.userId, users.id))
+        .where(eq(posts.id, newPost.id));
+
+      res.status(201).json(postWithAuthor);
     } catch (error) {
       console.error("Error creating post:", error);
       res.status(500).json({ message: "Lỗi tạo bài viết" });
@@ -7128,6 +7158,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error adding comment:", error);
       res.status(500).json({ message: "Lỗi thêm bình luận" });
+    }
+  });
+
+  // Pin/unpin post (admin only)
+  app.put("/api/posts/:postId/pin", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const { isPinned } = req.body;
+      const userRole = req.user!.role?.name;
+
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+
+      // Check if user is admin
+      if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
+        return res.status(403).json({ message: "Chỉ admin mới có thể ghim bài viết" });
+      }
+
+      // Check if post exists
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      if (!post) {
+        return res.status(404).json({ message: "Bài viết không tồn tại" });
+      }
+
+      // If pinning, check if already have 3 pinned posts
+      if (isPinned) {
+        const pinnedPostsCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(posts)
+          .where(eq(posts.isPinned, true));
+
+        if (pinnedPostsCount[0]?.count >= 3) {
+          return res.status(400).json({ message: "Chỉ được ghim tối đa 3 bài viết" });
+        }
+      }
+
+      await db
+        .update(posts)
+        .set({ 
+          isPinned: isPinned,
+          updatedAt: new Date()
+        })
+        .where(eq(posts.id, postId));
+
+      res.json({ message: isPinned ? "Đã ghim bài viết" : "Đã bỏ ghim bài viết" });
+    } catch (error) {
+      console.error("Error pinning post:", error);
+      res.status(500).json({ message: "Lỗi ghim bài viết" });
     }
   });
 
