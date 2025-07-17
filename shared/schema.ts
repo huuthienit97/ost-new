@@ -785,6 +785,44 @@ export const insertUserConnectionSchema = createInsertSchema(userConnections).om
 export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
 export type UserConnection = typeof userConnections.$inferSelect;
 
+// User settings table for personalized preferences
+export const userSettings = pgTable("user_settings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  
+  // Notification preferences
+  emailNotifications: boolean("email_notifications").default(true),
+  pushNotifications: boolean("push_notifications").default(true), 
+  missionNotifications: boolean("mission_notifications").default(true),
+  achievementNotifications: boolean("achievement_notifications").default(true),
+  socialNotifications: boolean("social_notifications").default(true),
+  
+  // Privacy settings
+  profileVisibility: varchar("profile_visibility", { length: 20 }).default("public"), // public, friends, private
+  showEmail: boolean("show_email").default(false),
+  showPhone: boolean("show_phone").default(false),
+  
+  // Preferences
+  theme: varchar("theme", { length: 20 }).default("light"), // light, dark, system
+  language: varchar("language", { length: 10 }).default("vi"), // vi, en
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User settings schema and types
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateUserSettingsSchema = insertUserSettingsSchema.partial();
+
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type UpdateUserSettings = z.infer<typeof updateUserSettingsSchema>;
+
 // Extended types
 export type UserWithRole = User & {
   role: Role;

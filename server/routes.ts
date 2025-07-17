@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages, notificationTemplates } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages, notificationTemplates, userSettings } from "@shared/schema";
 import { userPosts as posts, postLikes, postComments } from "@shared/posts-schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS, insertNotificationTemplateSchema } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
@@ -2587,29 +2587,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Settings API endpoints
+  // Settings API endpoints - accessible by all authenticated users
   app.get("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       
-      // Mock settings for now - in a real app you'd store these in database
+      // Get user settings from database or create default if not exists
+      let [userSettingsData] = await db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId));
+      
+      // If no settings exist, create default settings
+      if (!userSettingsData) {
+        [userSettingsData] = await db
+          .insert(userSettings)
+          .values({ userId })
+          .returning();
+      }
+      
+      // Format response to match frontend interface
       const settings = {
-        id: userId,
+        id: userSettingsData.id,
         notifications: {
-          email: true,
-          push: true,
-          missions: true,
-          achievements: true,
-          social: true,
+          email: userSettingsData.emailNotifications,
+          push: userSettingsData.pushNotifications,
+          missions: userSettingsData.missionNotifications,
+          achievements: userSettingsData.achievementNotifications,
+          social: userSettingsData.socialNotifications,
         },
         privacy: {
-          profileVisibility: 'public',
-          showEmail: false,
-          showPhone: false,
+          profileVisibility: userSettingsData.profileVisibility,
+          showEmail: userSettingsData.showEmail,
+          showPhone: userSettingsData.showPhone,
         },
         preferences: {
-          theme: 'light',
-          language: 'vi',
+          theme: userSettingsData.theme,
+          language: userSettingsData.language,
         },
       };
       
@@ -2623,11 +2637,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const updatedSettings = req.body;
+      const { notifications, privacy, preferences } = req.body;
       
-      // In a real app, you'd update these in database
-      // For now just return the updated settings
-      res.json({ message: "Cài đặt đã được lưu", settings: updatedSettings });
+      // Update user settings in database
+      const [updatedUserSettings] = await db
+        .update(userSettings)
+        .set({
+          emailNotifications: notifications?.email,
+          pushNotifications: notifications?.push,
+          missionNotifications: notifications?.missions,
+          achievementNotifications: notifications?.achievements,
+          socialNotifications: notifications?.social,
+          profileVisibility: privacy?.profileVisibility,
+          showEmail: privacy?.showEmail,
+          showPhone: privacy?.showPhone,
+          theme: preferences?.theme,
+          language: preferences?.language,
+          updatedAt: new Date(),
+        })
+        .where(eq(userSettings.userId, userId))
+        .returning();
+      
+      // If no settings existed, create them
+      if (!updatedUserSettings) {
+        await db.insert(userSettings).values({
+          userId,
+          emailNotifications: notifications?.email ?? true,
+          pushNotifications: notifications?.push ?? true,
+          missionNotifications: notifications?.missions ?? true,
+          achievementNotifications: notifications?.achievements ?? true,
+          socialNotifications: notifications?.social ?? true,
+          profileVisibility: privacy?.profileVisibility ?? 'public',
+          showEmail: privacy?.showEmail ?? false,
+          showPhone: privacy?.showPhone ?? false,
+          theme: preferences?.theme ?? 'light',
+          language: preferences?.language ?? 'vi',
+        });
+      }
+      
+      res.json({ message: "Cài đặt đã được lưu thành công" });
     } catch (error) {
       console.error("Error updating settings:", error);
       res.status(500).json({ message: "Lỗi lưu cài đặt" });
