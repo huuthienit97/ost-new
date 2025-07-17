@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
 import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages, notificationTemplates, userSettings } from "@shared/schema";
-import { userPosts as posts, postLikes, postComments } from "@shared/posts-schema";
+import { userPosts, postLikes, postComments } from "@shared/posts-schema";
 import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS, insertNotificationTemplateSchema } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
@@ -6245,8 +6245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get posts count
       const [postsCountResult] = await db
         .select({ count: sql<number>`count(*)` })
-        .from(posts)
-        .where(eq(posts.authorId, user.id));
+        .from(userPosts)
+        .where(eq(userPosts.authorId, user.id));
       const postsCount = postsCountResult?.count || 0;
       
       // Get friends count
@@ -6342,18 +6342,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get posts with author info
       const userPosts = await db
         .select({
-          id: posts.id,
-          content: posts.content,
-          imageUrls: posts.imageUrls,
-          createdAt: posts.createdAt,
-          authorId: posts.userId,
+          id: userPosts.id,
+          content: userPosts.content,
+          imageUrls: userPosts.imageUrls,
+          createdAt: userPosts.createdAt,
+          authorId: userPosts.userId,
           authorName: users.fullName,
           authorAvatar: users.avatarUrl,
         })
-        .from(posts)
-        .innerJoin(users, eq(posts.userId, users.id))
-        .where(eq(posts.userId, targetUserId))
-        .orderBy(desc(posts.createdAt));
+        .from(userPosts)
+        .innerJoin(users, eq(userPosts.userId, users.id))
+        .where(eq(userPosts.userId, targetUserId))
+        .orderBy(desc(userPosts.createdAt));
 
       // Get like and comment counts for each post, plus check if current user liked
       const postsWithStats = await Promise.all(userPosts.map(async (post) => {
@@ -6419,7 +6419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Save to database
       const [newPost] = await db
-        .insert(posts)
+        .insert(userPosts)
         .values({
           userId: currentUserId,
           content: content.trim(),
@@ -6464,7 +6464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if post exists
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId)).limit(1);
       if (!post) {
         return res.status(404).json({ message: "Không tìm thấy bài viết" });
       }
@@ -6514,7 +6514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if post exists
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId)).limit(1);
       if (!post) {
         return res.status(404).json({ message: "Không tìm thấy bài viết" });
       }
@@ -6894,26 +6894,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allPosts = await db
         .select({
-          id: posts.id,
-          content: posts.content,
-          images: posts.images,
-          visibility: posts.visibility,
-          isPinned: posts.isPinned,
-          pinnedAt: posts.pinnedAt,
-          createdAt: posts.createdAt,
+          id: userPosts.id,
+          content: userPosts.content,
+          images: userPosts.imageUrls,
+          visibility: userPosts.visibility,
+          isPinned: userPosts.isPinned,
+          createdAt: userPosts.createdAt,
           author: {
             id: users.id,
             fullName: users.fullName,
             avatarUrl: users.avatarUrl,
           },
           _count: {
-            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
-            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${userPosts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${userPosts.id})`,
           },
         })
-        .from(posts)
-        .innerJoin(users, eq(posts.authorId, users.id))
-        .orderBy(desc(posts.isPinned), desc(posts.createdAt));
+        .from(userPosts)
+        .innerJoin(users, eq(userPosts.userId, users.id))
+        .orderBy(desc(userPosts.isPinned), desc(userPosts.createdAt));
 
       res.json(allPosts);
     } catch (error) {
@@ -6927,29 +6926,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postsData = await db
         .select({
-          id: posts.id,
-          content: posts.content,
-          images: posts.images,
-          visibility: posts.visibility,
-          isPinned: posts.isPinned,
-          createdAt: posts.createdAt,
+          id: userPosts.id,
+          content: userPosts.content,
+          images: userPosts.imageUrls,
+          visibility: userPosts.visibility,
+          isPinned: userPosts.isPinned,
+          createdAt: userPosts.createdAt,
           author: {
             id: users.id,
             fullName: users.fullName,
             avatarUrl: users.avatarUrl,
           },
           _count: {
-            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
-            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${userPosts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${userPosts.id})`,
           },
         })
-        .from(posts)
-        .innerJoin(users, eq(posts.authorId, users.id))
+        .from(userPosts)
+        .innerJoin(users, eq(userPosts.userId, users.id))
         .where(or(
-          eq(posts.visibility, "public"),
-          eq(posts.isPinned, true)
+          eq(userPosts.visibility, "public"),
+          eq(userPosts.isPinned, true)
         ))
-        .orderBy(desc(posts.isPinned), desc(posts.createdAt))
+        .orderBy(desc(userPosts.isPinned), desc(userPosts.createdAt))
         .limit(50);
 
       // Check if current user liked each post
@@ -7032,11 +7031,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [newPost] = await db
-        .insert(posts)
+        .insert(userPosts)
         .values({
           content: content.trim(),
-          authorId: req.user!.id,
-          images: imageUrls.length > 0 ? imageUrls : [],
+          userId: req.user!.id,
+          imageUrls: imageUrls.length > 0 ? imageUrls : [],
           visibility: visibility,
           isPinned: false,
         })
@@ -7045,12 +7044,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get post with author info
       const [postWithAuthor] = await db
         .select({
-          id: posts.id,
-          content: posts.content,
-          images: posts.images,
-          visibility: posts.visibility,
-          isPinned: posts.isPinned,
-          createdAt: posts.createdAt,
+          id: userPosts.id,
+          content: userPosts.content,
+          images: userPosts.imageUrls,
+          visibility: userPosts.visibility,
+          isPinned: userPosts.isPinned,
+          createdAt: userPosts.createdAt,
           author: {
             id: users.id,
             fullName: users.fullName,
@@ -7061,9 +7060,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             comments: sql<number>`0`,
           },
         })
-        .from(posts)
-        .innerJoin(users, eq(posts.authorId, users.id))
-        .where(eq(posts.id, newPost.id));
+        .from(userPosts)
+        .innerJoin(users, eq(userPosts.userId, users.id))
+        .where(eq(userPosts.id, newPost.id));
 
       res.status(201).json({
         ...postWithAuthor,
@@ -7081,26 +7080,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postsData = await db
         .select({
-          id: posts.id,
-          content: posts.content,
-          images: posts.images,
-          visibility: posts.visibility,
-          isPinned: posts.isPinned,
-          createdAt: posts.createdAt,
+          id: userPosts.id,
+          content: userPosts.content,
+          images: userPosts.imageUrls,
+          visibility: userPosts.visibility,
+          isPinned: userPosts.isPinned,
+          createdAt: userPosts.createdAt,
           author: {
             id: users.id,
             fullName: users.fullName,
             avatarUrl: users.avatarUrl,
           },
           _count: {
-            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
-            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${userPosts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${userPosts.id})`,
           },
         })
-        .from(posts)
-        .innerJoin(users, eq(posts.authorId, users.id))
-        .where(eq(posts.authorId, req.user!.id))
-        .orderBy(desc(posts.createdAt));
+        .from(userPosts)
+        .innerJoin(users, eq(userPosts.userId, users.id))
+        .where(eq(userPosts.userId, req.user!.id))
+        .orderBy(desc(userPosts.createdAt));
 
       res.json(postsData);
     } catch (error) {
@@ -7120,14 +7119,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if post exists and belongs to user (or user is admin)
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId));
       
       if (!post) {
         return res.status(404).json({ message: "Bài viết không tồn tại" });
       }
 
       const isAdmin = req.user!.permissions.includes('system:admin');
-      if (post.authorId !== userId && !isAdmin) {
+      if (post.userId !== userId && !isAdmin) {
         return res.status(403).json({ message: "Bạn không có quyền xóa bài viết này" });
       }
 
@@ -7136,7 +7135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(postComments).where(eq(postComments.postId, postId));
       
       // Delete the post
-      await db.delete(posts).where(eq(posts.id, postId));
+      await db.delete(userPosts).where(eq(userPosts.id, postId));
 
       res.json({ message: "Đã xóa bài viết thành công" });
     } catch (error) {
@@ -7156,7 +7155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if post exists
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId));
       if (!post) {
         return res.status(404).json({ message: "Bài viết không tồn tại" });
       }
@@ -7180,7 +7179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             likes: sql`${posts.likes} - 1`,
             updatedAt: new Date()
           })
-          .where(eq(posts.id, postId));
+          .where(eq(userPosts.id, postId));
 
         res.json({ message: "Đã bỏ thích bài viết", liked: false });
       } else {
@@ -7194,7 +7193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             likes: sql`${posts.likes} + 1`,
             updatedAt: new Date()
           })
-          .where(eq(posts.id, postId));
+          .where(eq(userPosts.id, postId));
 
         res.json({ message: "Đã thích bài viết", liked: true });
       }
@@ -7220,7 +7219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if post exists
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId));
       if (!post) {
         return res.status(404).json({ message: "Bài viết không tồn tại" });
       }
@@ -7241,7 +7240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           comments: sql`${posts.comments} + 1`,
           updatedAt: new Date()
         })
-        .where(eq(posts.id, postId));
+        .where(eq(userPosts.id, postId));
 
       // Get comment with author info
       const [commentWithAuthor] = await db
@@ -7285,7 +7284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if post exists
-      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      const [post] = await db.select().from(userPosts).where(eq(userPosts.id, postId));
       if (!post) {
         return res.status(404).json({ message: "Bài viết không tồn tại" });
       }
@@ -7294,8 +7293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isPinned) {
         const pinnedPostsCount = await db
           .select({ count: sql<number>`count(*)` })
-          .from(posts)
-          .where(eq(posts.isPinned, true));
+          .from(userPosts)
+          .where(eq(userPosts.isPinned, true));
 
         if (pinnedPostsCount[0]?.count >= 3) {
           return res.status(400).json({ message: "Chỉ được ghim tối đa 3 bài viết" });
@@ -7308,7 +7307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isPinned: isPinned,
           updatedAt: new Date()
         })
-        .where(eq(posts.id, postId));
+        .where(eq(userPosts.id, postId));
 
       res.json({ message: isPinned ? "Đã ghim bài viết" : "Đã bỏ ghim bài viết" });
     } catch (error) {
