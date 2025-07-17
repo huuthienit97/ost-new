@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -231,6 +231,9 @@ export default function NotificationTemplatesPage() {
                 <DialogTitle>
                   {editingTemplate ? "Chỉnh sửa mẫu thông báo" : "Tạo mẫu thông báo mới"}
                 </DialogTitle>
+                <DialogDescription>
+                  Tạo hoặc chỉnh sửa mẫu thông báo cho hệ thống. Sử dụng các biến như {"{userName}"}, {"{missionName}"}, {"{points}"} để cá nhân hóa thông báo.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -394,6 +397,9 @@ export default function NotificationTemplatesPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test thông báo</DialogTitle>
+              <DialogDescription>
+                Gửi thông báo thử nghiệm từ mẫu đã chọn đến người dùng cụ thể.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
