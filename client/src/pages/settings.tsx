@@ -140,16 +140,20 @@ export default function SettingsPage() {
         ...settings.notifications,
         [key]: value,
       },
+      privacy: settings.privacy,
+      preferences: settings.preferences,
     });
   };
 
   const handlePrivacyChange = (key: string, value: any) => {
     if (!settings) return;
     updateSettingsMutation.mutate({
+      notifications: settings.notifications,
       privacy: {
         ...settings.privacy,
         [key]: value,
       },
+      preferences: settings.preferences,
     });
   };
 

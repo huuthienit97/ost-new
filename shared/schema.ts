@@ -790,7 +790,7 @@ export const userSettings = pgTable("user_settings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   
-  // Notification preferences
+  // Notification preferences - all enabled by default
   emailNotifications: boolean("email_notifications").default(true),
   pushNotifications: boolean("push_notifications").default(true), 
   missionNotifications: boolean("mission_notifications").default(true),

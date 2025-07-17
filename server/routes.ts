@@ -2675,7 +2675,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      res.json({ message: "Cài đặt đã được lưu thành công" });
+      res.json({ 
+        message: "Cài đặt đã được lưu thành công",
+        success: true 
+      });
     } catch (error) {
       console.error("Error updating settings:", error);
       res.status(500).json({ message: "Lỗi lưu cài đặt" });
