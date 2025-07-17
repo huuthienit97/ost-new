@@ -2587,8 +2587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Settings API endpoints - accessible by all authenticated users
-  app.get("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+  // User Settings API endpoints - accessible by all authenticated users
+  app.get("/api/user-settings", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       
@@ -2629,12 +2629,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(settings);
     } catch (error) {
-      console.error("Error fetching settings:", error);
-      res.status(500).json({ message: "Lỗi lấy cài đặt" });
+      console.error("Error fetching user settings:", error);
+      res.status(500).json({ message: "Lỗi lấy cài đặt cá nhân" });
     }
   });
 
-  app.put("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/user-settings", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const { notifications, privacy, preferences } = req.body;

@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
   // Fetch user settings
   const { data: settings, isLoading } = useQuery<UserSettings>({
-    queryKey: ["/api/settings"],
+    queryKey: ["/api/user-settings"],
     enabled: !!user,
     staleTime: 0,
     retry: 3,
@@ -69,13 +69,13 @@ export default function SettingsPage() {
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: Partial<UserSettings>) => {
-      return apiRequest("/api/settings", {
+      return apiRequest("/api/user-settings", {
         method: "PUT",
         body: JSON.stringify(data),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-settings"] });
       toast({ title: "Đã lưu cài đặt!" });
     },
     onError: () => {
