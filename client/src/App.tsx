@@ -12,6 +12,7 @@ import MembersPage from "@/pages/members";
 import AdminPage from "@/pages/admin";
 import ApiKeysPage from "@/pages/api-keys";
 import SettingsPage from "@/pages/settings";
+import NewsfeedPage from "@/pages/newsfeed";
 import LoginPage from "@/pages/login";
 import ChangePasswordPage from "@/pages/change-password";
 import ProfilePage from "@/pages/profile";
@@ -90,6 +91,7 @@ function Router() {
           <Route path="/chat" component={ChatPage} />
           <Route path="/friends" component={UserDiscovery} />
           <Route path="/profile/:userId" component={UserProfile} />
+          <Route path="/newsfeed" component={NewsfeedPage} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>

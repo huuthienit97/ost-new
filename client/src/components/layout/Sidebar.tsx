@@ -37,8 +37,10 @@ import {
   Bell,
   MessageCircle,
   UserPlus,
-  Search
+  Search,
+  Newspaper
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SidebarProps {
   className?: string;
@@ -78,6 +80,11 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Trang chủ",
       href: "/",
       icon: Home,
+    },
+    {
+      title: "Bảng tin",
+      href: "/newsfeed",
+      icon: Newspaper,
     },
     {
       title: "Thành viên",
@@ -299,11 +306,12 @@ export function Sidebar({ className }: SidebarProps) {
       {/* User Info */}
       <div className="border-b p-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">
+          <Avatar className="w-10 h-10">
+            <AvatarImage src={user?.avatarUrl} alt={user?.fullName || user?.username} />
+            <AvatarFallback className="bg-blue-500 text-white text-sm font-medium">
               {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2) : "U"}
-            </span>
-          </div>
+            </AvatarFallback>
+          </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user?.fullName}</p>
@@ -361,9 +369,12 @@ export function Sidebar({ className }: SidebarProps) {
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">
-                        {result.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </div>
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={result.avatarUrl} alt={result.fullName} />
+                        <AvatarFallback className="bg-blue-500 text-white text-xs">
+                          {result.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <p className="text-sm font-medium">{result.fullName}</p>
                         <p className="text-xs text-gray-500">@{result.username}</p>

@@ -6237,6 +6237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Người dùng không tồn tại" });
       }
 
+      console.log("Found user:", user);
+
       // Check if this is own profile
       const isOwnProfile = user.id === currentUserId;
       
@@ -6882,6 +6884,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending test notification:", error);
       res.status(500).json({ message: "Lỗi gửi thông báo test" });
+    }
+  });
+
+  // ===== NEWSFEED API =====
+  
+  // Get newsfeed posts (public posts ordered by creation, with pinned first)
+  app.get("/api/posts/newsfeed", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postsData = await db
+        .select({
+          id: posts.id,
+          content: posts.content,
+          imageUrls: posts.imageUrls,
+          likesCount: posts.likes,
+          commentsCount: posts.comments,
+          isPublic: posts.isPublic,
+          createdAt: posts.createdAt,
+          author: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.userId, users.id))
+        .where(eq(posts.isPublic, true))
+        .orderBy(desc(posts.createdAt))
+        .limit(50);
+
+      // Check if current user liked each post
+      const postIds = postsData.map(p => p.id);
+      const likes = postIds.length > 0 ? await db
+        .select({ postId: postLikes.postId })
+        .from(postLikes)
+        .where(
+          and(
+            inArray(postLikes.postId, postIds),
+            eq(postLikes.userId, req.user!.id)
+          )
+        ) : [];
+
+      const likedPostIds = new Set(likes.map(l => l.postId));
+
+      // Get latest comments for each post (up to 3)
+      const commentsData = postIds.length > 0 ? await db
+        .select({
+          id: postComments.id,
+          content: postComments.content,
+          postId: postComments.postId,
+          createdAt: postComments.createdAt,
+          author: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+        })
+        .from(postComments)
+        .innerJoin(users, eq(postComments.userId, users.id))
+        .where(inArray(postComments.postId, postIds))
+        .orderBy(desc(postComments.createdAt))
+        .limit(150) : [];
+
+      // Group comments by post (max 3 per post)
+      const commentsByPost = new Map<number, any[]>();
+      commentsData.forEach(comment => {
+        if (!commentsByPost.has(comment.postId)) {
+          commentsByPost.set(comment.postId, []);
+        }
+        if (commentsByPost.get(comment.postId)!.length < 3) {
+          commentsByPost.get(comment.postId)!.push(comment);
+        }
+      });
+
+      const postsWithInteractions = postsData.map(post => ({
+        ...post,
+        isLiked: likedPostIds.has(post.id),
+        comments: commentsByPost.get(post.id) || [],
+        isPinned: false, // TODO: Add pinned logic when admin feature added
+      }));
+
+      res.json(postsWithInteractions);
+    } catch (error) {
+      console.error("Error fetching newsfeed:", error);
+      res.status(500).json({ message: "Lỗi lấy bảng tin" });
+    }
+  });
+
+  // Create new post
+  app.post("/api/posts", authenticate, upload.array('images', 5), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content, isPublic = true } = req.body;
+      const files = req.files as Express.Multer.File[];
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Nội dung bài viết không được để trống" });
+      }
+
+      // Handle image uploads
+      let imageUrls: string[] = [];
+      if (files && files.length > 0) {
+        imageUrls = files.map(file => `/uploads/${file.filename}`);
+      }
+
+      const [newPost] = await db
+        .insert(posts)
+        .values({
+          content: content.trim(),
+          userId: req.user!.id,
+          imageUrls: imageUrls.length > 0 ? imageUrls : [],
+          isPublic: isPublic === 'true' || isPublic === true,
+          likes: 0,
+          comments: 0,
+        })
+        .returning();
+
+      res.status(201).json(newPost);
+    } catch (error) {
+      console.error("Error creating post:", error);
+      res.status(500).json({ message: "Lỗi tạo bài viết" });
+    }
+  });
+
+  // Like/unlike post
+  app.post("/api/posts/:postId/like", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const userId = req.user!.id;
+
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+
+      // Check if post exists
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      if (!post) {
+        return res.status(404).json({ message: "Bài viết không tồn tại" });
+      }
+
+      // Check if user already liked the post
+      const [existingLike] = await db
+        .select()
+        .from(postLikes)
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+
+      if (existingLike) {
+        // Unlike the post
+        await db
+          .delete(postLikes)
+          .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+
+        // Decrease likes count
+        await db
+          .update(posts)
+          .set({ 
+            likes: sql`${posts.likes} - 1`,
+            updatedAt: new Date()
+          })
+          .where(eq(posts.id, postId));
+
+        res.json({ message: "Đã bỏ thích bài viết", liked: false });
+      } else {
+        // Like the post
+        await db.insert(postLikes).values({ postId, userId });
+
+        // Increase likes count
+        await db
+          .update(posts)
+          .set({ 
+            likes: sql`${posts.likes} + 1`,
+            updatedAt: new Date()
+          })
+          .where(eq(posts.id, postId));
+
+        res.json({ message: "Đã thích bài viết", liked: true });
+      }
+    } catch (error) {
+      console.error("Error liking post:", error);
+      res.status(500).json({ message: "Lỗi thích bài viết" });
+    }
+  });
+
+  // Add comment to post
+  app.post("/api/posts/:postId/comments", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      const { content } = req.body;
+      const userId = req.user!.id;
+
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "ID bài viết không hợp lệ" });
+      }
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Nội dung bình luận không được để trống" });
+      }
+
+      // Check if post exists
+      const [post] = await db.select().from(posts).where(eq(posts.id, postId));
+      if (!post) {
+        return res.status(404).json({ message: "Bài viết không tồn tại" });
+      }
+
+      const [newComment] = await db
+        .insert(postComments)
+        .values({
+          content: content.trim(),
+          postId,
+          userId,
+        })
+        .returning();
+
+      // Increase comments count
+      await db
+        .update(posts)
+        .set({ 
+          comments: sql`${posts.comments} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(posts.id, postId));
+
+      // Get comment with author info
+      const [commentWithAuthor] = await db
+        .select({
+          id: postComments.id,
+          content: postComments.content,
+          postId: postComments.postId,
+          createdAt: postComments.createdAt,
+          author: {
+            id: users.id,
+            username: users.username,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+        })
+        .from(postComments)
+        .innerJoin(users, eq(postComments.userId, users.id))
+        .where(eq(postComments.id, newComment.id));
+
+      res.status(201).json(commentWithAuthor);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ message: "Lỗi thêm bình luận" });
     }
   });
 
