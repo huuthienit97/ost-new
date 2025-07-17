@@ -123,6 +123,15 @@ export function Sidebar({ className }: SidebarProps) {
     },
   ];
 
+  const postManagementItems: NavItem[] = [
+    {
+      title: "Quản lý bài viết",
+      href: "/post-management", 
+      icon: FileText,
+      adminOnly: true,
+    },
+  ];
+
   const adminNavItems: NavItem[] = [
     {
       title: "Quản lý nhiệm vụ",
@@ -392,6 +401,7 @@ export function Sidebar({ className }: SidebarProps) {
       <ScrollArea className="flex-1">
         <nav className="flex-1 space-y-2 py-4">
           <NavSection title="Chính" items={mainNavItems} />
+          <NavSection title="Bài viết" items={postManagementItems} />
           <NavSection title="Quản lý" items={adminNavItems} />
           <NavSection title="Hệ thống" items={systemNavItems} />
         </nav>

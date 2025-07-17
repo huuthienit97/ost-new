@@ -6245,8 +6245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get posts count
       const [postsCountResult] = await db
         .select({ count: sql<number>`count(*)` })
-        .from(userPosts)
-        .where(eq(userPosts.authorId, user.id));
+        .from(posts)
+        .where(eq(posts.authorId, user.id));
       const postsCount = postsCountResult?.count || 0;
       
       // Get friends count
@@ -6889,6 +6889,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== NEWSFEED API =====
   
+  // Admin route to get all posts for management
+  app.get("/api/admin/posts", authenticate, authorize([PERMISSIONS.SYSTEM_ADMIN]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const allPosts = await db
+        .select({
+          id: posts.id,
+          content: posts.content,
+          images: posts.images,
+          visibility: posts.visibility,
+          isPinned: posts.isPinned,
+          pinnedAt: posts.pinnedAt,
+          createdAt: posts.createdAt,
+          author: {
+            id: users.id,
+            fullName: users.fullName,
+            avatarUrl: users.avatarUrl,
+          },
+          _count: {
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+          },
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.authorId, users.id))
+        .orderBy(desc(posts.isPinned), desc(posts.createdAt));
+
+      res.json(allPosts);
+    } catch (error) {
+      console.error("Error fetching admin posts:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách bài viết" });
+    }
+  });
+
   // Get newsfeed posts (public posts ordered by creation, with pinned first)
   app.get("/api/posts/newsfeed", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
@@ -6896,20 +6929,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           id: posts.id,
           content: posts.content,
-          imageUrls: posts.imageUrls,
-          likesCount: posts.likes,
-          commentsCount: posts.comments,
-          isPublic: posts.isPublic,
+          images: posts.images,
+          visibility: posts.visibility,
+          isPinned: posts.isPinned,
           createdAt: posts.createdAt,
           author: {
             id: users.id,
-            username: users.username,
             fullName: users.fullName,
             avatarUrl: users.avatarUrl,
           },
+          _count: {
+            likes: sql<number>`(SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id})`,
+            comments: sql<number>`(SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id})`,
+          },
         })
         .from(posts)
-        .innerJoin(users, eq(posts.userId, users.id))
+        .innerJoin(users, eq(posts.authorId, users.id))
         .where(or(
           eq(posts.visibility, "public"),
           eq(posts.isPinned, true)

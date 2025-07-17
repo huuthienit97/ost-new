@@ -37,6 +37,7 @@ import ChatPage from "@/pages/chat";
 import GuestChatPage from "@/pages/guest-chat";
 import UserDiscovery from "@/pages/user-discovery";
 import UserProfile from "@/pages/user-profile";
+import PostManagement from "@/pages/post-management";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -92,6 +93,7 @@ function Router() {
           <Route path="/friends" component={UserDiscovery} />
           <Route path="/profile/:userId" component={UserProfile} />
           <Route path="/newsfeed" component={NewsfeedPage} />
+          <Route path="/post-management" component={PostManagement} />
           <Route path="/change-password" component={ChangePasswordPage} />
           <Route component={HomePage} />
         </>
