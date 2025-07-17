@@ -142,8 +142,11 @@ export default function UserDiscovery() {
 
   // Create chat with friend mutation
   const createChatMutation = useMutation({
-    mutationFn: async (friendId: number) =>
-      apiRequest(`/api/users/chat/${friendId}`, "POST"),
+    mutationFn: async (friendId: number) => {
+      return apiRequest(`/api/users/chat/${friendId}`, {
+        method: "POST",
+      });
+    },
     onSuccess: (room) => {
       toast({ title: "Thành công", description: "Đã tạo cuộc trò chuyện" });
       // Navigate to chat room (you can implement navigation here)

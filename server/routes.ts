@@ -5460,6 +5460,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create private chat with user
+  app.post("/api/users/chat/:userId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const targetUserId = parseInt(req.params.userId);
+      const currentUserId = req.user!.id;
+
+      if (isNaN(targetUserId) || targetUserId === currentUserId) {
+        return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+      }
+
+      // Check if target user exists
+      const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId));
+      if (!targetUser) {
+        return res.status(404).json({ message: "Người dùng không tồn tại" });
+      }
+
+      // Check if they are friends
+      const [connection] = await db
+        .select()
+        .from(userConnections)
+        .where(
+          and(
+            or(
+              and(
+                eq(userConnections.requesterId, currentUserId),
+                eq(userConnections.addresseeId, targetUserId)
+              ),
+              and(
+                eq(userConnections.requesterId, targetUserId),
+                eq(userConnections.addresseeId, currentUserId)
+              )
+            ),
+            eq(userConnections.status, "accepted")
+          )
+        );
+
+      if (!connection) {
+        return res.status(403).json({ message: "Bạn chỉ có thể nhắn tin với bạn bè" });
+      }
+
+      const room = await chatService.createPrivateRoom(currentUserId, targetUserId);
+      res.json(room);
+    } catch (error) {
+      console.error("Error creating private chat:", error);
+      res.status(500).json({ message: "Lỗi khi tạo cuộc trò chuyện" });
+    }
+  });
+
   // Get or create private chat room
   app.post("/api/chat/rooms/private", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
