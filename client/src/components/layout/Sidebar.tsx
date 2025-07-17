@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
@@ -34,7 +35,8 @@ import {
   LayoutGrid,
   Bell,
   MessageCircle,
-  UserPlus
+  UserPlus,
+  Search
 } from "lucide-react";
 
 interface SidebarProps {
@@ -54,6 +56,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { user, hasPermission, logout } = useAuth();
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [friendSearchQuery, setFriendSearchQuery] = useState("");
 
   // Fetch user's BeePoints separately
   const { data: beePoints } = useQuery({
@@ -78,7 +81,7 @@ export function Sidebar({ className }: SidebarProps) {
       icon: MessageCircle,
     },
     {
-      title: "Kết bạn",
+      title: "Bạn bè",
       href: "/friends",
       icon: UserPlus,
     },
@@ -308,6 +311,26 @@ export function Sidebar({ className }: SidebarProps) {
           </div>
         )}
       </div>
+
+      {/* Quick Friend Search */}
+      {!collapsed && (
+        <div className="border-b p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Tìm bạn bè..."
+              value={friendSearchQuery}
+              onChange={(e) => setFriendSearchQuery(e.target.value)}
+              className="pl-10 h-8"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && friendSearchQuery.trim()) {
+                  window.location.href = `/friends?search=${encodeURIComponent(friendSearchQuery.trim())}`;
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <ScrollArea className="flex-1">

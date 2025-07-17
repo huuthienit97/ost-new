@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -41,6 +41,17 @@ export default function UserDiscovery() {
   const [connectMessage, setConnectMessage] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check for search query from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchFromUrl = urlParams.get('search');
+    if (searchFromUrl) {
+      setSearchTerm(searchFromUrl);
+      // Clean URL after setting search term
+      window.history.replaceState({}, '', '/friends');
+    }
+  }, []);
 
   // Search users
   const { data: searchResults, isLoading: searchLoading } = useQuery({
@@ -124,12 +135,18 @@ export default function UserDiscovery() {
       });
     },
     onSuccess: (data, variables) => {
+      const wasAccepted = variables.action === "accept";
       toast({
         title: "Thành công",
-        description: variables.action === "accept" ? "Đã chấp nhận lời mời" : "Đã từ chối lời mời",
+        description: wasAccepted ? "Đã chấp nhận lời mời" : "Đã từ chối lời mời",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users/friends"] });
+      
+      // If accepted, automatically create chat room (like Facebook UX)
+      if (wasAccepted && data.requester) {
+        createChatMutation.mutate(data.requester.id);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -149,8 +166,8 @@ export default function UserDiscovery() {
     },
     onSuccess: (room) => {
       toast({ title: "Thành công", description: "Đã tạo cuộc trò chuyện" });
-      // Navigate to chat room (you can implement navigation here)
-      console.log("Created chat room:", room);
+      // Auto-redirect to chat page with the new room
+      window.location.href = `/chat?roomId=${room.id}`;
     },
     onError: (error: any) => {
       toast({
@@ -184,7 +201,7 @@ export default function UserDiscovery() {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-2 mb-6">
           <Users className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Khám phá & Kết bạn</h1>
+          <h1 className="text-2xl font-bold">Bạn bè</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

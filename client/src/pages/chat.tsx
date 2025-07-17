@@ -57,6 +57,7 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,16 +75,37 @@ export default function ChatPage() {
     enabled: !isSearching || (isSearching && searchQuery.trim().length > 0),
   });
 
-  // Auto-select first room when rooms are loaded
+  // Auto-select first room when rooms are loaded, or select room from URL params
   useEffect(() => {
-    if (rooms.length > 0 && !selectedRoomId) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomIdFromUrl = urlParams.get('roomId');
+    
+    if (roomIdFromUrl) {
+      setSelectedRoomId(parseInt(roomIdFromUrl));
+      // Clean URL after selecting room
+      window.history.replaceState({}, '', '/chat');
+    } else if (rooms.length > 0 && !selectedRoomId) {
       setSelectedRoomId(rooms[0].id);
     }
   }, [rooms, selectedRoomId]);
 
-  // Get available users for new chat
+  // Get current user info for role-based filtering
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
+
+  // Get available users for new chat - filtered based on user role
   const { data: availableUsers = [] } = useQuery<User[]>({
     queryKey: ["/api/chat/users"],
+    queryFn: async () => {
+      // If admin, show all users, otherwise show only friends
+      if (currentUser?.user?.permissions?.includes('system:admin')) {
+        return apiRequest("/api/chat/users");
+      } else {
+        return apiRequest("/api/users/friends");
+      }
+    },
+    enabled: !!currentUser,
   });
 
   // Get messages for selected room - using different approach
@@ -263,7 +285,15 @@ export default function ChatPage() {
 
   const handleCreateChat = () => {
     if (!selectedUserId) return;
-    createRoomMutation.mutate(parseInt(selectedUserId));
+    const userId = parseInt(selectedUserId);
+    
+    // Check if available user is from friends list (has friend property) or direct user
+    const selectedUserData = availableUsers.find(u => 
+      u.id?.toString() === selectedUserId || u.friend?.id?.toString() === selectedUserId
+    );
+    
+    const targetUserId = selectedUserData?.friend?.id || selectedUserData?.id || userId;
+    createRoomMutation.mutate(targetUserId);
   };
 
   const handleDeleteChat = (roomId: number) => {
@@ -332,10 +362,10 @@ export default function ChatPage() {
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarFallback className="text-xs">
-                                {getInitials(user.fullName)}
+                                {getInitials(user.fullName || user.friend?.fullName || "U")}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{user.fullName}</span>
+                            <span>{user.fullName || user.friend?.fullName || "Unknown"}</span>
                           </div>
                         </SelectItem>
                       ))}
