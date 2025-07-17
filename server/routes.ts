@@ -734,7 +734,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fullName: userWithRole.fullName,
           role: userWithRole.role,
           mustChangePassword: userWithRole.mustChangePassword,
-          avatarUrl: userWithRole.avatarUrl,
+          avatarUrl: userWithRole.avatarUrl && !userWithRole.avatarUrl.startsWith('/uploads/') 
+            ? `/uploads/${userWithRole.avatarUrl}` 
+            : userWithRole.avatarUrl,
           bio: userWithRole.bio,
           phone: userWithRole.phone,
           facebookUrl: userWithRole.facebookUrl,
@@ -6190,8 +6192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get posts count
       const [postsCountResult] = await db
         .select({ count: sql<number>`count(*)` })
-        .from(posts)
-        .where(eq(posts.userId, user.id));
+        .from(userPosts)
+        .where(eq(userPosts.authorId, user.id));
       const postsCount = postsCountResult?.count || 0;
       
       // Get friends count
@@ -6247,6 +6249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         ...user,
+        avatarUrl: user.avatarUrl ? `/uploads/${user.avatarUrl}` : null,
         isOwnProfile,
         isFriend,
         connectionStatus,

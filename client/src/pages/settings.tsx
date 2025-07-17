@@ -62,6 +62,8 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useQuery<UserSettings>({
     queryKey: ["/api/settings"],
     enabled: !!user,
+    staleTime: 0,
+    retry: 3,
   });
 
   // Update settings mutation
@@ -231,7 +233,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Nhận thông báo qua email</p>
                   </div>
                   <Switch 
-                    checked={settings?.notifications.email || false}
+                    checked={settings?.notifications?.email || false}
                     onCheckedChange={(checked) => handleNotificationChange('email', checked)}
                   />
                 </div>
@@ -241,7 +243,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Nhận thông báo trên trình duyệt</p>
                   </div>
                   <Switch 
-                    checked={settings?.notifications.push || false}
+                    checked={settings?.notifications?.push || false}
                     onCheckedChange={(checked) => handleNotificationChange('push', checked)}
                   />
                 </div>
@@ -251,7 +253,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Thông báo về nhiệm vụ mới và hoàn thành</p>
                   </div>
                   <Switch 
-                    checked={settings?.notifications.missions || false}
+                    checked={settings?.notifications?.missions || false}
                     onCheckedChange={(checked) => handleNotificationChange('missions', checked)}
                   />
                 </div>
@@ -261,7 +263,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Thông báo về thành tích mới</p>
                   </div>
                   <Switch 
-                    checked={settings?.notifications.achievements || false}
+                    checked={settings?.notifications?.achievements || false}
                     onCheckedChange={(checked) => handleNotificationChange('achievements', checked)}
                   />
                 </div>
@@ -271,7 +273,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Thông báo về bạn bè và tương tác</p>
                   </div>
                   <Switch 
-                    checked={settings?.notifications.social || false}
+                    checked={settings?.notifications?.social || false}
                     onCheckedChange={(checked) => handleNotificationChange('social', checked)}
                   />
                 </div>
@@ -290,7 +292,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-500 mb-2">Ai có thể xem hồ sơ của bạn?</p>
                   <select 
                     className="w-full p-2 border rounded"
-                    value={settings?.privacy.profileVisibility || 'public'}
+                    value={settings?.privacy?.profileVisibility || 'public'}
                     onChange={(e) => handlePrivacyChange('profileVisibility', e.target.value)}
                   >
                     <option value="public">Công khai</option>
@@ -304,7 +306,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Cho phép người khác xem email của bạn</p>
                   </div>
                   <Switch 
-                    checked={settings?.privacy.showEmail || false}
+                    checked={settings?.privacy?.showEmail || false}
                     onCheckedChange={(checked) => handlePrivacyChange('showEmail', checked)}
                   />
                 </div>
@@ -314,7 +316,7 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Cho phép người khác xem số điện thoại của bạn</p>
                   </div>
                   <Switch 
-                    checked={settings?.privacy.showPhone || false}
+                    checked={settings?.privacy?.showPhone || false}
                     onCheckedChange={(checked) => handlePrivacyChange('showPhone', checked)}
                   />
                 </div>

@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { updateUserProfileSchema, UpdateUserProfile } from "@shared/schema";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   User, 
   Camera, 
@@ -50,8 +52,10 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: UpdateUserProfile) => {
-      const response = await apiRequest("PUT", "/api/auth/profile", data);
-      return response.json();
+      return apiRequest("/api/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
@@ -208,8 +212,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="space-y-6">
+    <AppLayout>
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <User className="h-8 w-8 text-primary" />
           <div>
@@ -525,7 +530,8 @@ export default function ProfilePage() {
             </Card>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
