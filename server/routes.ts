@@ -5730,10 +5730,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'friend_request_cancelled',
             connectionId: deletedConnection.id,
             requesterId: currentUserId,
-            requesterName: req.user!.fullName || req.user!.username
+            requesterName: req.user!.fullName || req.user!.username,
+            action: 'cancelled'
           }
         });
       }
+
+      // Send cache refresh notification to requester
+      await notificationService.createNotification(currentUserId, {
+        title: "Cache Refresh",
+        message: "Friend request status updated",
+        type: 'info',
+        priority: 'low',
+        targetType: 'user',
+        targetIds: [currentUserId.toString()],
+        metadata: {
+          type: 'cache_refresh',
+          action: 'friend_request_cancelled',
+          targetUserId: deletedConnection.addresseeId
+        }
+      });
 
       res.json({ 
         message: "Đã hủy lời mời kết bạn thành công"
@@ -5798,7 +5814,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           connectionId: connection.id,
           requesterId: req.user!.id,
           requesterName: req.user!.fullName || req.user!.username,
-          requesterAvatar: req.user!.avatarUrl
+          requesterAvatar: req.user!.avatarUrl,
+          action: 'sent'
+        }
+      });
+
+      // Also send cache refresh notification to requester
+      await notificationService.createNotification(req.user!.id, {
+        title: "Cache Refresh",
+        message: "Friend request status updated",
+        type: 'info',
+        priority: 'low',
+        targetType: 'user',
+        targetIds: [req.user!.id.toString()],
+        metadata: {
+          type: 'cache_refresh',
+          action: 'friend_request_sent',
+          targetUserId: userId
         }
       });
 
@@ -5871,7 +5903,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           responseAction: action,
           responderId: req.user!.id,
           responderName: req.user!.fullName || req.user!.username,
-          responderAvatar: req.user!.avatarUrl
+          responderAvatar: req.user!.avatarUrl,
+          action: action
+        }
+      });
+
+      // Send cache refresh notification to responder
+      await notificationService.createNotification(req.user!.id, {
+        title: "Cache Refresh",
+        message: "Friend request status updated",
+        type: 'info',
+        priority: 'low',
+        targetType: 'user',
+        targetIds: [req.user!.id.toString()],
+        metadata: {
+          type: 'cache_refresh',
+          action: `friend_request_${action}`,
+          targetUserId: connection.requesterId
         }
       });
 

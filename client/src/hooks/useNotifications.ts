@@ -80,6 +80,13 @@ export function useNotifications() {
               queryClient.invalidateQueries({ queryKey: ['/api/users/requests'] });
               queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
               queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
+            } else if (notification.metadata?.type === 'cache_refresh') {
+              // Silent cache refresh notification - no toast, just invalidate cache
+              console.log('Cache refresh notification:', notification.metadata);
+              queryClient.invalidateQueries({ queryKey: ['/api/users/search'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/profile'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/requests'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/users/friends'] });
             } else {
               // General notifications
               toast({
