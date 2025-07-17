@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { db } from "./db";
-import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages } from "@shared/schema";
+import { users, members, beePoints, pointTransactions, achievements, userAchievements, departments, positions, divisions, academicYears, statistics, missions, missionAssignments, missionSubmissions, uploads, shopProducts, shopOrders, shopCategories, roles, notifications, notificationStatus, userConnections, chatRooms, chatRoomMembers, chatMessages, notificationTemplates } from "@shared/schema";
 import { userPosts as posts, postLikes, postComments } from "@shared/posts-schema";
-import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS } from "@shared/schema";
+import { createMemberSchema, insertMemberSchema, createUserSchema, createRoleSchema, updateUserProfileSchema, createAchievementSchema, awardAchievementSchema, insertMissionSchema, insertMissionAssignmentSchema, insertMissionSubmissionSchema, insertNotificationSchema, insertShopCategorySchema, insertShopProductSchema, insertShopOrderSchema, insertBeePointTransactionSchema, PERMISSIONS, insertNotificationTemplateSchema } from "@shared/schema";
 import { authenticate, authorize, hashPassword, verifyPassword, generateToken, AuthenticatedRequest } from "./auth";
 import { z } from "zod";
 import { eq, and, desc, ilike, or, isNotNull, isNull, sql, gte, lte, ne, not, inArray, asc, like, count } from "drizzle-orm";
@@ -6556,6 +6556,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating chat with friend:", error);
       res.status(500).json({ message: "Lỗi tạo chat với bạn bè" });
+    }
+  });
+
+  // Notification Templates
+  /**
+   * @swagger
+   * /api/notification-templates:
+   *   get:
+   *     tags: [Notification Templates]
+   *     summary: Lấy danh sách mẫu thông báo
+   *     description: Lấy tất cả mẫu thông báo (admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Danh sách mẫu thông báo
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   */
+  app.get("/api/notification-templates", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const templates = await db.select().from(notificationTemplates).orderBy(desc(notificationTemplates.createdAt));
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching notification templates:", error);
+      res.status(500).json({ message: "Lỗi lấy danh sách mẫu thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notification-templates:
+   *   post:
+   *     tags: [Notification Templates]
+   *     summary: Tạo mẫu thông báo mới
+   *     description: Tạo mẫu thông báo mới (admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   */
+  app.post("/api/notification-templates", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const validationResult = insertNotificationTemplateSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Dữ liệu không hợp lệ",
+          errors: validationResult.error.issues
+        });
+      }
+
+      const [template] = await db.insert(notificationTemplates).values(validationResult.data).returning();
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating notification template:", error);
+      res.status(500).json({ message: "Lỗi tạo mẫu thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notification-templates/{id}:
+   *   put:
+   *     tags: [Notification Templates]
+   *     summary: Cập nhật mẫu thông báo
+   *     description: Cập nhật mẫu thông báo (admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   */
+  app.put("/api/notification-templates/:id", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const validationResult = insertNotificationTemplateSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Dữ liệu không hợp lệ",
+          errors: validationResult.error.issues
+        });
+      }
+
+      const [updatedTemplate] = await db.update(notificationTemplates)
+        .set({ ...validationResult.data, updatedAt: new Date() })
+        .where(eq(notificationTemplates.id, templateId))
+        .returning();
+
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Không tìm thấy mẫu thông báo" });
+      }
+
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error updating notification template:", error);
+      res.status(500).json({ message: "Lỗi cập nhật mẫu thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notification-templates/{id}:
+   *   delete:
+   *     tags: [Notification Templates]
+   *     summary: Xóa mẫu thông báo
+   *     description: Xóa mẫu thông báo (admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   */
+  app.delete("/api/notification-templates/:id", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      
+      const [deletedTemplate] = await db.delete(notificationTemplates)
+        .where(eq(notificationTemplates.id, templateId))
+        .returning();
+
+      if (!deletedTemplate) {
+        return res.status(404).json({ message: "Không tìm thấy mẫu thông báo" });
+      }
+
+      res.json({ message: "Đã xóa mẫu thông báo thành công" });
+    } catch (error) {
+      console.error("Error deleting notification template:", error);
+      res.status(500).json({ message: "Lỗi xóa mẫu thông báo" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/notifications/test-template:
+   *   post:
+   *     tags: [Notification Templates]
+   *     summary: Test gửi thông báo từ mẫu
+   *     description: Gửi thông báo test từ mẫu đến người dùng cụ thể (admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               templateId:
+   *                 type: integer
+   *               userId:
+   *                 type: integer
+   */
+  app.post("/api/notifications/test-template", authenticate, authorize(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { templateId, userId } = req.body;
+      
+      if (!templateId || !userId) {
+        return res.status(400).json({ message: "templateId và userId là bắt buộc" });
+      }
+
+      // Get template
+      const [template] = await db.select().from(notificationTemplates).where(eq(notificationTemplates.id, templateId));
+      
+      if (!template) {
+        return res.status(404).json({ message: "Không tìm thấy mẫu thông báo" });
+      }
+
+      // Get user
+      const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      // Replace template variables with test data
+      let title = template.title.replace(/{userName}/g, targetUser.fullName)
+                             .replace(/{missionName}/g, "Test Mission")
+                             .replace(/{points}/g, "10")
+                             .replace(/{achievementName}/g, "Test Achievement");
+                             
+      let content = template.content.replace(/{userName}/g, targetUser.fullName)
+                                  .replace(/{missionName}/g, "Test Mission")
+                                  .replace(/{points}/g, "10")
+                                  .replace(/{achievementName}/g, "Test Achievement");
+
+      // Create notification
+      const [notification] = await db.insert(notifications).values({
+        userId: userId,
+        title: `[TEST] ${title}`,
+        content: content,
+        type: template.type,
+        priority: 'medium',
+        isRead: false,
+        metadata: { test: true, templateId: templateId }
+      }).returning();
+
+      // Update template usage count
+      await db.update(notificationTemplates)
+        .set({ usageCount: sql`${notificationTemplates.usageCount} + 1` })
+        .where(eq(notificationTemplates.id, templateId));
+
+      // Send via WebSocket if user is online
+      notificationWebSocket.sendToUser(userId, {
+        type: 'notification',
+        data: notification
+      });
+
+      res.status(201).json({ message: "Đã gửi thông báo test thành công", notification });
+    } catch (error) {
+      console.error("Error sending test notification:", error);
+      res.status(500).json({ message: "Lỗi gửi thông báo test" });
     }
   });
 

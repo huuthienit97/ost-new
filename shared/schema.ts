@@ -1054,3 +1054,6 @@ export const insertAcademicYearSchema = createInsertSchema(academicYears);
 export const insertPositionSchema = createInsertSchema(positions);
 export const insertDivisionSchema = createInsertSchema(divisions);
 export const insertStatisticSchema = createInsertSchema(statistics);
+
+// Export notification templates
+export * from "./notification-templates";

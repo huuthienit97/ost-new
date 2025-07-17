@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -360,10 +360,12 @@ export default function ChatPage() {
                       {availableUsers.map((user, index) => {
                         const userId = user.id || user.friend?.id;
                         const userName = user.fullName || user.friend?.fullName || "Unknown";
+                        const avatarUrl = user.avatarUrl || user.friend?.avatarUrl;
                         return (
                           <SelectItem key={userId || index} value={(userId || index).toString()}>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
+                                <AvatarImage src={avatarUrl} />
                                 <AvatarFallback className="text-xs">
                                   {getInitials(userName)}
                                 </AvatarFallback>

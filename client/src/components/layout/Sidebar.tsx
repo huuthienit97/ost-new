@@ -193,6 +193,12 @@ export function Sidebar({ className }: SidebarProps) {
       adminOnly: true
     },
     {
+      title: "Mẫu thông báo",
+      href: "/notification-templates",
+      icon: FileText,
+      adminOnly: true
+    },
+    {
       title: "API Keys",
       href: "/api-keys",
       icon: Key,

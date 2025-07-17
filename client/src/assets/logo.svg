@@ -28,4 +28,17 @@
   <!-- Wings -->
   <ellipse cx="85" cy="90" rx="12" ry="20" fill="#E6F3FF" stroke="#B3D9FF" stroke-width="1" opacity="0.8" transform="rotate(-15 85 90)"/>
   <ellipse cx="115" cy="90" rx="12" ry="20" fill="#E6F3FF" stroke="#B3D9FF" stroke-width="1" opacity="0.8" transform="rotate(15 115 90)"/>
+  
+  <!-- Small decorative elements -->
+  <circle cx="70" cy="50" r="3" fill="#FFE55C" opacity="0.6"/>
+  <circle cx="130" cy="60" r="2" fill="#FFE55C" opacity="0.6"/>
+  <circle cx="150" cy="120" r="2.5" fill="#FFE55C" opacity="0.6"/>
+  <circle cx="50" cy="140" r="2" fill="#FFE55C" opacity="0.6"/>
+  
+  <!-- Creative spark lines -->
+  <path d="M 40 70 L 35 65 M 40 70 L 35 75 M 40 70 L 45 65" stroke="#FFE55C" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 160 130 L 155 125 M 160 130 L 155 135 M 160 130 L 165 125" stroke="#FFE55C" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Text (optional) -->
+  <text x="100" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">CLUB SÁNG TẠO</text>
 </svg>

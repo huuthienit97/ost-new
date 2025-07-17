@@ -31,6 +31,7 @@ import ShopProductAdminPage from "@/pages/shop-product-admin";
 import ShopOrderAdminPage from "@/pages/shop-order-admin";
 import NotificationsTestPage from "@/pages/notifications-test";
 import NotificationsManagement from "@/pages/admin/notifications";
+import NotificationTemplatesPage from "@/pages/notification-templates";
 import ChatPage from "@/pages/chat";
 import GuestChatPage from "@/pages/guest-chat";
 import UserDiscovery from "@/pages/user-discovery";
@@ -84,6 +85,7 @@ function Router() {
           <Route path="/positions" component={PositionsPage} />
           <Route path="/notifications-test" component={NotificationsTestPage} />
           <Route path="/admin/notifications" component={NotificationsManagement} />
+          <Route path="/notification-templates" component={NotificationTemplatesPage} />
           <Route path="/chat" component={ChatPage} />
           <Route path="/friends" component={UserDiscovery} />
           <Route path="/profile/:userId" component={UserProfile} />
