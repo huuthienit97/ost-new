@@ -416,7 +416,12 @@ export default function UserProfile() {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-shrink-0">
               <Avatar className="h-32 w-32">
-                <AvatarImage src={profile.avatarUrl} />
+                <AvatarImage 
+                  src={profile.avatarUrl} 
+                  alt={profile.fullName}
+                  onLoad={() => console.log("Avatar loaded successfully:", profile.avatarUrl)}
+                  onError={() => console.log("Avatar failed to load:", profile.avatarUrl)}
+                />
                 <AvatarFallback className="text-2xl">
                   {getInitials(profile.fullName)}
                 </AvatarFallback>

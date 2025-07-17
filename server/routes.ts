@@ -2585,6 +2585,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Settings API endpoints
+  app.get("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Mock settings for now - in a real app you'd store these in database
+      const settings = {
+        id: userId,
+        notifications: {
+          email: true,
+          push: true,
+          missions: true,
+          achievements: true,
+          social: true,
+        },
+        privacy: {
+          profileVisibility: 'public',
+          showEmail: false,
+          showPhone: false,
+        },
+        preferences: {
+          theme: 'light',
+          language: 'vi',
+        },
+      };
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Lỗi lấy cài đặt" });
+    }
+  });
+
+  app.put("/api/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const updatedSettings = req.body;
+      
+      // In a real app, you'd update these in database
+      // For now just return the updated settings
+      res.json({ message: "Cài đặt đã được lưu", settings: updatedSettings });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ message: "Lỗi lưu cài đặt" });
+    }
+  });
+
   // Change password endpoint
   app.post("/api/auth/change-password", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
@@ -5742,7 +5789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
-        avatarUrl: user.avatarUrl,
+        avatarUrl: user.avatarUrl ? `/uploads/${user.avatarUrl}` : null,
       })));
     } catch (error) {
       console.error("Error fetching available users:", error);

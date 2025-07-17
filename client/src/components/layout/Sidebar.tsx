@@ -208,7 +208,6 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Cài đặt",
       href: "/settings",
       icon: Settings,
-      permission: "settings:view"
     },
   ];
 
