@@ -11,8 +11,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Plus, Send, Users } from "lucide-react";
+import { MessageCircle, Plus, Send, Users, Search, Trash2, Smile, Settings } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface ChatRoom {
@@ -43,19 +44,34 @@ interface User {
   avatarUrl?: string;
 }
 
+// Emoji list for stickers
+const EMOJI_LIST = [
+  "😀", "😃", "😄", "😁", "😊", "😍", "🥰", "😘", "😗", "😙", "😚", "🙂", "🤗", "🤔", "😐", "😑", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "😯", "😪", "😫", "🥱", "😴", "😌", "😛", "😜", "😝", "🤤", "😒", "😓", "😔", "😕", "🙃", "🤑", "😲", "☹️", "🙁", "😖", "😞", "😟", "😤", "😢", "😭", "😦", "😧", "😨", "😩", "🤯", "😬", "😰", "😱", "🥵", "🥶", "😳", "🤪", "😵", "🥴", "😠", "😡", "🤬", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "😇", "🥳", "🥺", "🤠", "🤡", "🤥", "🤫", "🤭", "🧐", "🤓", "😈", "👿", "👹", "👺", "💀", "👻", "👽", "🤖", "💩", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"
+];
+
 export default function ChatPage() {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Get chat rooms
+  // Get chat rooms  
   const { data: rooms = [], isLoading: roomsLoading } = useQuery({
-    queryKey: ["/api/chat/rooms"],
+    queryKey: isSearching ? ["/api/chat/rooms/search", searchQuery] : ["/api/chat/rooms"],
+    queryFn: async () => {
+      if (isSearching && searchQuery.trim()) {
+        return apiRequest(`/api/chat/rooms/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
+      return apiRequest("/api/chat/rooms");
+    },
+    enabled: !isSearching || (isSearching && searchQuery.trim().length > 0),
   });
 
   // Auto-select first room when rooms are loaded
@@ -143,6 +159,49 @@ export default function ChatPage() {
     },
   });
 
+  // Delete chat room mutation
+  const deleteChatMutation = useMutation({
+    mutationFn: async (roomId: number) => {
+      return await apiRequest(`/api/chat/rooms/${roomId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
+      setSelectedRoomId(null);
+      toast({ title: "Thành công", description: "Đã xóa cuộc trò chuyện" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa cuộc trò chuyện",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cleanup old messages mutation (admin only)
+  const cleanupMessagesMutation = useMutation({
+    mutationFn: async (days: number) => {
+      return await apiRequest(`/api/chat/messages/cleanup?days=${days}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Thành công", 
+        description: `${data.message}` 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể dọn dẹp tin nhắn cũ",
+        variant: "destructive",
+      });
+    },
+  });
+
   // WebSocket connection for real-time messaging
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -205,6 +264,22 @@ export default function ChatPage() {
   const handleCreateChat = () => {
     if (!selectedUserId) return;
     createRoomMutation.mutate(parseInt(selectedUserId));
+  };
+
+  const handleDeleteChat = (roomId: number) => {
+    if (confirm("Bạn có chắc chắn muốn xóa cuộc trò chuyện này?")) {
+      deleteChatMutation.mutate(roomId);
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setEmojiOpen(false);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setIsSearching(query.trim().length > 0);
   };
 
   const getRoomDisplayName = (room: ChatRoom) => {
@@ -284,10 +359,65 @@ export default function ChatPage() {
           {/* Chat rooms list */}
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 mb-3">
                 <Users className="h-4 w-4" />
                 Danh sách chat
               </CardTitle>
+              {/* Search and admin controls */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm cuộc trò chuyện..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Settings className="h-4 w-4 mr-1" />
+                        Dọn dẹp
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Dọn dẹp tin nhắn cũ</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Xóa tin nhắn cũ hơn số ngày được chỉ định để giảm tải database.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => cleanupMessagesMutation.mutate(30)}
+                            disabled={cleanupMessagesMutation.isPending}
+                            variant="outline"
+                          >
+                            30 ngày
+                          </Button>
+                          <Button 
+                            onClick={() => cleanupMessagesMutation.mutate(60)}
+                            disabled={cleanupMessagesMutation.isPending}
+                            variant="outline"
+                          >
+                            60 ngày
+                          </Button>
+                          <Button 
+                            onClick={() => cleanupMessagesMutation.mutate(90)}
+                            disabled={cleanupMessagesMutation.isPending}
+                            variant="outline"
+                          >
+                            90 ngày
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="h-[500px]">
@@ -345,9 +475,20 @@ export default function ChatPage() {
             {selectedRoomId ? (
               <>
                 <CardHeader className="pb-3">
-                  <CardTitle>
-                    {rooms.find((r: ChatRoom) => r.id === selectedRoomId)?.name || "Chat"}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      {rooms.find((r: ChatRoom) => r.id === selectedRoomId)?.name || "Chat"}
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDeleteChat(selectedRoomId)}
+                      disabled={deleteChatMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Xóa
+                    </Button>
+                  </div>
                 </CardHeader>
                 <Separator />
                 <CardContent className="p-0 flex flex-col h-[500px]">
@@ -397,13 +538,42 @@ export default function ChatPage() {
                   <Separator />
                   <div className="p-4">
                     <div className="flex gap-2">
-                      <Input
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Nhập tin nhắn..."
-                        onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                        disabled={sendMessageMutation.isPending}
-                      />
+                      <div className="flex-1 relative">
+                        <Input
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Nhập tin nhắn..."
+                          onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                          disabled={sendMessageMutation.isPending}
+                          className="pr-10"
+                        />
+                        <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                            >
+                              <Smile className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-2">
+                            <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto">
+                              {EMOJI_LIST.map((emoji, index) => (
+                                <Button
+                                  key={index}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-lg hover:bg-gray-100"
+                                  onClick={() => handleEmojiSelect(emoji)}
+                                >
+                                  {emoji}
+                                </Button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <Button
                         onClick={handleSendMessage}
                         disabled={!newMessage.trim() || sendMessageMutation.isPending}

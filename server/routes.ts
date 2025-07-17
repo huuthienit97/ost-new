@@ -5543,6 +5543,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete chat room
+  app.delete("/api/chat/rooms/:roomId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const roomId = parseInt(req.params.roomId);
+      const userId = req.user!.id;
+
+      if (isNaN(roomId)) {
+        return res.status(400).json({ message: "ID phòng chat không hợp lệ" });
+      }
+
+      // Check if user has access to this room
+      const hasAccess = await chatService.hasRoomAccess(roomId, userId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Không có quyền xóa phòng chat này" });
+      }
+
+      await chatService.deleteRoom(roomId, userId);
+      res.json({ message: "Đã xóa cuộc trò chuyện thành công" });
+    } catch (error) {
+      console.error("Error deleting chat room:", error);
+      res.status(500).json({ message: "Lỗi khi xóa cuộc trò chuyện" });
+    }
+  });
+
+  // Search chat rooms
+  app.get("/api/chat/rooms/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const query = req.query.q as string;
+
+      if (!query || query.trim().length === 0) {
+        return res.status(400).json({ message: "Từ khóa tìm kiếm không được để trống" });
+      }
+
+      const rooms = await chatService.searchUserRooms(userId, query.trim());
+      res.json(rooms);
+    } catch (error) {
+      console.error("Error searching chat rooms:", error);
+      res.status(500).json({ message: "Lỗi khi tìm kiếm cuộc trò chuyện" });
+    }
+  });
+
+  // Delete old messages to clean database
+  app.delete("/api/chat/messages/cleanup", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const daysOld = parseInt(req.query.days as string) || 30; // Default 30 days
+
+      // Only allow admin users to cleanup messages
+      if (req.user!.roleId !== 7) {
+        return res.status(403).json({ message: "Chỉ admin mới có thể dọn dẹp tin nhắn cũ" });
+      }
+
+      const deletedCount = await chatService.deleteOldMessages(daysOld);
+      res.json({ 
+        message: `Đã xóa ${deletedCount} tin nhắn cũ hơn ${daysOld} ngày`,
+        deletedCount 
+      });
+    } catch (error) {
+      console.error("Error cleaning up old messages:", error);
+      res.status(500).json({ message: "Lỗi khi dọn dẹp tin nhắn cũ" });
+    }
+  });
+
   // Get room messages
   app.get("/api/chat/rooms/:roomId/messages", async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, like } from "drizzle-orm";
+import { eq, and, or, desc, asc, like, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   chatRooms,
@@ -314,6 +314,76 @@ class ChatService {
         )
       )
       .orderBy(asc(users.fullName));
+  }
+
+  // Delete a chat room (soft delete by setting isActive to false)
+  async deleteRoom(roomId: number, userId: number): Promise<void> {
+    // Soft delete the room
+    await db
+      .update(chatRooms)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(chatRooms.id, roomId));
+
+    // Also deactivate user's membership
+    await db
+      .update(chatRoomMembers)
+      .set({ isActive: false })
+      .where(
+        and(
+          eq(chatRoomMembers.roomId, roomId),
+          eq(chatRoomMembers.userId, userId)
+        )
+      );
+  }
+
+  // Search user's chat rooms by name or participants
+  async searchUserRooms(userId: number, query: string): Promise<RoomWithLastMessage[]> {
+    const userRooms = await db
+      .select()
+      .from(chatRoomMembers)
+      .leftJoin(chatRooms, eq(chatRoomMembers.roomId, chatRooms.id))
+      .leftJoin(users, eq(chatRoomMembers.userId, users.id))
+      .where(
+        and(
+          eq(chatRoomMembers.userId, userId),
+          eq(chatRoomMembers.isActive, true),
+          eq(chatRooms.isActive, true),
+          or(
+            like(chatRooms.name, `%${query}%`),
+            like(chatRooms.description, `%${query}%`),
+            like(users.fullName, `%${query}%`)
+          )
+        )
+      )
+      .orderBy(desc(chatRooms.updatedAt));
+
+    const roomsWithMessages = await Promise.all(
+      userRooms.map(async (room) => {
+        const roomData = room.chat_rooms!;
+        const lastMessage = await this.getLastMessage(roomData.id);
+        const participants = await this.getRoomParticipants(roomData.id);
+        
+        return {
+          ...roomData,
+          lastMessage,
+          participants: participants.map(p => p.name),
+        };
+      })
+    );
+
+    return roomsWithMessages;
+  }
+
+  // Delete old messages (hard delete) to clean up database
+  async deleteOldMessages(daysOld: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+    const result = await db
+      .delete(chatMessages)
+      .where(lt(chatMessages.createdAt, cutoffDate));
+
+    return result.rowCount || 0;
   }
 }
 
