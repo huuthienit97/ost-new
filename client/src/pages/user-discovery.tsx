@@ -117,8 +117,12 @@ export default function UserDiscovery() {
 
   // Respond to friend request mutation
   const respondRequestMutation = useMutation({
-    mutationFn: async ({ connectionId, action }: { connectionId: number; action: "accept" | "reject" }) =>
-      apiRequest(`/api/users/respond/${connectionId}`, "POST", { action }),
+    mutationFn: async ({ connectionId, action }: { connectionId: number; action: "accept" | "reject" }) => {
+      return apiRequest(`/api/users/respond/${connectionId}`, {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      });
+    },
     onSuccess: (data, variables) => {
       toast({
         title: "Thành công",
