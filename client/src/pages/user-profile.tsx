@@ -28,7 +28,8 @@ import {
   Mail,
   Phone,
   Send,
-  UserPlus
+  UserPlus,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -345,6 +346,27 @@ export default function UserProfile() {
     },
   });
 
+  // Create chat mutation
+  const createChatMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/users/chat/${profile.id}`, {
+        method: "POST",
+      });
+    },
+    onSuccess: (room) => {
+      toast({ title: "Thành công", description: "Đã tạo cuộc trò chuyện" });
+      // Navigate to chat with room ID
+      window.location.href = `/chat?roomId=${room.id}`;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể tạo cuộc trò chuyện",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (profileLoading) {
     return (
       <div className="container max-w-4xl mx-auto p-6">
@@ -373,6 +395,21 @@ export default function UserProfile() {
 
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-6">
+      {/* Back Button */}
+      <div className="flex items-center gap-3 mb-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
+        </Button>
+        <div className="h-6 w-px bg-gray-300" />
+        <h2 className="text-lg font-semibold text-gray-600">Hồ sơ cá nhân</h2>
+      </div>
+
       {/* Profile Header */}
       <Card>
         <CardContent className="pt-6">
@@ -497,9 +534,14 @@ export default function UserProfile() {
                       </Button>
                     )}
                     
-                    <Button variant="outline">
+                    {/* Message Button */}
+                    <Button 
+                      variant="outline"
+                      onClick={() => createChatMutation.mutate()}
+                      disabled={createChatMutation.isPending}
+                    >
                       <MessageCircle className="h-4 w-4 mr-2" />
-                      Nhắn tin
+                      {createChatMutation.isPending ? "Đang tạo..." : "Nhắn tin"}
                     </Button>
                   </>
                 )}

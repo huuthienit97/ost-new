@@ -5607,6 +5607,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto cleanup old messages (run daily) 
+  const autoCleanupMessages = async () => {
+    try {
+      // Delete messages older than 30 days automatically
+      const deletedCount = await chatService.deleteOldMessages(30);
+      
+      if (deletedCount > 0) {
+        console.log(`Auto cleanup: Deleted ${deletedCount} messages older than 30 days`);
+      }
+    } catch (error) {
+      console.error("Error in auto cleanup messages:", error);
+    }
+  };
+
+  // Run cleanup every 24 hours
+  setInterval(autoCleanupMessages, 24 * 60 * 60 * 1000); // 24 hours
+  
+  // Run initial cleanup after 5 minutes
+  setTimeout(autoCleanupMessages, 5 * 60 * 1000); // 5 minutes
+
   // Get room messages
   app.get("/api/chat/rooms/:roomId/messages", async (req, res) => {
     try {

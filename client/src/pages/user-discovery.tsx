@@ -143,9 +143,9 @@ export default function UserDiscovery() {
       queryClient.invalidateQueries({ queryKey: ["/api/users/requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users/friends"] });
       
-      // If accepted, automatically create chat room (like Facebook UX)
-      if (wasAccepted && data.requester) {
-        createChatMutation.mutate(data.requester.id);
+      // If accepted, automatically create chat room (like Facebook UX) 
+      if (wasAccepted && data?.friendship?.friend) {
+        createChatMutation.mutate(data.friendship.friend.id);
       }
     },
     onError: (error: any) => {

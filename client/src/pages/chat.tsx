@@ -357,18 +357,22 @@ export default function ChatPage() {
                       <SelectValue placeholder="Chọn thành viên..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-xs">
-                                {getInitials(user.fullName || user.friend?.fullName || "U")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{user.fullName || user.friend?.fullName || "Unknown"}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {availableUsers.map((user, index) => {
+                        const userId = user.id || user.friend?.id;
+                        const userName = user.fullName || user.friend?.fullName || "Unknown";
+                        return (
+                          <SelectItem key={userId || index} value={(userId || index).toString()}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(userName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{userName}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

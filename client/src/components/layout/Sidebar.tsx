@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { 
   Home, 
@@ -57,11 +58,19 @@ export function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Fetch user's BeePoints separately
   const { data: beePoints } = useQuery({
     queryKey: ["/api/bee-points/me"],
     enabled: !!user,
+  });
+
+  // Search friends for quick navigation
+  const { data: searchResults = [] } = useQuery({
+    queryKey: ["/api/users/search", friendSearchQuery],
+    queryFn: () => apiRequest(`/api/users/search?q=${encodeURIComponent(friendSearchQuery)}`),
+    enabled: friendSearchQuery.length >= 2,
   });
 
   const mainNavItems: NavItem[] = [
@@ -320,7 +329,12 @@ export function Sidebar({ className }: SidebarProps) {
             <Input
               placeholder="Tìm bạn bè..."
               value={friendSearchQuery}
-              onChange={(e) => setFriendSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setFriendSearchQuery(e.target.value);
+                setShowSearchResults(e.target.value.length >= 2);
+              }}
+              onFocus={() => setShowSearchResults(friendSearchQuery.length >= 2)}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
               className="pl-10 h-8"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && friendSearchQuery.trim()) {
@@ -328,6 +342,32 @@ export function Sidebar({ className }: SidebarProps) {
                 }
               }}
             />
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-10 left-0 right-0 bg-white border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                {searchResults.slice(0, 5).map((result: any) => (
+                  <div
+                    key={result.id}
+                    className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    onClick={() => {
+                      window.location.href = `/profile/${result.username}`;
+                      setShowSearchResults(false);
+                      setFriendSearchQuery("");
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">
+                        {result.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{result.fullName}</p>
+                        <p className="text-xs text-gray-500">@{result.username}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

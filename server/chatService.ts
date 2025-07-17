@@ -376,14 +376,19 @@ class ChatService {
 
   // Delete old messages (hard delete) to clean up database
   async deleteOldMessages(daysOld: number): Promise<number> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-    const result = await db
-      .delete(chatMessages)
-      .where(lt(chatMessages.createdAt, cutoffDate));
+      const result = await db
+        .delete(chatMessages)
+        .where(lt(chatMessages.createdAt, cutoffDate));
 
-    return result.rowCount || 0;
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error("Error deleting old messages:", error);
+      return 0;
+    }
   }
 }
 
